@@ -29,6 +29,7 @@ import {
   Upload,
   Camera,
   Download,
+  RotateCcw,
 } from "lucide-react"
 import { useProfileStore } from "@/lib/profile-store"
 import { useDatabaseInit } from "@/hooks/use-database-init"
@@ -74,7 +75,7 @@ export default function AdminDashboard() {
     isSaving,
     lastSaved,
     syncStatus,
-    loadFromDatabase,
+    hasUnsavedChanges,
     saveToDatabase,
     createBackup,
   } = useProfileStore()
@@ -100,15 +101,20 @@ export default function AdminDashboard() {
   // Content filter state
   const [contentFilter, setContentFilter] = useState("all")
 
-  // File input handling state
-  const [uploadingImage, setUploadingImage] = useState(false)
-
-  const handleSave = async () => {
-    await saveToDatabase()
-  }
-
-  const handlePreview = () => {
-    window.open("/", "_blank")
+  const handleSaveChanges = async () => {
+    const result = await saveToDatabase()
+    if (result.success) {
+      toast({
+        title: "Changes Saved",
+        description: "All your changes have been saved to the database successfully!",
+      })
+    } else {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save changes to database. Please try again.",
+        variant: "destructive",
+      })
+    }
   }
 
   const handleExport = () => {
@@ -117,7 +123,7 @@ export default function AdminDashboard() {
     const url = URL.createObjectURL(blob)
     const a = document.createElement("a")
     a.href = url
-    a.download = "profile-data.json"
+    a.download = `profile-data-${new Date().toISOString().split("T")[0]}.json`
     a.click()
     URL.revokeObjectURL(url)
     toast({
@@ -160,6 +166,25 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleCreateBackup = async () => {
+    const backupName = prompt("Enter backup name:")
+    if (backupName) {
+      const result = await createBackup(backupName)
+      if (result.success) {
+        toast({
+          title: "Backup Created",
+          description: `Backup "${backupName}" created successfully!`,
+        })
+      } else {
+        toast({
+          title: "Backup Failed",
+          description: "Failed to create backup.",
+          variant: "destructive",
+        })
+      }
+    }
+  }
+
   // Filter posts by section
   const getFilteredPosts = () => {
     if (contentFilter === "all") return posts
@@ -178,32 +203,6 @@ export default function AdminDashboard() {
 
   const postCounts = getPostCounts()
 
-  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
-    const file = event.target.files?.[0]
-    if (file) {
-      setUploadingImage(true)
-      // Simulate upload delay
-      setTimeout(() => {
-        // In a real app, you'd upload to a service like Cloudinary, AWS S3, etc.
-        // For now, we'll create a local URL for preview
-        const url = URL.createObjectURL(file)
-        callback(url)
-        setUploadingImage(false)
-        toast({
-          title: "Image Uploaded",
-          description: "Image has been uploaded successfully!",
-        })
-      }, 1000)
-    }
-  }
-
-  const handleCreateBackup = async () => {
-    const backupName = prompt("Enter backup name:")
-    if (backupName) {
-      await createBackup(backupName)
-    }
-  }
-
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto">
@@ -217,27 +216,9 @@ export default function AdminDashboard() {
                 <p className="text-sm text-gray-600">Manage your profile content</p>
               </div>
             </div>
+
             <div className="flex items-center gap-3">
-              <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700">
-                <Save className="w-4 h-4" />
-                Save Changes
-              </Button>
-              <Button onClick={handleExport} variant="outline" className="gap-2">
-                <Download className="w-4 h-4" />
-                Export
-              </Button>
-              <div className="relative">
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={handleImport}
-                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                />
-                <Button variant="outline" className="gap-2">
-                  <Upload className="w-4 h-4" />
-                  Import
-                </Button>
-              </div>
+              {/* Status Indicator */}
               <div className="flex items-center gap-2 text-sm">
                 <div
                   className={`w-2 h-2 rounded-full ${
@@ -251,28 +232,54 @@ export default function AdminDashboard() {
                   }`}
                 ></div>
                 <span className="text-gray-600">
-                  {syncStatus === "success" && lastSaved
-                    ? `Saved ${new Date(lastSaved).toLocaleTimeString()}`
-                    : syncStatus === "syncing"
-                      ? "Syncing..."
-                      : syncStatus === "error"
-                        ? "Sync failed"
-                        : "Not synced"}
+                  {hasUnsavedChanges
+                    ? "Unsaved changes"
+                    : lastSaved
+                      ? `Saved ${new Date(lastSaved).toLocaleTimeString()}`
+                      : "No changes"}
                 </span>
               </div>
 
-              <Button onClick={loadFromDatabase} variant="outline" className="gap-2" disabled={isLoading}>
-                <Download className="w-4 h-4" />
-                {isLoading ? "Loading..." : "Load from DB"}
+              {/* Main Save Button */}
+              <Button
+                onClick={handleSaveChanges}
+                className={`gap-2 ${hasUnsavedChanges ? "bg-blue-600 hover:bg-blue-700" : "bg-green-600 hover:bg-green-700"}`}
+                disabled={isSaving}
+              >
+                <Save className="w-4 h-4" />
+                {isSaving ? "Saving..." : hasUnsavedChanges ? "Save Changes" : "All Saved"}
               </Button>
 
-              <Button onClick={saveToDatabase} variant="outline" className="gap-2" disabled={isSaving}>
-                <Upload className="w-4 h-4" />
-                {isSaving ? "Saving..." : "Save to DB"}
+              {/* Export Button */}
+              <Button onClick={handleExport} variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                Export
               </Button>
+
+              {/* Import Button */}
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <Button variant="outline" className="gap-2">
+                  <Upload className="w-4 h-4" />
+                  Import
+                </Button>
+              </div>
+
+              {/* Backup Button */}
               <Button onClick={handleCreateBackup} variant="outline" className="gap-2">
                 <Save className="w-4 h-4" />
-                Create Backup
+                Backup
+              </Button>
+
+              {/* Reset Button */}
+              <Button onClick={handleReset} variant="outline" className="gap-2 text-red-600 hover:text-red-700">
+                <RotateCcw className="w-4 h-4" />
+                Reset
               </Button>
             </div>
           </div>
@@ -330,29 +337,15 @@ export default function AdminDashboard() {
                   <div className="flex-1 space-y-4">
                     <div>
                       <Label htmlFor="profileImage">Profile Image URL</Label>
-                      <div className="flex gap-2">
-                        <Input
-                          id="profileImage"
-                          value={profileData.profileImage}
-                          onChange={(e) => updateProfileData({ profileImage: e.target.value })}
-                          placeholder="https://example.com/image.jpg"
-                        />
-                        <div className="relative">
-                          <input
-                            type="file"
-                            accept="image/*"
-                            onChange={(e) => handleImageUpload(e, (url) => updateProfileData({ profileImage: url }))}
-                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-                            disabled={uploadingImage}
-                          />
-                          <Button variant="outline" className="gap-2" disabled={uploadingImage}>
-                            <Upload className="w-4 h-4" />
-                            {uploadingImage ? "Uploading..." : "Upload"}
-                          </Button>
-                        </div>
-                      </div>
+                      <Input
+                        id="profileImage"
+                        value={profileData.profileImage}
+                        onChange={(e) => updateProfileData({ profileImage: e.target.value })}
+                        placeholder="https://example.com/image.jpg or /placeholder.svg?height=192&width=192"
+                      />
                       <p className="text-xs text-gray-500 mt-1">
-                        Add a professional profile image URL. Recommended size: 400x400px
+                        Use a publicly accessible image URL (e.g., from Unsplash, your website, or cloud storage).
+                        Recommended size: 400x400px
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -1106,32 +1099,13 @@ function ExperienceForm({ experience, onSave, onCancel }: any) {
       </div>
       <div>
         <Label htmlFor="image">Company/Organization Logo URL</Label>
-        <div className="flex gap-2">
-          <Input
-            id="image"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-            placeholder="/placeholder.svg?height=48&width=48"
-          />
-          <div className="relative">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  const url = URL.createObjectURL(file)
-                  setFormData({ ...formData, image: url })
-                }
-              }}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-            <Button variant="outline" size="sm">
-              <Upload className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
-        <p className="text-xs text-gray-500 mt-1">Add a logo or image URL to represent this organization</p>
+        <Input
+          id="image"
+          value={formData.image}
+          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+          placeholder="https://example.com/logo.png or /placeholder.svg?height=48&width=48"
+        />
+        <p className="text-xs text-gray-500 mt-1">Use a publicly accessible image URL for the company logo</p>
       </div>
       <div>
         <Label htmlFor="description">Description</Label>
@@ -1395,30 +1369,13 @@ function PostForm({ post, onSave, onCancel }: any) {
       </div>
       <div>
         <Label htmlFor="image">Image URL</Label>
-        <div className="flex gap-2">
-          <Input
-            id="image"
-            value={formData.image}
-            onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-          />
-          <div className="relative">
-            <input
-              type="file"
-              accept="image/*"
-              onChange={(e) => {
-                const file = e.target.files?.[0]
-                if (file) {
-                  const url = URL.createObjectURL(file)
-                  setFormData({ ...formData, image: url })
-                }
-              }}
-              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
-            />
-            <Button variant="outline" size="sm">
-              <Upload className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+        <Input
+          id="image"
+          value={formData.image}
+          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+          placeholder="https://example.com/image.jpg or /placeholder.svg?height=400&width=400"
+        />
+        <p className="text-xs text-gray-500 mt-1">Use a publicly accessible image URL</p>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel}>

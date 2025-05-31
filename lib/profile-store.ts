@@ -2,7 +2,6 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { toast } from "@/hooks/use-toast"
 
 export interface ProfileData {
   name: string
@@ -91,6 +90,7 @@ interface ProfileStore {
   isSaving: boolean
   lastSaved: string | null
   syncStatus: "idle" | "syncing" | "success" | "error"
+  hasUnsavedChanges: boolean
 
   // Profile actions
   updateProfileData: (data: Partial<ProfileData>) => void
@@ -137,7 +137,7 @@ interface ProfileStore {
   loadFromDatabase: () => Promise<void>
   saveToDatabase: () => Promise<void>
   createBackup: (backupName: string) => Promise<void>
-  autoSave: () => void
+  markAsChanged: () => void
 }
 
 const defaultProfileData: ProfileData = {
@@ -369,13 +369,14 @@ export const useProfileStore = create<ProfileStore>()(
       isSaving: false,
       lastSaved: null,
       syncStatus: "idle",
+      hasUnsavedChanges: false,
 
       // Profile actions
       updateProfileData: (data) => {
         set((state) => ({
           profileData: { ...state.profileData, ...data },
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       updateContact: (contact) => {
@@ -384,8 +385,8 @@ export const useProfileStore = create<ProfileStore>()(
             ...state.profileData,
             contact: { ...state.profileData.contact, ...contact },
           },
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       addSocialLink: (link) => {
@@ -396,9 +397,9 @@ export const useProfileStore = create<ProfileStore>()(
               ...state.profileData,
               socialLinks: [...state.profileData.socialLinks, { ...link, id: newId }],
             },
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updateSocialLink: (id, link) => {
@@ -407,8 +408,8 @@ export const useProfileStore = create<ProfileStore>()(
             ...state.profileData,
             socialLinks: state.profileData.socialLinks.map((s) => (s.id === id ? { ...s, ...link } : s)),
           },
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deleteSocialLink: (id) => {
@@ -417,8 +418,8 @@ export const useProfileStore = create<ProfileStore>()(
             ...state.profileData,
             socialLinks: state.profileData.socialLinks.filter((s) => s.id !== id),
           },
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       addBadge: (badge) => {
@@ -429,9 +430,9 @@ export const useProfileStore = create<ProfileStore>()(
               ...state.profileData,
               badges: [...state.profileData.badges, { ...badge, id: newId }],
             },
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updateBadge: (id, badge) => {
@@ -440,8 +441,8 @@ export const useProfileStore = create<ProfileStore>()(
             ...state.profileData,
             badges: state.profileData.badges.map((b) => (b.id === id ? { ...b, ...badge } : b)),
           },
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deleteBadge: (id) => {
@@ -450,8 +451,8 @@ export const useProfileStore = create<ProfileStore>()(
             ...state.profileData,
             badges: state.profileData.badges.filter((b) => b.id !== id),
           },
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       // Experience actions
@@ -460,23 +461,23 @@ export const useProfileStore = create<ProfileStore>()(
           const newId = Math.max(...state.experience.map((e) => e.id), 0) + 1
           return {
             experience: [...state.experience, { ...exp, id: newId }],
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updateExperience: (id, exp) => {
         set((state) => ({
           experience: state.experience.map((e) => (e.id === id ? { ...e, ...exp } : e)),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deleteExperience: (id) => {
         set((state) => ({
           experience: state.experience.filter((e) => e.id !== id),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       // Education actions
@@ -485,23 +486,23 @@ export const useProfileStore = create<ProfileStore>()(
           const newId = Math.max(...state.education.map((e) => e.id), 0) + 1
           return {
             education: [...state.education, { ...edu, id: newId }],
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updateEducation: (id, edu) => {
         set((state) => ({
           education: state.education.map((e) => (e.id === id ? { ...e, ...edu } : e)),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deleteEducation: (id) => {
         set((state) => ({
           education: state.education.filter((e) => e.id !== id),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       // Skills actions
@@ -510,23 +511,23 @@ export const useProfileStore = create<ProfileStore>()(
           const newId = Math.max(...state.skills.map((s) => s.id), 0) + 1
           return {
             skills: [...state.skills, { ...skill, id: newId }],
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updateSkill: (id, skill) => {
         set((state) => ({
           skills: state.skills.map((s) => (s.id === id ? { ...s, ...skill } : s)),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deleteSkill: (id) => {
         set((state) => ({
           skills: state.skills.filter((s) => s.id !== id),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       // Posts actions
@@ -535,23 +536,23 @@ export const useProfileStore = create<ProfileStore>()(
           const newId = Math.max(...state.posts.map((p) => p.id), 0) + 1
           return {
             posts: [...state.posts, { ...post, id: newId }],
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updatePost: (id, post) => {
         set((state) => ({
           posts: state.posts.map((p) => (p.id === id ? { ...p, ...post } : p)),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deletePost: (id) => {
         set((state) => ({
           posts: state.posts.filter((p) => p.id !== id),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       getPostsBySection: (section) => {
@@ -566,23 +567,23 @@ export const useProfileStore = create<ProfileStore>()(
           const newId = Math.max(...state.navigationPages.map((p) => p.id), 0) + 1
           return {
             navigationPages: [...state.navigationPages, { ...page, id: newId }],
+            hasUnsavedChanges: true,
           }
         })
-        get().autoSave()
       },
 
       updateNavigationPage: (id, page) => {
         set((state) => ({
           navigationPages: state.navigationPages.map((p) => (p.id === id ? { ...p, ...page } : p)),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       deleteNavigationPage: (id) => {
         set((state) => ({
           navigationPages: state.navigationPages.filter((p) => p.id !== id),
+          hasUnsavedChanges: true,
         }))
-        get().autoSave()
       },
 
       // Utility actions
@@ -594,6 +595,7 @@ export const useProfileStore = create<ProfileStore>()(
           skills: defaultSkills,
           posts: defaultPosts,
           navigationPages: defaultNavigationPages,
+          hasUnsavedChanges: true,
         }),
 
       exportData: () => {
@@ -618,6 +620,7 @@ export const useProfileStore = create<ProfileStore>()(
             skills: parsed.skills || defaultSkills,
             posts: parsed.posts || defaultPosts,
             navigationPages: parsed.navigationPages || defaultNavigationPages,
+            hasUnsavedChanges: true,
           })
         } catch (error) {
           console.error("Failed to import data:", error)
@@ -645,17 +648,14 @@ export const useProfileStore = create<ProfileStore>()(
               isLoading: false,
               syncStatus: "success",
               lastSaved: result.data.lastUpdated,
-            })
-
-            toast({
-              title: "Data Loaded",
-              description: "Profile data loaded from database successfully!",
+              hasUnsavedChanges: false,
             })
           } else {
             // No data found, use defaults
             set({
               isLoading: false,
               syncStatus: "idle",
+              hasUnsavedChanges: false,
             })
           }
         } catch (error) {
@@ -663,12 +663,6 @@ export const useProfileStore = create<ProfileStore>()(
           set({
             isLoading: false,
             syncStatus: "error",
-          })
-
-          toast({
-            title: "Load Failed",
-            description: "Failed to load data from database. Using local data.",
-            variant: "destructive",
           })
         }
       },
@@ -702,12 +696,9 @@ export const useProfileStore = create<ProfileStore>()(
               isSaving: false,
               syncStatus: "success",
               lastSaved: new Date().toISOString(),
+              hasUnsavedChanges: false,
             })
-
-            toast({
-              title: "Data Saved",
-              description: "Profile data saved to database successfully!",
-            })
+            return { success: true }
           } else {
             throw new Error(result.error)
           }
@@ -717,12 +708,7 @@ export const useProfileStore = create<ProfileStore>()(
             isSaving: false,
             syncStatus: "error",
           })
-
-          toast({
-            title: "Save Failed",
-            description: "Failed to save data to database.",
-            variant: "destructive",
-          })
+          return { success: false, error: error.message }
         }
       },
 
@@ -739,34 +725,23 @@ export const useProfileStore = create<ProfileStore>()(
           const result = await response.json()
 
           if (result.success) {
-            toast({
-              title: "Backup Created",
-              description: `Backup "${backupName}" created successfully!`,
-            })
+            return { success: true }
           } else {
             throw new Error(result.error)
           }
         } catch (error) {
           console.error("Failed to create backup:", error)
-          toast({
-            title: "Backup Failed",
-            description: "Failed to create backup.",
-            variant: "destructive",
-          })
+          return { success: false, error: error.message }
         }
       },
 
-      autoSave: () => {
-        const state = get()
-        // Auto-save after any data change
-        setTimeout(() => {
-          state.saveToDatabase()
-        }, 1000) // Debounce auto-save by 1 second
+      markAsChanged: () => {
+        set({ hasUnsavedChanges: true })
       },
     }),
     {
       name: "profile-storage",
-      version: 2, // Increment version for migration
+      version: 3, // Increment version for migration
     },
   ),
 )

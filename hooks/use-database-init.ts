@@ -7,7 +7,7 @@ export function useDatabaseInit() {
   const { loadFromDatabase, syncStatus } = useProfileStore()
 
   useEffect(() => {
-    // Load data from database on app initialization
+    // Load data from database on app initialization silently
     if (syncStatus === "idle") {
       loadFromDatabase()
     }
