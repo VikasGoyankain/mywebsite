@@ -31,8 +31,11 @@ import {
   Download,
 } from "lucide-react"
 import { useProfileStore } from "@/lib/profile-store"
+import { useDatabaseInit } from "@/hooks/use-database-init"
 
 export default function AdminDashboard() {
+  useDatabaseInit() // Initialize database connection
+
   const { toast } = useToast()
   const {
     profileData,
@@ -67,6 +70,13 @@ export default function AdminDashboard() {
     resetToDefaults,
     exportData,
     importData,
+    isLoading,
+    isSaving,
+    lastSaved,
+    syncStatus,
+    loadFromDatabase,
+    saveToDatabase,
+    createBackup,
   } = useProfileStore()
 
   // Dialog states
@@ -93,11 +103,8 @@ export default function AdminDashboard() {
   // File input handling state
   const [uploadingImage, setUploadingImage] = useState(false)
 
-  const handleSave = () => {
-    toast({
-      title: "Profile Updated",
-      description: "Your profile has been saved successfully!",
-    })
+  const handleSave = async () => {
+    await saveToDatabase()
   }
 
   const handlePreview = () => {
@@ -190,6 +197,13 @@ export default function AdminDashboard() {
     }
   }
 
+  const handleCreateBackup = async () => {
+    const backupName = prompt("Enter backup name:")
+    if (backupName) {
+      await createBackup(backupName)
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-7xl mx-auto">
@@ -224,6 +238,42 @@ export default function AdminDashboard() {
                   Import
                 </Button>
               </div>
+              <div className="flex items-center gap-2 text-sm">
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    syncStatus === "success"
+                      ? "bg-green-500"
+                      : syncStatus === "syncing"
+                        ? "bg-yellow-500 animate-pulse"
+                        : syncStatus === "error"
+                          ? "bg-red-500"
+                          : "bg-gray-400"
+                  }`}
+                ></div>
+                <span className="text-gray-600">
+                  {syncStatus === "success" && lastSaved
+                    ? `Saved ${new Date(lastSaved).toLocaleTimeString()}`
+                    : syncStatus === "syncing"
+                      ? "Syncing..."
+                      : syncStatus === "error"
+                        ? "Sync failed"
+                        : "Not synced"}
+                </span>
+              </div>
+
+              <Button onClick={loadFromDatabase} variant="outline" className="gap-2" disabled={isLoading}>
+                <Download className="w-4 h-4" />
+                {isLoading ? "Loading..." : "Load from DB"}
+              </Button>
+
+              <Button onClick={saveToDatabase} variant="outline" className="gap-2" disabled={isSaving}>
+                <Upload className="w-4 h-4" />
+                {isSaving ? "Saving..." : "Save to DB"}
+              </Button>
+              <Button onClick={handleCreateBackup} variant="outline" className="gap-2">
+                <Save className="w-4 h-4" />
+                Create Backup
+              </Button>
             </div>
           </div>
         </div>

@@ -2,6 +2,7 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
+import { toast } from "@/hooks/use-toast"
 
 export interface ProfileData {
   name: string
@@ -85,6 +86,12 @@ interface ProfileStore {
   posts: Post[]
   navigationPages: NavigationPage[]
 
+  // Database sync properties
+  isLoading: boolean
+  isSaving: boolean
+  lastSaved: string | null
+  syncStatus: "idle" | "syncing" | "success" | "error"
+
   // Profile actions
   updateProfileData: (data: Partial<ProfileData>) => void
   updateContact: (contact: Partial<ProfileData["contact"]>) => void
@@ -125,6 +132,12 @@ interface ProfileStore {
   resetToDefaults: () => void
   exportData: () => string
   importData: (data: string) => void
+
+  // Database actions
+  loadFromDatabase: () => Promise<void>
+  saveToDatabase: () => Promise<void>
+  createBackup: (backupName: string) => Promise<void>
+  autoSave: () => void
 }
 
 const defaultProfileData: ProfileData = {
@@ -351,21 +364,31 @@ export const useProfileStore = create<ProfileStore>()(
       posts: defaultPosts,
       navigationPages: defaultNavigationPages,
 
+      // Database sync state
+      isLoading: false,
+      isSaving: false,
+      lastSaved: null,
+      syncStatus: "idle",
+
       // Profile actions
-      updateProfileData: (data) =>
+      updateProfileData: (data) => {
         set((state) => ({
           profileData: { ...state.profileData, ...data },
-        })),
+        }))
+        get().autoSave()
+      },
 
-      updateContact: (contact) =>
+      updateContact: (contact) => {
         set((state) => ({
           profileData: {
             ...state.profileData,
             contact: { ...state.profileData.contact, ...contact },
           },
-        })),
+        }))
+        get().autoSave()
+      },
 
-      addSocialLink: (link) =>
+      addSocialLink: (link) => {
         set((state) => {
           const newId = Math.max(...state.profileData.socialLinks.map((s) => s.id), 0) + 1
           return {
@@ -374,25 +397,31 @@ export const useProfileStore = create<ProfileStore>()(
               socialLinks: [...state.profileData.socialLinks, { ...link, id: newId }],
             },
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updateSocialLink: (id, link) =>
+      updateSocialLink: (id, link) => {
         set((state) => ({
           profileData: {
             ...state.profileData,
             socialLinks: state.profileData.socialLinks.map((s) => (s.id === id ? { ...s, ...link } : s)),
           },
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deleteSocialLink: (id) =>
+      deleteSocialLink: (id) => {
         set((state) => ({
           profileData: {
             ...state.profileData,
             socialLinks: state.profileData.socialLinks.filter((s) => s.id !== id),
           },
-        })),
+        }))
+        get().autoSave()
+      },
 
-      addBadge: (badge) =>
+      addBadge: (badge) => {
         set((state) => {
           const newId = Math.max(...state.profileData.badges.map((b) => b.id), 0) + 1
           return {
@@ -401,99 +430,129 @@ export const useProfileStore = create<ProfileStore>()(
               badges: [...state.profileData.badges, { ...badge, id: newId }],
             },
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updateBadge: (id, badge) =>
+      updateBadge: (id, badge) => {
         set((state) => ({
           profileData: {
             ...state.profileData,
             badges: state.profileData.badges.map((b) => (b.id === id ? { ...b, ...badge } : b)),
           },
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deleteBadge: (id) =>
+      deleteBadge: (id) => {
         set((state) => ({
           profileData: {
             ...state.profileData,
             badges: state.profileData.badges.filter((b) => b.id !== id),
           },
-        })),
+        }))
+        get().autoSave()
+      },
 
       // Experience actions
-      addExperience: (exp) =>
+      addExperience: (exp) => {
         set((state) => {
           const newId = Math.max(...state.experience.map((e) => e.id), 0) + 1
           return {
             experience: [...state.experience, { ...exp, id: newId }],
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updateExperience: (id, exp) =>
+      updateExperience: (id, exp) => {
         set((state) => ({
           experience: state.experience.map((e) => (e.id === id ? { ...e, ...exp } : e)),
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deleteExperience: (id) =>
+      deleteExperience: (id) => {
         set((state) => ({
           experience: state.experience.filter((e) => e.id !== id),
-        })),
+        }))
+        get().autoSave()
+      },
 
       // Education actions
-      addEducation: (edu) =>
+      addEducation: (edu) => {
         set((state) => {
           const newId = Math.max(...state.education.map((e) => e.id), 0) + 1
           return {
             education: [...state.education, { ...edu, id: newId }],
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updateEducation: (id, edu) =>
+      updateEducation: (id, edu) => {
         set((state) => ({
           education: state.education.map((e) => (e.id === id ? { ...e, ...edu } : e)),
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deleteEducation: (id) =>
+      deleteEducation: (id) => {
         set((state) => ({
           education: state.education.filter((e) => e.id !== id),
-        })),
+        }))
+        get().autoSave()
+      },
 
       // Skills actions
-      addSkill: (skill) =>
+      addSkill: (skill) => {
         set((state) => {
           const newId = Math.max(...state.skills.map((s) => s.id), 0) + 1
           return {
             skills: [...state.skills, { ...skill, id: newId }],
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updateSkill: (id, skill) =>
+      updateSkill: (id, skill) => {
         set((state) => ({
           skills: state.skills.map((s) => (s.id === id ? { ...s, ...skill } : s)),
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deleteSkill: (id) =>
+      deleteSkill: (id) => {
         set((state) => ({
           skills: state.skills.filter((s) => s.id !== id),
-        })),
+        }))
+        get().autoSave()
+      },
 
       // Posts actions
-      addPost: (post) =>
+      addPost: (post) => {
         set((state) => {
           const newId = Math.max(...state.posts.map((p) => p.id), 0) + 1
           return {
             posts: [...state.posts, { ...post, id: newId }],
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updatePost: (id, post) =>
+      updatePost: (id, post) => {
         set((state) => ({
           posts: state.posts.map((p) => (p.id === id ? { ...p, ...post } : p)),
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deletePost: (id) =>
+      deletePost: (id) => {
         set((state) => ({
           posts: state.posts.filter((p) => p.id !== id),
-        })),
+        }))
+        get().autoSave()
+      },
 
       getPostsBySection: (section) => {
         const state = get()
@@ -502,23 +561,29 @@ export const useProfileStore = create<ProfileStore>()(
       },
 
       // Navigation actions
-      addNavigationPage: (page) =>
+      addNavigationPage: (page) => {
         set((state) => {
           const newId = Math.max(...state.navigationPages.map((p) => p.id), 0) + 1
           return {
             navigationPages: [...state.navigationPages, { ...page, id: newId }],
           }
-        }),
+        })
+        get().autoSave()
+      },
 
-      updateNavigationPage: (id, page) =>
+      updateNavigationPage: (id, page) => {
         set((state) => ({
           navigationPages: state.navigationPages.map((p) => (p.id === id ? { ...p, ...page } : p)),
-        })),
+        }))
+        get().autoSave()
+      },
 
-      deleteNavigationPage: (id) =>
+      deleteNavigationPage: (id) => {
         set((state) => ({
           navigationPages: state.navigationPages.filter((p) => p.id !== id),
-        })),
+        }))
+        get().autoSave()
+      },
 
       // Utility actions
       resetToDefaults: () =>
@@ -558,10 +623,150 @@ export const useProfileStore = create<ProfileStore>()(
           console.error("Failed to import data:", error)
         }
       },
+
+      // Database actions
+      loadFromDatabase: async () => {
+        set({ isLoading: true, syncStatus: "syncing" })
+
+        try {
+          const response = await fetch("/api/profile")
+          const result = await response.json()
+
+          if (result.success && result.data) {
+            const { profileData, experience, education, skills, posts, navigationPages } = result.data
+
+            set({
+              profileData: profileData || defaultProfileData,
+              experience: experience || defaultExperience,
+              education: education || defaultEducation,
+              skills: skills || defaultSkills,
+              posts: posts || defaultPosts,
+              navigationPages: navigationPages || defaultNavigationPages,
+              isLoading: false,
+              syncStatus: "success",
+              lastSaved: result.data.lastUpdated,
+            })
+
+            toast({
+              title: "Data Loaded",
+              description: "Profile data loaded from database successfully!",
+            })
+          } else {
+            // No data found, use defaults
+            set({
+              isLoading: false,
+              syncStatus: "idle",
+            })
+          }
+        } catch (error) {
+          console.error("Failed to load from database:", error)
+          set({
+            isLoading: false,
+            syncStatus: "error",
+          })
+
+          toast({
+            title: "Load Failed",
+            description: "Failed to load data from database. Using local data.",
+            variant: "destructive",
+          })
+        }
+      },
+
+      saveToDatabase: async () => {
+        const state = get()
+        set({ isSaving: true, syncStatus: "syncing" })
+
+        try {
+          const dataToSave = {
+            profileData: state.profileData,
+            experience: state.experience,
+            education: state.education,
+            skills: state.skills,
+            posts: state.posts,
+            navigationPages: state.navigationPages,
+          }
+
+          const response = await fetch("/api/profile", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(dataToSave),
+          })
+
+          const result = await response.json()
+
+          if (result.success) {
+            set({
+              isSaving: false,
+              syncStatus: "success",
+              lastSaved: new Date().toISOString(),
+            })
+
+            toast({
+              title: "Data Saved",
+              description: "Profile data saved to database successfully!",
+            })
+          } else {
+            throw new Error(result.error)
+          }
+        } catch (error) {
+          console.error("Failed to save to database:", error)
+          set({
+            isSaving: false,
+            syncStatus: "error",
+          })
+
+          toast({
+            title: "Save Failed",
+            description: "Failed to save data to database.",
+            variant: "destructive",
+          })
+        }
+      },
+
+      createBackup: async (backupName: string) => {
+        try {
+          const response = await fetch("/api/profile/backup", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ backupName }),
+          })
+
+          const result = await response.json()
+
+          if (result.success) {
+            toast({
+              title: "Backup Created",
+              description: `Backup "${backupName}" created successfully!`,
+            })
+          } else {
+            throw new Error(result.error)
+          }
+        } catch (error) {
+          console.error("Failed to create backup:", error)
+          toast({
+            title: "Backup Failed",
+            description: "Failed to create backup.",
+            variant: "destructive",
+          })
+        }
+      },
+
+      autoSave: () => {
+        const state = get()
+        // Auto-save after any data change
+        setTimeout(() => {
+          state.saveToDatabase()
+        }, 1000) // Debounce auto-save by 1 second
+      },
     }),
     {
       name: "profile-storage",
-      version: 1,
+      version: 2, // Increment version for migration
     },
   ),
 )

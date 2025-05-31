@@ -30,6 +30,7 @@ import Image from "next/image"
 import Link from "next/link"
 import { useProfileStore } from "@/lib/profile-store"
 import { useState } from "react"
+import { useDatabaseInit } from "@/hooks/use-database-init"
 
 // Icon mapping for dynamic icons
 const iconMap = {
@@ -56,6 +57,8 @@ const iconMap = {
 }
 
 export default function ModernProfile() {
+  useDatabaseInit() // Initialize database connection
+
   const { profileData, experience, education, skills, posts, navigationPages } = useProfileStore()
 
   // Get posts by section
