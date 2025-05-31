@@ -1,4 +1,3 @@
-import { Button } from "@/components/ui/button"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -18,14 +17,11 @@ import {
   MessageSquare,
   FileText,
   Users,
-  Calendar,
   Gavel,
   TrendingUp,
   Globe,
   Verified,
   Send,
-  Download,
-  ExternalLink,
   Clock,
 } from "lucide-react"
 import Image from "next/image"
@@ -33,10 +29,15 @@ import Link from "next/link"
 
 export default function ModernProfile() {
   const socialLinks = [
-    { name: "Instagram", icon: Instagram, href: "#", color: "text-pink-600" },
-    { name: "LinkedIn", icon: Linkedin, href: "#", color: "text-blue-700" },
-    { name: "Telegram", icon: Send, href: "#", color: "text-blue-500" },
-    { name: "X (Twitter)", icon: Twitter, href: "#", color: "text-gray-900" },
+    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/vikasgoyanka.in/", color: "text-pink-600" },
+    {
+      name: "LinkedIn",
+      icon: Linkedin,
+      href: "https://in.linkedin.com/in/vikas-goyanka-1a483a342",
+      color: "text-blue-700",
+    },
+    { name: "Telegram", icon: Send, href: "https://t.me/Vikasgoyanka_in", color: "text-blue-500" },
+    { name: "X (Twitter)", icon: Twitter, href: "https://x.com/vikasgoyanka_in", color: "text-gray-900" },
   ]
 
   const navigationPages = [
@@ -246,11 +247,11 @@ export default function ModernProfile() {
                   <div className="space-y-2 text-sm">
                     <div className="flex items-center gap-2 text-gray-700">
                       <Mail className="w-4 h-4" />
-                      <span>vikas@example.com</span>
+                      <span>contact@vikasgoyanka.in</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <Phone className="w-4 h-4" />
-                      <span>+91 98765 43210</span>
+                      <span>+917597441305</span>
                     </div>
                     <div className="flex items-center gap-2 text-gray-700">
                       <MapPin className="w-4 h-4" />
@@ -305,22 +306,6 @@ export default function ModernProfile() {
                     <br />
                     ⚖️ Legal Aid & Community Service
                   </p>
-                </div>
-
-                {/* Quick Actions */}
-                <div className="flex flex-wrap gap-3">
-                  <Button className="bg-blue-600 hover:bg-blue-700 text-white px-6">
-                    <Download className="w-4 h-4 mr-2" />
-                    Download CV
-                  </Button>
-                  <Button variant="outline" className="px-6">
-                    <Calendar className="w-4 h-4 mr-2" />
-                    Schedule Meeting
-                  </Button>
-                  <Button variant="outline" className="px-6">
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    View Portfolio
-                  </Button>
                 </div>
               </div>
             </div>
