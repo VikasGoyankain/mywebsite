@@ -27,12 +27,13 @@ import {
   ImageIcon,
   LinkIcon,
   Upload,
-  Camera,
   Download,
   RotateCcw,
 } from "lucide-react"
 import { useProfileStore } from "@/lib/profile-store"
 import { useDatabaseInit } from "@/hooks/use-database-init"
+import { ImageUploader } from "@/components/image-uploader"
+import Image from "next/image"
 
 export default function AdminDashboard() {
   useDatabaseInit() // Initialize database connection
@@ -319,21 +320,12 @@ export default function AdminDashboard() {
               {/* Profile Image Section */}
               <Card className="p-6">
                 <h2 className="text-2xl font-bold mb-6">Profile Image</h2>
-                <div className="flex items-center gap-6">
-                  <div className="relative">
-                    <Avatar className="w-32 h-32 ring-4 ring-blue-500 ring-offset-4">
-                      <AvatarImage src={profileData.profileImage || "/placeholder.svg"} alt={profileData.name} />
-                      <AvatarFallback className="text-2xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-                        {profileData.name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="absolute -bottom-2 -right-2 bg-blue-600 w-10 h-10 rounded-full border-4 border-white flex items-center justify-center cursor-pointer hover:bg-blue-700 transition-colors">
-                      <Camera className="w-5 h-5 text-white" />
-                    </div>
-                  </div>
+                <div className="flex flex-col md:flex-row items-start gap-6">
+                  <ImageUploader
+                    currentImageUrl={profileData.profileImage || "/placeholder.svg"}
+                    onImageSelect={(imageUrl) => updateProfileData({ profileImage: imageUrl })}
+                    className="w-full md:w-1/3 aspect-square"
+                  />
                   <div className="flex-1 space-y-4">
                     <div>
                       <Label htmlFor="profileImage">Profile Image URL</Label>
@@ -344,8 +336,8 @@ export default function AdminDashboard() {
                         placeholder="https://example.com/image.jpg or /placeholder.svg?height=192&width=192"
                       />
                       <p className="text-xs text-gray-500 mt-1">
-                        Use a publicly accessible image URL (e.g., from Unsplash, your website, or cloud storage).
-                        Recommended size: 400x400px
+                        Use a publicly accessible image URL or upload an image using the button on the left. Recommended
+                        size: 400x400px
                       </p>
                     </div>
                     <div className="flex gap-2">
@@ -895,8 +887,17 @@ export default function AdminDashboard() {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   {getFilteredPosts().map((post) => (
                     <Card key={post.id} className="overflow-hidden">
-                      <div className="aspect-square bg-gray-100 flex items-center justify-center relative">
-                        <ImageIcon className="w-12 h-12 text-gray-400" />
+                      <div className="aspect-video bg-gray-100 flex items-center justify-center relative">
+                        {post.image ? (
+                          <Image
+                            src={post.image || "/placeholder.svg"}
+                            alt={post.title}
+                            className="object-cover"
+                            fill
+                          />
+                        ) : (
+                          <ImageIcon className="w-12 h-12 text-gray-400" />
+                        )}
                         <div className="absolute top-3 left-3">
                           <Badge
                             className={`${
@@ -1098,14 +1099,24 @@ function ExperienceForm({ experience, onSave, onCancel }: any) {
         </Select>
       </div>
       <div>
-        <Label htmlFor="image">Company/Organization Logo URL</Label>
-        <Input
-          id="image"
-          value={formData.image}
-          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-          placeholder="https://example.com/logo.png or /placeholder.svg?height=48&width=48"
-        />
-        <p className="text-xs text-gray-500 mt-1">Use a publicly accessible image URL for the company logo</p>
+        <Label htmlFor="image">Company/Organization Logo</Label>
+        <div className="flex gap-4 items-start">
+          <ImageUploader
+            currentImageUrl={formData.image || "/placeholder.svg?height=48&width=48"}
+            onImageSelect={(imageUrl) => setFormData({ ...formData, image: imageUrl })}
+            className="w-24 h-24"
+            buttonText="Upload"
+          />
+          <div className="flex-1">
+            <Input
+              id="image"
+              value={formData.image}
+              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              placeholder="https://example.com/logo.png or /placeholder.svg?height=48&width=48"
+            />
+            <p className="text-xs text-gray-500 mt-1">Upload a logo or use a publicly accessible image URL</p>
+          </div>
+        </div>
       </div>
       <div>
         <Label htmlFor="description">Description</Label>
@@ -1368,14 +1379,24 @@ function PostForm({ post, onSave, onCancel }: any) {
         />
       </div>
       <div>
-        <Label htmlFor="image">Image URL</Label>
-        <Input
-          id="image"
-          value={formData.image}
-          onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-          placeholder="https://example.com/image.jpg or /placeholder.svg?height=400&width=400"
-        />
-        <p className="text-xs text-gray-500 mt-1">Use a publicly accessible image URL</p>
+        <Label htmlFor="image">Image</Label>
+        <div className="flex flex-col md:flex-row gap-4 items-start">
+          <ImageUploader
+            currentImageUrl={formData.image || "/placeholder.svg?height=400&width=400"}
+            onImageSelect={(imageUrl) => setFormData({ ...formData, image: imageUrl })}
+            className="w-full md:w-1/3 aspect-video"
+            buttonText="Upload"
+          />
+          <div className="flex-1">
+            <Input
+              id="image"
+              value={formData.image}
+              onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+              placeholder="https://example.com/image.jpg or /placeholder.svg?height=400&width=400"
+            />
+            <p className="text-xs text-gray-500 mt-1">Upload an image or use a publicly accessible image URL</p>
+          </div>
+        </div>
       </div>
       <DialogFooter>
         <Button variant="outline" onClick={onCancel}>
