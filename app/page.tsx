@@ -29,6 +29,7 @@ import {
 import Image from "next/image"
 import Link from "next/link"
 import { useProfileStore } from "@/lib/profile-store"
+import { useState } from "react"
 
 // Icon mapping for dynamic icons
 const iconMap = {
@@ -63,8 +64,9 @@ export default function ModernProfile() {
   const achievementPosts = posts.filter((post) => post.section === "achievements")
 
   // Current active tab (you can make this stateful if needed)
-  const activeTab = "recent-work"
-  const currentPosts = recentWorkPosts
+  const [activeTab, setActiveTab] = useState("recent-work")
+  const currentPosts =
+    activeTab === "recent-work" ? recentWorkPosts : activeTab === "articles" ? articlePosts : achievementPosts
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -463,17 +465,48 @@ export default function ModernProfile() {
           {/* Content Tabs */}
           <div className="border-t border-gray-200 pt-8">
             <div className="flex items-center justify-center gap-8 mb-8">
-              <button className="flex items-center gap-2 text-gray-900 border-t-2 border-gray-900 pt-4 px-4">
-                <div className="w-4 h-4 border-2 border-gray-900"></div>
-                <span className="font-semibold">RECENT WORK ({recentWorkPosts.length})</span>
+              <button
+                onClick={() => setActiveTab("recent-work")}
+                className={`flex items-center gap-2 pt-4 px-4 ${
+                  activeTab === "recent-work"
+                    ? "text-gray-900 border-t-2 border-gray-900"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
+                <div
+                  className={`w-4 h-4 ${
+                    activeTab === "recent-work" ? "border-2 border-gray-900" : "border-2 border-gray-400"
+                  }`}
+                ></div>
+                <span className={activeTab === "recent-work" ? "font-semibold" : "font-medium"}>
+                  RECENT WORK ({recentWorkPosts.length})
+                </span>
               </button>
-              <button className="flex items-center gap-2 text-gray-500 pt-4 px-4 hover:text-gray-700">
+              <button
+                onClick={() => setActiveTab("articles")}
+                className={`flex items-center gap-2 pt-4 px-4 ${
+                  activeTab === "articles"
+                    ? "text-gray-900 border-t-2 border-gray-900"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
                 <BookOpen className="w-4 h-4" />
-                <span className="font-medium">ARTICLES ({articlePosts.length})</span>
+                <span className={activeTab === "articles" ? "font-semibold" : "font-medium"}>
+                  ARTICLES ({articlePosts.length})
+                </span>
               </button>
-              <button className="flex items-center gap-2 text-gray-500 pt-4 px-4 hover:text-gray-700">
+              <button
+                onClick={() => setActiveTab("achievements")}
+                className={`flex items-center gap-2 pt-4 px-4 ${
+                  activeTab === "achievements"
+                    ? "text-gray-900 border-t-2 border-gray-900"
+                    : "text-gray-500 hover:text-gray-700"
+                }`}
+              >
                 <Award className="w-4 h-4" />
-                <span className="font-medium">ACHIEVEMENTS ({achievementPosts.length})</span>
+                <span className={activeTab === "achievements" ? "font-semibold" : "font-medium"}>
+                  ACHIEVEMENTS ({achievementPosts.length})
+                </span>
               </button>
             </div>
 

@@ -90,6 +90,9 @@ export default function AdminDashboard() {
   // Content filter state
   const [contentFilter, setContentFilter] = useState("all")
 
+  // File input handling state
+  const [uploadingImage, setUploadingImage] = useState(false)
+
   const handleSave = () => {
     toast({
       title: "Profile Updated",
@@ -167,6 +170,25 @@ export default function AdminDashboard() {
   }
 
   const postCounts = getPostCounts()
+
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>, callback: (url: string) => void) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      setUploadingImage(true)
+      // Simulate upload delay
+      setTimeout(() => {
+        // In a real app, you'd upload to a service like Cloudinary, AWS S3, etc.
+        // For now, we'll create a local URL for preview
+        const url = URL.createObjectURL(file)
+        callback(url)
+        setUploadingImage(false)
+        toast({
+          title: "Image Uploaded",
+          description: "Image has been uploaded successfully!",
+        })
+      }, 1000)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -265,10 +287,19 @@ export default function AdminDashboard() {
                           onChange={(e) => updateProfileData({ profileImage: e.target.value })}
                           placeholder="https://example.com/image.jpg"
                         />
-                        <Button variant="outline" className="gap-2">
-                          <Upload className="w-4 h-4" />
-                          Upload
-                        </Button>
+                        <div className="relative">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            onChange={(e) => handleImageUpload(e, (url) => updateProfileData({ profileImage: url }))}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            disabled={uploadingImage}
+                          />
+                          <Button variant="outline" className="gap-2" disabled={uploadingImage}>
+                            <Upload className="w-4 h-4" />
+                            {uploadingImage ? "Uploading..." : "Upload"}
+                          </Button>
+                        </div>
                       </div>
                       <p className="text-xs text-gray-500 mt-1">
                         Add a professional profile image URL. Recommended size: 400x400px
@@ -1032,9 +1063,23 @@ function ExperienceForm({ experience, onSave, onCancel }: any) {
             onChange={(e) => setFormData({ ...formData, image: e.target.value })}
             placeholder="/placeholder.svg?height=48&width=48"
           />
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4" />
-          </Button>
+          <div className="relative">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  const url = URL.createObjectURL(file)
+                  setFormData({ ...formData, image: url })
+                }
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <Button variant="outline" size="sm">
+              <Upload className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
         <p className="text-xs text-gray-500 mt-1">Add a logo or image URL to represent this organization</p>
       </div>
@@ -1306,9 +1351,23 @@ function PostForm({ post, onSave, onCancel }: any) {
             value={formData.image}
             onChange={(e) => setFormData({ ...formData, image: e.target.value })}
           />
-          <Button variant="outline" size="sm">
-            <Upload className="w-4 h-4" />
-          </Button>
+          <div className="relative">
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0]
+                if (file) {
+                  const url = URL.createObjectURL(file)
+                  setFormData({ ...formData, image: url })
+                }
+              }}
+              className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+            />
+            <Button variant="outline" size="sm">
+              <Upload className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
       </div>
       <DialogFooter>
