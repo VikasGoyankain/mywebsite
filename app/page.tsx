@@ -1,6 +1,7 @@
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import {
   Mail,
   Phone,
@@ -18,7 +19,6 @@ import {
   FileText,
   Users,
   Gavel,
-  TrendingUp,
   Globe,
   Verified,
   Send,
@@ -56,13 +56,6 @@ export default function ModernProfile() {
       color: "bg-green-500",
     },
     {
-      title: "Newsletter",
-      description: "Subscribe to legal insights",
-      icon: Mail,
-      href: "/newsletter",
-      color: "bg-purple-500",
-    },
-    {
       title: "Speaking Events",
       description: "Book me for conferences",
       icon: Users,
@@ -75,13 +68,6 @@ export default function ModernProfile() {
       icon: Gavel,
       href: "/legal-aid",
       color: "bg-red-500",
-    },
-    {
-      title: "Policy Blog",
-      description: "Thoughts on current affairs",
-      icon: TrendingUp,
-      href: "/blog",
-      color: "bg-indigo-500",
     },
   ]
 
@@ -306,12 +292,18 @@ export default function ModernProfile() {
                     <br />
                     ⚖️ Legal Aid & Community Service
                   </p>
+                  {/* Subscribe Button */}
+                  <div className="mt-6">
+                    <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8">
+                      <Mail className="w-4 h-4 mr-2" />
+                      Subscribe to Updates
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
-
             {/* Navigation Pages */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
               {navigationPages.map((page, index) => (
                 <Link key={index} href={page.href} className="group">
                   <Card className="p-4 text-center hover:shadow-lg transition-all duration-300 group-hover:scale-105 border-0 bg-white/80 backdrop-blur-sm">
