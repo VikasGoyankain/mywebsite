@@ -177,14 +177,16 @@ export default function ModernProfile() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-gray-200">
-          <div className="px-4 py-4 flex items-center justify-between">
+        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
+          <div className="px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10">
-                <AvatarImage src="/placeholder.svg?height=40&width=40" />
-                <AvatarFallback>VG</AvatarFallback>
+              <Avatar className="w-10 h-10 ring-2 ring-blue-500/20">
+                <AvatarImage src="/placeholder.svg?height=40&width=40" alt="Vikas Goyanka" />
+                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
+                  VG
+                </AvatarFallback>
               </Avatar>
-              <div>
+              <div className="hidden sm:block">
                 <div className="flex items-center gap-2">
                   <span className="font-bold text-gray-900">Vikas Goyanka</span>
                   <Verified className="w-4 h-4 text-blue-500" />
@@ -192,58 +194,79 @@ export default function ModernProfile() {
                 <span className="text-sm text-gray-600">Law Student & Political Activist</span>
               </div>
             </div>
-            <div className="flex items-center gap-3">
+
+            {/* Desktop Social Links */}
+            <div className="hidden md:flex items-center gap-2">
               {socialLinks.map((social, index) => (
                 <Link
                   key={index}
                   href={social.href}
-                  className={`p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors ${social.color}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`p-2.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-110 ${social.color}`}
+                  aria-label={`Visit ${social.name} profile`}
                 >
-                  <social.icon className="w-5 h-5" />
+                  <social.icon className="w-4 h-4" />
                 </Link>
               ))}
             </div>
+
+            {/* Mobile Menu Button */}
+            <button className="md:hidden p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
+              </svg>
+            </button>
           </div>
         </div>
 
         <div className="px-4 py-8">
           {/* Profile Section */}
-          <div className="mb-8">
-            <div className="flex flex-col md:flex-row gap-8 mb-8">
+          <div className="mb-12">
+            <div className="flex flex-col lg:flex-row gap-8 mb-10">
               {/* Profile Picture & Contact */}
-              <div className="flex flex-col items-center md:items-start">
-                <div className="relative mb-6">
-                  <Avatar className="w-36 h-36 md:w-44 md:h-44 ring-4 ring-blue-500 ring-offset-4">
-                    <AvatarImage src="/placeholder.svg?height=176&width=176" alt="Vikas Goyanka" />
-                    <AvatarFallback className="text-4xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white">
+              <div className="flex flex-col items-center lg:items-start">
+                <div className="relative mb-8 group">
+                  <Avatar className="w-40 h-40 lg:w-48 lg:h-48 ring-4 ring-blue-500 ring-offset-4 transition-all duration-300 group-hover:ring-6 group-hover:ring-blue-400">
+                    <AvatarImage
+                      src="/placeholder.svg?height=192&width=192"
+                      alt="Vikas Goyanka - Law Student & Political Activist"
+                    />
+                    <AvatarFallback className="text-5xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white">
                       VG
                     </AvatarFallback>
                   </Avatar>
-                  <div className="absolute -bottom-2 -right-2 bg-green-500 w-10 h-10 rounded-full border-4 border-white flex items-center justify-center">
-                    <div className="w-4 h-4 bg-white rounded-full"></div>
+                  <div className="absolute -bottom-3 -right-3 bg-green-500 w-12 h-12 rounded-full border-4 border-white flex items-center justify-center shadow-lg animate-pulse">
+                    <div className="w-5 h-5 bg-white rounded-full"></div>
                   </div>
                 </div>
 
                 {/* Contact Info Card */}
-                <Card className="p-4 w-full max-w-sm bg-gradient-to-br from-blue-50 to-purple-50 border-0">
-                  <h3 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                    <Phone className="w-4 h-4" />
+                <Card className="p-5 w-full max-w-sm bg-gradient-to-br from-blue-50 to-purple-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
+                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
+                    <Phone className="w-4 h-4 text-blue-600" />
                     Contact Information
                   </h3>
-                  <div className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Mail className="w-4 h-4" />
+                  <div className="space-y-3 text-sm">
+                    <a
+                      href="mailto:contact@vikasgoyanka.in"
+                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors group"
+                    >
+                      <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
                       <span>contact@vikasgoyanka.in</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-700">
-                      <Phone className="w-4 h-4" />
-                      <span>+917597441305</span>
-                    </div>
-                    <div className="flex items-center gap-2 text-gray-700">
+                    </a>
+                    <a
+                      href="tel:+917597441305"
+                      className="flex items-center gap-3 text-gray-700 hover:text-green-600 transition-colors group"
+                    >
+                      <Phone className="w-4 h-4 group-hover:scale-110 transition-transform" />
+                      <span>+91 7597441305</span>
+                    </a>
+                    <div className="flex items-center gap-3 text-gray-700">
                       <MapPin className="w-4 h-4" />
                       <span>New Delhi, India</span>
                     </div>
-                    <div className="flex items-center gap-2 text-gray-700">
+                    <div className="flex items-center gap-3 text-gray-700">
                       <Globe className="w-4 h-4" />
                       <span>Available for consultations</span>
                     </div>
@@ -293,9 +316,9 @@ export default function ModernProfile() {
                     ⚖️ Legal Aid & Community Service
                   </p>
                   {/* Subscribe Button */}
-                  <div className="mt-6">
-                    <Button className="bg-purple-600 hover:bg-purple-700 text-white px-8">
-                      <Mail className="w-4 h-4 mr-2" />
+                  <div className="mt-8">
+                    <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group">
+                      <Mail className="w-4 h-4 mr-2 group-hover:animate-bounce" />
                       Subscribe to Updates
                     </Button>
                   </div>
@@ -303,17 +326,22 @@ export default function ModernProfile() {
               </div>
             </div>
             {/* Navigation Pages */}
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-8">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
               {navigationPages.map((page, index) => (
                 <Link key={index} href={page.href} className="group">
-                  <Card className="p-4 text-center hover:shadow-lg transition-all duration-300 group-hover:scale-105 border-0 bg-white/80 backdrop-blur-sm">
-                    <div
-                      className={`w-12 h-12 ${page.color} rounded-full flex items-center justify-center mx-auto mb-3 group-hover:scale-110 transition-transform`}
-                    >
-                      <page.icon className="w-6 h-6 text-white" />
+                  <Card className="p-6 text-center hover:shadow-2xl transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-2 border-0 bg-white/90 backdrop-blur-sm overflow-hidden relative">
+                    <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="relative z-10">
+                      <div
+                        className={`w-14 h-14 ${page.color} rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-125 transition-all duration-300 shadow-lg group-hover:shadow-xl`}
+                      >
+                        <page.icon className="w-7 h-7 text-white" />
+                      </div>
+                      <h3 className="font-semibold text-gray-900 text-sm mb-2 group-hover:text-gray-800">
+                        {page.title}
+                      </h3>
+                      <p className="text-xs text-gray-600 group-hover:text-gray-700">{page.description}</p>
                     </div>
-                    <h3 className="font-semibold text-gray-900 text-sm mb-1">{page.title}</h3>
-                    <p className="text-xs text-gray-600">{page.description}</p>
                   </Card>
                 </Link>
               ))}
