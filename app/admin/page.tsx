@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
@@ -11,12 +13,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { useToast } from "@/hooks/use-toast"
 import {
   Save,
   Plus,
   Trash2,
   Edit,
-  Eye,
   Settings,
   User,
   Briefcase,
@@ -24,220 +26,48 @@ import {
   Star,
   ImageIcon,
   LinkIcon,
-  Globe,
   Upload,
   Camera,
+  Download,
 } from "lucide-react"
-import Link from "next/link"
+import { useProfileStore } from "@/lib/profile-store"
 
 export default function AdminDashboard() {
-  // Profile Data State
-  const [profileData, setProfileData] = useState({
-    name: "Vikas Goyanka",
-    title: "Law Student & Political Activist",
-    bio: "Passionate advocate for constitutional rights and social justice. Currently pursuing LLB while actively engaging in policy research and grassroots political work. Dedicated to bridging the gap between legal theory and practical governance to create meaningful change in Indian society.",
-    profileImage: "/placeholder.svg?height=192&width=192",
-    specializations: [
-      "🏛️ Specializing in Constitutional Law & Human Rights",
-      "📊 Policy Research & Analysis",
-      "🗳️ Youth Political Engagement",
-      "⚖️ Legal Aid & Community Service",
-    ],
-    contact: {
-      email: "contact@vikasgoyanka.in",
-      phone: "+917597441305",
-      location: "New Delhi, India",
-      availability: "Available for consultations",
-    },
-    socialLinks: [
-      {
-        id: 1,
-        name: "Instagram",
-        icon: "Instagram",
-        href: "https://www.instagram.com/vikasgoyanka.in/",
-        color: "text-pink-600",
-      },
-      {
-        id: 2,
-        name: "LinkedIn",
-        icon: "Linkedin",
-        href: "https://in.linkedin.com/in/vikas-goyanka-1a483a342",
-        color: "text-blue-700",
-      },
-      {
-        id: 3,
-        name: "Telegram",
-        icon: "Send",
-        href: "https://t.me/Vikasgoyanka_in",
-        color: "text-blue-500",
-      },
-      {
-        id: 4,
-        name: "X (Twitter)",
-        icon: "Twitter",
-        href: "https://x.com/vikasgoyanka_in",
-        color: "text-gray-900",
-      },
-    ],
-    badges: [
-      { id: 1, text: "Law Student", icon: "GraduationCap", color: "bg-blue-100 text-blue-800" },
-      { id: 2, text: "Legal Researcher", icon: "Gavel", color: "bg-purple-100 text-purple-800" },
-      { id: 3, text: "Political Activist", icon: "Users", color: "bg-green-100 text-green-800" },
-      { id: 4, text: "Social Worker", icon: "Heart", color: "bg-orange-100 text-orange-800" },
-    ],
-  })
-
-  const [experience, setExperience] = useState([
-    {
-      title: "Legal Research Intern",
-      company: "Supreme Court of India",
-      duration: "Jan 2024 - Present",
-      location: "New Delhi",
-      description:
-        "Conducting research on constitutional law cases, drafting legal briefs, and assisting senior advocates in landmark cases.",
-      type: "Internship",
-      image: "/placeholder.svg?height=48&width=48",
-    },
-    {
-      title: "Youth Wing Secretary",
-      company: "Indian National Congress",
-      duration: "Mar 2023 - Present",
-      location: "Delhi Pradesh",
-      description:
-        "Leading youth engagement initiatives, organizing policy discussions, and coordinating grassroots campaigns.",
-      type: "Leadership",
-      image: "/placeholder.svg?height=48&width=48",
-    },
-    {
-      title: "Legal Aid Coordinator",
-      company: "Delhi Legal Services Authority",
-      duration: "Jun 2022 - Dec 2023",
-      location: "New Delhi",
-      description:
-        "Coordinated free legal aid camps, provided legal literacy programs, and assisted in pro bono cases.",
-      type: "Volunteer",
-      image: "/placeholder.svg?height=48&width=48",
-    },
-  ])
-
-  const [education, setEducation] = useState([
-    {
-      degree: "Bachelor of Laws (LLB)",
-      institution: "National Law University Delhi",
-      year: "2021 - 2024",
-      grade: "CGPA: 8.7/10",
-      specialization: "Constitutional Law & Human Rights",
-      achievements: ["Dean's List 2023", "Best Moot Court Performance", "Research Excellence Award"],
-    },
-    {
-      degree: "Bachelor of Arts (Political Science)",
-      institution: "University of Delhi",
-      year: "2018 - 2021",
-      grade: "First Class (78%)",
-      specialization: "Public Policy & Governance",
-      achievements: ["Gold Medalist", "Student Union President", "Debate Society Captain"],
-    },
-  ])
-
-  const [skills, setSkills] = useState([
-    { name: "Constitutional Law", level: 95, category: "Legal" },
-    { name: "Criminal Law", level: 88, category: "Legal" },
-    { name: "Public Policy Analysis", level: 92, category: "Policy" },
-    { name: "Legal Research", level: 96, category: "Research" },
-    { name: "Public Speaking", level: 94, category: "Communication" },
-    { name: "Campaign Management", level: 85, category: "Political" },
-    { name: "Community Organizing", level: 90, category: "Social" },
-    { name: "Legal Writing", level: 93, category: "Communication" },
-  ])
-
-  const [navigationPages, setNavigationPages] = useState([
-    {
-      title: "Research Studies",
-      description: "Constitutional Law & Policy Research",
-      icon: "FileText",
-      href: "/research",
-      color: "bg-blue-500",
-    },
-    {
-      title: "Contact Me",
-      description: "Get in touch for consultations",
-      icon: "MessageSquare",
-      href: "/contact",
-      color: "bg-green-500",
-    },
-    {
-      title: "Speaking Events",
-      description: "Book me for conferences",
-      icon: "Users",
-      href: "/speaking",
-      color: "bg-orange-500",
-    },
-    {
-      title: "Legal Aid",
-      description: "Free consultation program",
-      icon: "Gavel",
-      href: "/legal-aid",
-      color: "bg-red-500",
-    },
-  ])
-
-  // Updated posts structure with section categorization
-  const [posts, setPosts] = useState([
-    {
-      id: 1,
-      title: "Legal Aid Camp Success",
-      date: "2 days ago",
-      category: "Social Work",
-      section: "recent-work", // recent-work, articles, achievements
-      image: "/placeholder.svg?height=400&width=400",
-      description: "Successfully organized a legal aid camp helping 200+ families",
-    },
-    {
-      id: 2,
-      title: "Constitutional Rights in Digital Age",
-      date: "1 week ago",
-      category: "Legal Research",
-      section: "articles",
-      image: "/placeholder.svg?height=400&width=400",
-      description: "Published research paper on digital privacy rights",
-    },
-    {
-      id: 3,
-      title: "Best Moot Court Performance Award",
-      date: "2 weeks ago",
-      category: "Academic",
-      section: "achievements",
-      image: "/placeholder.svg?height=400&width=400",
-      description: "Won first place in National Moot Court Competition",
-    },
-    {
-      id: 4,
-      title: "Youth Leadership Summit",
-      date: "3 weeks ago",
-      category: "Politics",
-      section: "recent-work",
-      image: "/placeholder.svg?height=400&width=400",
-      description: "Led youth engagement session at national summit",
-    },
-    {
-      id: 5,
-      title: "Policy Analysis: Education Reform",
-      date: "1 month ago",
-      category: "Policy Research",
-      section: "articles",
-      image: "/placeholder.svg?height=400&width=400",
-      description: "Comprehensive analysis of proposed education reforms",
-    },
-    {
-      id: 6,
-      title: "Dean's List Recognition",
-      date: "2 months ago",
-      category: "Academic",
-      section: "achievements",
-      image: "/placeholder.svg?height=400&width=400",
-      description: "Achieved Dean's List for academic excellence",
-    },
-  ])
+  const { toast } = useToast()
+  const {
+    profileData,
+    experience,
+    education,
+    skills,
+    posts,
+    navigationPages,
+    updateProfileData,
+    updateContact,
+    addSocialLink,
+    updateSocialLink,
+    deleteSocialLink,
+    addBadge,
+    updateBadge,
+    deleteBadge,
+    addExperience,
+    updateExperience,
+    deleteExperience,
+    addEducation,
+    updateEducation,
+    deleteEducation,
+    addSkill,
+    updateSkill,
+    deleteSkill,
+    addPost,
+    updatePost,
+    deletePost,
+    addNavigationPage,
+    updateNavigationPage,
+    deleteNavigationPage,
+    resetToDefaults,
+    exportData,
+    importData,
+  } = useProfileStore()
 
   // Dialog states
   const [isExperienceDialogOpen, setIsExperienceDialogOpen] = useState(false)
@@ -245,143 +75,79 @@ export default function AdminDashboard() {
   const [isSkillDialogOpen, setIsSkillDialogOpen] = useState(false)
   const [isPostDialogOpen, setIsPostDialogOpen] = useState(false)
   const [isNavigationDialogOpen, setIsNavigationDialogOpen] = useState(false)
-
-  // Add these new dialog states after the existing ones
   const [isSocialDialogOpen, setIsSocialDialogOpen] = useState(false)
   const [isBadgeDialogOpen, setIsBadgeDialogOpen] = useState(false)
-  const [editingSocial, setEditingSocial] = useState(null)
-  const [editingBadge, setEditingBadge] = useState(null)
 
-  // Form states
-  const [editingExperience, setEditingExperience] = useState(null)
-  const [editingEducation, setEditingEducation] = useState(null)
-  const [editingSkill, setEditingSkill] = useState(null)
-  const [editingPost, setEditingPost] = useState(null)
-  const [editingNavigation, setEditingNavigation] = useState(null)
+  // Editing states
+  const [editingExperience, setEditingExperience] = useState<number | null>(null)
+  const [editingEducation, setEditingEducation] = useState<number | null>(null)
+  const [editingSkill, setEditingSkill] = useState<number | null>(null)
+  const [editingPost, setEditingPost] = useState<number | null>(null)
+  const [editingNavigation, setEditingNavigation] = useState<number | null>(null)
+  const [editingSocial, setEditingSocial] = useState<number | null>(null)
+  const [editingBadge, setEditingBadge] = useState<number | null>(null)
 
   // Content filter state
-  const [contentFilter, setContentFilter] = useState("all") // all, recent-work, articles, achievements
+  const [contentFilter, setContentFilter] = useState("all")
 
   const handleSave = () => {
-    // Here you would typically save to a database or API
-    alert("Profile updated successfully!")
+    toast({
+      title: "Profile Updated",
+      description: "Your profile has been saved successfully!",
+    })
   }
 
   const handlePreview = () => {
-    // Open the main profile page in a new tab
     window.open("/", "_blank")
   }
 
-  const addExperience = (exp) => {
-    if (editingExperience !== null) {
-      const updated = [...experience]
-      updated[editingExperience] = exp
-      setExperience(updated)
-      setEditingExperience(null)
-    } else {
-      setExperience([...experience, exp])
-    }
-    setIsExperienceDialogOpen(false)
-  }
-
-  const deleteExperience = (index) => {
-    setExperience(experience.filter((_, i) => i !== index))
-  }
-
-  const addEducation = (edu) => {
-    if (editingEducation !== null) {
-      const updated = [...education]
-      updated[editingEducation] = edu
-      setEducation(updated)
-      setEditingEducation(null)
-    } else {
-      setEducation([...education, edu])
-    }
-    setIsEducationDialogOpen(false)
-  }
-
-  const deleteEducation = (index) => {
-    setEducation(education.filter((_, i) => i !== index))
-  }
-
-  const addSkill = (skill) => {
-    if (editingSkill !== null) {
-      const updated = [...skills]
-      updated[editingSkill] = skill
-      setSkills(updated)
-      setEditingSkill(null)
-    } else {
-      setSkills([...skills, skill])
-    }
-    setIsSkillDialogOpen(false)
-  }
-
-  const deleteSkill = (index) => {
-    setSkills(skills.filter((_, i) => i !== index))
-  }
-
-  const addPost = (post) => {
-    if (editingPost !== null) {
-      const updated = posts.map((p) => (p.id === editingPost ? { ...post, id: editingPost } : p))
-      setPosts(updated)
-      setEditingPost(null)
-    } else {
-      const newId = Math.max(...posts.map((p) => p.id), 0) + 1
-      setPosts([...posts, { ...post, id: newId }])
-    }
-    setIsPostDialogOpen(false)
-  }
-
-  const deletePost = (id) => {
-    setPosts(posts.filter((post) => post.id !== id))
-  }
-
-  // Add these functions after the existing helper functions
-
-  const addSocialLink = (social) => {
-    if (editingSocial !== null) {
-      const updated = profileData.socialLinks.map((link) =>
-        link.id === editingSocial ? { ...social, id: editingSocial } : link,
-      )
-      setProfileData({ ...profileData, socialLinks: updated })
-      setEditingSocial(null)
-    } else {
-      const newId = Math.max(...profileData.socialLinks.map((s) => s.id), 0) + 1
-      setProfileData({
-        ...profileData,
-        socialLinks: [...profileData.socialLinks, { ...social, id: newId }],
-      })
-    }
-    setIsSocialDialogOpen(false)
-  }
-
-  const deleteSocialLink = (id) => {
-    setProfileData({
-      ...profileData,
-      socialLinks: profileData.socialLinks.filter((link) => link.id !== id),
+  const handleExport = () => {
+    const data = exportData()
+    const blob = new Blob([data], { type: "application/json" })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement("a")
+    a.href = url
+    a.download = "profile-data.json"
+    a.click()
+    URL.revokeObjectURL(url)
+    toast({
+      title: "Data Exported",
+      description: "Your profile data has been exported successfully!",
     })
   }
 
-  const addBadge = (badge) => {
-    if (editingBadge !== null) {
-      const updated = profileData.badges.map((b) => (b.id === editingBadge ? { ...badge, id: editingBadge } : b))
-      setProfileData({ ...profileData, badges: updated })
-      setEditingBadge(null)
-    } else {
-      const newId = Math.max(...profileData.badges.map((b) => b.id), 0) + 1
-      setProfileData({
-        ...profileData,
-        badges: [...profileData.badges, { ...badge, id: newId }],
-      })
+  const handleImport = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (file) {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        try {
+          const data = e.target?.result as string
+          importData(data)
+          toast({
+            title: "Data Imported",
+            description: "Your profile data has been imported successfully!",
+          })
+        } catch (error) {
+          toast({
+            title: "Import Failed",
+            description: "Failed to import data. Please check the file format.",
+            variant: "destructive",
+          })
+        }
+      }
+      reader.readAsText(file)
     }
-    setIsBadgeDialogOpen(false)
   }
 
-  const deleteBadge = (id) => {
-    setProfileData({
-      ...profileData,
-      badges: profileData.badges.filter((badge) => badge.id !== id),
-    })
+  const handleReset = () => {
+    if (confirm("Are you sure you want to reset all data to defaults? This cannot be undone.")) {
+      resetToDefaults()
+      toast({
+        title: "Data Reset",
+        description: "All data has been reset to default values.",
+      })
+    }
   }
 
   // Filter posts by section
@@ -416,20 +182,26 @@ export default function AdminDashboard() {
               </div>
             </div>
             <div className="flex items-center gap-3">
-              <Button onClick={handlePreview} variant="outline" className="gap-2">
-                <Eye className="w-4 h-4" />
-                Preview
-              </Button>
               <Button onClick={handleSave} className="gap-2 bg-blue-600 hover:bg-blue-700">
                 <Save className="w-4 h-4" />
                 Save Changes
               </Button>
-              <Link href="/">
-                <Button variant="ghost" className="gap-2">
-                  <Globe className="w-4 h-4" />
-                  View Site
+              <Button onClick={handleExport} variant="outline" className="gap-2">
+                <Download className="w-4 h-4" />
+                Export
+              </Button>
+              <div className="relative">
+                <input
+                  type="file"
+                  accept=".json"
+                  onChange={handleImport}
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                />
+                <Button variant="outline" className="gap-2">
+                  <Upload className="w-4 h-4" />
+                  Import
                 </Button>
-              </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -490,7 +262,7 @@ export default function AdminDashboard() {
                         <Input
                           id="profileImage"
                           value={profileData.profileImage}
-                          onChange={(e) => setProfileData({ ...profileData, profileImage: e.target.value })}
+                          onChange={(e) => updateProfileData({ profileImage: e.target.value })}
                           placeholder="https://example.com/image.jpg"
                         />
                         <Button variant="outline" className="gap-2">
@@ -506,12 +278,7 @@ export default function AdminDashboard() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() =>
-                          setProfileData({
-                            ...profileData,
-                            profileImage: "/placeholder.svg?height=192&width=192",
-                          })
-                        }
+                        onClick={() => updateProfileData({ profileImage: "/placeholder.svg?height=192&width=192" })}
                       >
                         Use Default
                       </Button>
@@ -519,8 +286,7 @@ export default function AdminDashboard() {
                         variant="outline"
                         size="sm"
                         onClick={() =>
-                          setProfileData({
-                            ...profileData,
+                          updateProfileData({
                             profileImage:
                               "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&h=400&fit=crop&crop=face",
                           })
@@ -533,6 +299,7 @@ export default function AdminDashboard() {
                 </div>
               </Card>
 
+              {/* Basic Information */}
               <Card className="p-6">
                 <h2 className="text-2xl font-bold mb-6">Basic Information</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
@@ -542,7 +309,7 @@ export default function AdminDashboard() {
                       <Input
                         id="name"
                         value={profileData.name}
-                        onChange={(e) => setProfileData({ ...profileData, name: e.target.value })}
+                        onChange={(e) => updateProfileData({ name: e.target.value })}
                       />
                     </div>
                     <div>
@@ -550,7 +317,7 @@ export default function AdminDashboard() {
                       <Input
                         id="title"
                         value={profileData.title}
-                        onChange={(e) => setProfileData({ ...profileData, title: e.target.value })}
+                        onChange={(e) => updateProfileData({ title: e.target.value })}
                       />
                     </div>
                     <div>
@@ -559,7 +326,7 @@ export default function AdminDashboard() {
                         id="bio"
                         rows={4}
                         value={profileData.bio}
-                        onChange={(e) => setProfileData({ ...profileData, bio: e.target.value })}
+                        onChange={(e) => updateProfileData({ bio: e.target.value })}
                       />
                     </div>
                   </div>
@@ -570,12 +337,7 @@ export default function AdminDashboard() {
                         id="email"
                         type="email"
                         value={profileData.contact.email}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            contact: { ...profileData.contact, email: e.target.value },
-                          })
-                        }
+                        onChange={(e) => updateContact({ email: e.target.value })}
                       />
                     </div>
                     <div>
@@ -583,12 +345,7 @@ export default function AdminDashboard() {
                       <Input
                         id="phone"
                         value={profileData.contact.phone}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            contact: { ...profileData.contact, phone: e.target.value },
-                          })
-                        }
+                        onChange={(e) => updateContact({ phone: e.target.value })}
                       />
                     </div>
                     <div>
@@ -596,12 +353,7 @@ export default function AdminDashboard() {
                       <Input
                         id="location"
                         value={profileData.contact.location}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            contact: { ...profileData.contact, location: e.target.value },
-                          })
-                        }
+                        onChange={(e) => updateContact({ location: e.target.value })}
                       />
                     </div>
                     <div>
@@ -609,12 +361,7 @@ export default function AdminDashboard() {
                       <Input
                         id="availability"
                         value={profileData.contact.availability}
-                        onChange={(e) =>
-                          setProfileData({
-                            ...profileData,
-                            contact: { ...profileData.contact, availability: e.target.value },
-                          })
-                        }
+                        onChange={(e) => updateContact({ availability: e.target.value })}
                       />
                     </div>
                   </div>
@@ -640,7 +387,15 @@ export default function AdminDashboard() {
                         socialLink={
                           editingSocial !== null ? profileData.socialLinks.find((s) => s.id === editingSocial) : null
                         }
-                        onSave={addSocialLink}
+                        onSave={(link) => {
+                          if (editingSocial !== null) {
+                            updateSocialLink(editingSocial, link)
+                          } else {
+                            addSocialLink(link)
+                          }
+                          setIsSocialDialogOpen(false)
+                          setEditingSocial(null)
+                        }}
                         onCancel={() => {
                           setIsSocialDialogOpen(false)
                           setEditingSocial(null)
@@ -700,7 +455,15 @@ export default function AdminDashboard() {
                       </DialogHeader>
                       <BadgeForm
                         badge={editingBadge !== null ? profileData.badges.find((b) => b.id === editingBadge) : null}
-                        onSave={addBadge}
+                        onSave={(badge) => {
+                          if (editingBadge !== null) {
+                            updateBadge(editingBadge, badge)
+                          } else {
+                            addBadge(badge)
+                          }
+                          setIsBadgeDialogOpen(false)
+                          setEditingBadge(null)
+                        }}
                         onCancel={() => {
                           setIsBadgeDialogOpen(false)
                           setEditingBadge(null)
@@ -757,8 +520,18 @@ export default function AdminDashboard() {
                         </DialogTitle>
                       </DialogHeader>
                       <ExperienceForm
-                        experience={editingExperience !== null ? experience[editingExperience] : null}
-                        onSave={addExperience}
+                        experience={
+                          editingExperience !== null ? experience.find((e) => e.id === editingExperience) : null
+                        }
+                        onSave={(exp) => {
+                          if (editingExperience !== null) {
+                            updateExperience(editingExperience, exp)
+                          } else {
+                            addExperience(exp)
+                          }
+                          setIsExperienceDialogOpen(false)
+                          setEditingExperience(null)
+                        }}
                         onCancel={() => {
                           setIsExperienceDialogOpen(false)
                           setEditingExperience(null)
@@ -768,8 +541,8 @@ export default function AdminDashboard() {
                   </Dialog>
                 </div>
                 <div className="space-y-4">
-                  {experience.map((exp, index) => (
-                    <Card key={index} className="p-4 border-l-4 border-blue-500">
+                  {experience.map((exp) => (
+                    <Card key={exp.id} className="p-4 border-l-4 border-blue-500">
                       <div className="flex items-start justify-between">
                         <div className="flex gap-4 flex-1">
                           <Avatar className="w-12 h-12 ring-2 ring-white shadow-md">
@@ -798,13 +571,13 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setEditingExperience(index)
+                              setEditingExperience(exp.id)
                               setIsExperienceDialogOpen(true)
                             }}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => deleteExperience(index)}>
+                          <Button size="sm" variant="outline" onClick={() => deleteExperience(exp.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
@@ -832,8 +605,16 @@ export default function AdminDashboard() {
                         <DialogTitle>{editingEducation !== null ? "Edit Education" : "Add New Education"}</DialogTitle>
                       </DialogHeader>
                       <EducationForm
-                        education={editingEducation !== null ? education[editingEducation] : null}
-                        onSave={addEducation}
+                        education={editingEducation !== null ? education.find((e) => e.id === editingEducation) : null}
+                        onSave={(edu) => {
+                          if (editingEducation !== null) {
+                            updateEducation(editingEducation, edu)
+                          } else {
+                            addEducation(edu)
+                          }
+                          setIsEducationDialogOpen(false)
+                          setEditingEducation(null)
+                        }}
                         onCancel={() => {
                           setIsEducationDialogOpen(false)
                           setEditingEducation(null)
@@ -843,8 +624,8 @@ export default function AdminDashboard() {
                   </Dialog>
                 </div>
                 <div className="space-y-4">
-                  {education.map((edu, index) => (
-                    <Card key={index} className="p-4 border-l-4 border-purple-500">
+                  {education.map((edu) => (
+                    <Card key={edu.id} className="p-4 border-l-4 border-purple-500">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="font-bold text-lg">{edu.degree}</h3>
@@ -866,13 +647,13 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setEditingEducation(index)
+                              setEditingEducation(edu.id)
                               setIsEducationDialogOpen(true)
                             }}
                           >
                             <Edit className="w-4 h-4" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => deleteEducation(index)}>
+                          <Button size="sm" variant="outline" onClick={() => deleteEducation(edu.id)}>
                             <Trash2 className="w-4 h-4" />
                           </Button>
                         </div>
@@ -900,8 +681,16 @@ export default function AdminDashboard() {
                         <DialogTitle>{editingSkill !== null ? "Edit Skill" : "Add New Skill"}</DialogTitle>
                       </DialogHeader>
                       <SkillForm
-                        skill={editingSkill !== null ? skills[editingSkill] : null}
-                        onSave={addSkill}
+                        skill={editingSkill !== null ? skills.find((s) => s.id === editingSkill) : null}
+                        onSave={(skill) => {
+                          if (editingSkill !== null) {
+                            updateSkill(editingSkill, skill)
+                          } else {
+                            addSkill(skill)
+                          }
+                          setIsSkillDialogOpen(false)
+                          setEditingSkill(null)
+                        }}
                         onCancel={() => {
                           setIsSkillDialogOpen(false)
                           setEditingSkill(null)
@@ -911,8 +700,8 @@ export default function AdminDashboard() {
                   </Dialog>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {skills.map((skill, index) => (
-                    <Card key={index} className="p-4">
+                  {skills.map((skill) => (
+                    <Card key={skill.id} className="p-4">
                       <div className="flex items-center justify-between mb-2">
                         <div className="flex items-center gap-2">
                           <span className="font-medium">{skill.name}</span>
@@ -925,13 +714,13 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setEditingSkill(index)
+                              setEditingSkill(skill.id)
                               setIsSkillDialogOpen(true)
                             }}
                           >
                             <Edit className="w-3 h-3" />
                           </Button>
-                          <Button size="sm" variant="outline" onClick={() => deleteSkill(index)}>
+                          <Button size="sm" variant="outline" onClick={() => deleteSkill(skill.id)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
@@ -967,7 +756,15 @@ export default function AdminDashboard() {
                       </DialogHeader>
                       <PostForm
                         post={editingPost !== null ? posts.find((p) => p.id === editingPost) : null}
-                        onSave={addPost}
+                        onSave={(post) => {
+                          if (editingPost !== null) {
+                            updatePost(editingPost, post)
+                          } else {
+                            addPost(post)
+                          }
+                          setIsPostDialogOpen(false)
+                          setEditingPost(null)
+                        }}
                         onCancel={() => {
                           setIsPostDialogOpen(false)
                           setEditingPost(null)
@@ -1098,17 +895,17 @@ export default function AdminDashboard() {
                         </DialogTitle>
                       </DialogHeader>
                       <NavigationForm
-                        navigation={editingNavigation !== null ? navigationPages[editingNavigation] : null}
+                        navigation={
+                          editingNavigation !== null ? navigationPages.find((p) => p.id === editingNavigation) : null
+                        }
                         onSave={(nav) => {
                           if (editingNavigation !== null) {
-                            const updated = [...navigationPages]
-                            updated[editingNavigation] = nav
-                            setNavigationPages(updated)
-                            setEditingNavigation(null)
+                            updateNavigationPage(editingNavigation, nav)
                           } else {
-                            setNavigationPages([...navigationPages, nav])
+                            addNavigationPage(nav)
                           }
                           setIsNavigationDialogOpen(false)
+                          setEditingNavigation(null)
                         }}
                         onCancel={() => {
                           setIsNavigationDialogOpen(false)
@@ -1119,8 +916,8 @@ export default function AdminDashboard() {
                   </Dialog>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {navigationPages.map((page, index) => (
-                    <Card key={index} className="p-4">
+                  {navigationPages.map((page) => (
+                    <Card key={page.id} className="p-4">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <h3 className="font-bold">{page.title}</h3>
@@ -1135,19 +932,13 @@ export default function AdminDashboard() {
                             size="sm"
                             variant="outline"
                             onClick={() => {
-                              setEditingNavigation(index)
+                              setEditingNavigation(page.id)
                               setIsNavigationDialogOpen(true)
                             }}
                           >
                             <Edit className="w-3 h-3" />
                           </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => {
-                              setNavigationPages(navigationPages.filter((_, i) => i !== index))
-                            }}
-                          >
+                          <Button size="sm" variant="outline" onClick={() => deleteNavigationPage(page.id)}>
                             <Trash2 className="w-3 h-3" />
                           </Button>
                         </div>
@@ -1165,7 +956,7 @@ export default function AdminDashboard() {
 }
 
 // Form Components
-function ExperienceForm({ experience, onSave, onCancel }) {
+function ExperienceForm({ experience, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     experience || {
       title: "",
@@ -1266,7 +1057,7 @@ function ExperienceForm({ experience, onSave, onCancel }) {
   )
 }
 
-function EducationForm({ education, onSave, onCancel }) {
+function EducationForm({ education, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     education || {
       degree: "",
@@ -1290,10 +1081,10 @@ function EducationForm({ education, onSave, onCancel }) {
     }
   }
 
-  const removeAchievement = (index) => {
+  const removeAchievement = (index: number) => {
     setFormData({
       ...formData,
-      achievements: formData.achievements.filter((_, i) => i !== index),
+      achievements: formData.achievements.filter((_: any, i: number) => i !== index),
     })
   }
 
@@ -1357,7 +1148,7 @@ function EducationForm({ education, onSave, onCancel }) {
           </Button>
         </div>
         <div className="flex flex-wrap gap-2">
-          {formData.achievements.map((achievement, index) => (
+          {formData.achievements.map((achievement: string, index: number) => (
             <Badge key={index} variant="secondary" className="gap-1">
               {achievement}
               <button onClick={() => removeAchievement(index)}>×</button>
@@ -1375,7 +1166,7 @@ function EducationForm({ education, onSave, onCancel }) {
   )
 }
 
-function SkillForm({ skill, onSave, onCancel }) {
+function SkillForm({ skill, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     skill || {
       name: "",
@@ -1432,7 +1223,7 @@ function SkillForm({ skill, onSave, onCancel }) {
   )
 }
 
-function PostForm({ post, onSave, onCancel }) {
+function PostForm({ post, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     post || {
       title: "",
@@ -1530,7 +1321,7 @@ function PostForm({ post, onSave, onCancel }) {
   )
 }
 
-function NavigationForm({ navigation, onSave, onCancel }) {
+function NavigationForm({ navigation, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     navigation || {
       title: "",
@@ -1610,7 +1401,7 @@ function NavigationForm({ navigation, onSave, onCancel }) {
   )
 }
 
-function SocialLinkForm({ socialLink, onSave, onCancel }) {
+function SocialLinkForm({ socialLink, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     socialLink || {
       name: "",
@@ -1704,7 +1495,7 @@ function SocialLinkForm({ socialLink, onSave, onCancel }) {
   )
 }
 
-function BadgeForm({ badge, onSave, onCancel }) {
+function BadgeForm({ badge, onSave, onCancel }: any) {
   const [formData, setFormData] = useState(
     badge || {
       text: "",

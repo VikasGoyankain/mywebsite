@@ -1,3 +1,5 @@
+"use client"
+
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -26,152 +28,43 @@ import {
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
+import { useProfileStore } from "@/lib/profile-store"
+
+// Icon mapping for dynamic icons
+const iconMap = {
+  Instagram,
+  Twitter,
+  Linkedin,
+  Send,
+  Mail,
+  Phone,
+  MessageSquare,
+  FileText,
+  Users,
+  Gavel,
+  Globe,
+  GraduationCap,
+  Heart,
+  Star,
+  Award,
+  Briefcase,
+  BookOpen,
+  Facebook: Users, // Using Users as fallback for Facebook
+  Youtube: Users, // Using Users as fallback for Youtube
+  Github: Users, // Using Users as fallback for Github
+}
 
 export default function ModernProfile() {
-  const socialLinks = [
-    { name: "Instagram", icon: Instagram, href: "https://www.instagram.com/vikasgoyanka.in/", color: "text-pink-600" },
-    {
-      name: "LinkedIn",
-      icon: Linkedin,
-      href: "https://in.linkedin.com/in/vikas-goyanka-1a483a342",
-      color: "text-blue-700",
-    },
-    { name: "Telegram", icon: Send, href: "https://t.me/Vikasgoyanka_in", color: "text-blue-500" },
-    { name: "X (Twitter)", icon: Twitter, href: "https://x.com/vikasgoyanka_in", color: "text-gray-900" },
-  ]
+  const { profileData, experience, education, skills, posts, navigationPages } = useProfileStore()
 
-  const navigationPages = [
-    {
-      title: "Research Studies",
-      description: "Constitutional Law & Policy Research",
-      icon: FileText,
-      href: "/research",
-      color: "bg-blue-500",
-    },
-    {
-      title: "Contact Me",
-      description: "Get in touch for consultations",
-      icon: MessageSquare,
-      href: "/contact",
-      color: "bg-green-500",
-    },
-    {
-      title: "Speaking Events",
-      description: "Book me for conferences",
-      icon: Users,
-      href: "/speaking",
-      color: "bg-orange-500",
-    },
-    {
-      title: "Legal Aid",
-      description: "Free consultation program",
-      icon: Gavel,
-      href: "/legal-aid",
-      color: "bg-red-500",
-    },
-  ]
+  // Get posts by section
+  const recentWorkPosts = posts.filter((post) => post.section === "recent-work")
+  const articlePosts = posts.filter((post) => post.section === "articles")
+  const achievementPosts = posts.filter((post) => post.section === "achievements")
 
-  const experience = [
-    {
-      title: "Legal Research Intern",
-      company: "Supreme Court of India",
-      duration: "Jan 2024 - Present",
-      location: "New Delhi",
-      description:
-        "Conducting research on constitutional law cases, drafting legal briefs, and assisting senior advocates in landmark cases.",
-      logo: "/placeholder.svg?height=48&width=48",
-      type: "Internship",
-    },
-    {
-      title: "Youth Wing Secretary",
-      company: "Indian National Congress",
-      duration: "Mar 2023 - Present",
-      location: "Delhi Pradesh",
-      description:
-        "Leading youth engagement initiatives, organizing policy discussions, and coordinating grassroots campaigns.",
-      logo: "/placeholder.svg?height=48&width=48",
-      type: "Leadership",
-    },
-    {
-      title: "Legal Aid Coordinator",
-      company: "Delhi Legal Services Authority",
-      duration: "Jun 2022 - Dec 2023",
-      location: "New Delhi",
-      description:
-        "Coordinated free legal aid camps, provided legal literacy programs, and assisted in pro bono cases.",
-      logo: "/placeholder.svg?height=48&width=48",
-      type: "Volunteer",
-    },
-  ]
-
-  const education = [
-    {
-      degree: "Bachelor of Laws (LLB)",
-      institution: "National Law University Delhi",
-      year: "2021 - 2024",
-      grade: "CGPA: 8.7/10",
-      specialization: "Constitutional Law & Human Rights",
-      achievements: ["Dean's List 2023", "Best Moot Court Performance", "Research Excellence Award"],
-    },
-    {
-      degree: "Bachelor of Arts (Political Science)",
-      institution: "University of Delhi",
-      year: "2018 - 2021",
-      grade: "First Class (78%)",
-      specialization: "Public Policy & Governance",
-      achievements: ["Gold Medalist", "Student Union President", "Debate Society Captain"],
-    },
-  ]
-
-  const skills = [
-    { name: "Constitutional Law", level: 95, category: "Legal" },
-    { name: "Criminal Law", level: 88, category: "Legal" },
-    { name: "Public Policy Analysis", level: 92, category: "Policy" },
-    { name: "Legal Research", level: 96, category: "Research" },
-    { name: "Public Speaking", level: 94, category: "Communication" },
-    { name: "Campaign Management", level: 85, category: "Political" },
-    { name: "Community Organizing", level: 90, category: "Social" },
-    { name: "Legal Writing", level: 93, category: "Communication" },
-  ]
-
-  const posts = [
-    {
-      image: "/placeholder.svg?height=400&width=400",
-      title: "Legal Aid Camp Success",
-      date: "2 days ago",
-      category: "Social Work",
-    },
-    {
-      image: "/placeholder.svg?height=400&width=400",
-      title: "Youth Leadership Summit",
-      date: "1 week ago",
-      category: "Politics",
-    },
-    {
-      image: "/placeholder.svg?height=400&width=400",
-      title: "Constitutional Law Seminar",
-      date: "2 weeks ago",
-      category: "Education",
-    },
-    {
-      image: "/placeholder.svg?height=400&width=400",
-      title: "Policy Research Presentation",
-      date: "3 weeks ago",
-      category: "Research",
-    },
-    {
-      image: "/placeholder.svg?height=400&width=400",
-      title: "Community Outreach Program",
-      date: "1 month ago",
-      category: "Social Work",
-    },
-    {
-      image: "/placeholder.svg?height=400&width=400",
-      title: "Moot Court Competition",
-      date: "1 month ago",
-      category: "Legal",
-    },
-  ]
+  // Current active tab (you can make this stateful if needed)
+  const activeTab = "recent-work"
+  const currentPosts = recentWorkPosts
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -181,34 +74,40 @@ export default function ModernProfile() {
           <div className="px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-3">
               <Avatar className="w-10 h-10 ring-2 ring-blue-500/20">
-                <AvatarImage src="/placeholder.svg?height=40&width=40" alt="Vikas Goyanka" />
+                <AvatarImage src={profileData.profileImage || "/placeholder.svg"} alt={profileData.name} />
                 <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
-                  VG
+                  {profileData.name
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")}
                 </AvatarFallback>
               </Avatar>
               <div className="hidden sm:block">
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900">Vikas Goyanka</span>
+                  <span className="font-bold text-gray-900">{profileData.name}</span>
                   <Verified className="w-4 h-4 text-blue-500" />
                 </div>
-                <span className="text-sm text-gray-600">Law Student & Political Activist</span>
+                <span className="text-sm text-gray-600">{profileData.title}</span>
               </div>
             </div>
 
             {/* Desktop Social Links */}
             <div className="hidden md:flex items-center gap-2">
-              {socialLinks.map((social, index) => (
-                <Link
-                  key={index}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`p-2.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-110 ${social.color}`}
-                  aria-label={`Visit ${social.name} profile`}
-                >
-                  <social.icon className="w-4 h-4" />
-                </Link>
-              ))}
+              {profileData.socialLinks.map((social, index) => {
+                const IconComponent = iconMap[social.icon as keyof typeof iconMap]
+                return (
+                  <Link
+                    key={social.id}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`p-2.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-110 ${social.color}`}
+                    aria-label={`Visit ${social.name} profile`}
+                  >
+                    {IconComponent && <IconComponent className="w-4 h-4" />}
+                  </Link>
+                )
+              })}
             </div>
 
             {/* Mobile Menu Button */}
@@ -226,18 +125,21 @@ export default function ModernProfile() {
             <div className="flex flex-col lg:flex-row gap-8 mb-10">
               {/* Profile Picture & Contact */}
               <div className="flex flex-col items-center lg:items-start">
-                <div className="relative mb-8 group">
-                  <Avatar className="w-40 h-40 lg:w-48 lg:h-48 ring-4 ring-blue-500 ring-offset-4 transition-all duration-300 group-hover:ring-6 group-hover:ring-blue-400">
-                    <AvatarImage
-                      src="/placeholder.svg?height=192&width=192"
-                      alt="Vikas Goyanka - Law Student & Political Activist"
-                    />
-                    <AvatarFallback className="text-5xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white">
-                      VG
-                    </AvatarFallback>
-                  </Avatar>
-                  <div className="absolute -bottom-3 -right-3 bg-green-500 w-12 h-12 rounded-full border-4 border-white flex items-center justify-center shadow-lg animate-pulse">
-                    <div className="w-5 h-5 bg-white rounded-full"></div>
+                <div className="relative mb-8">
+                  <div className="w-40 h-40 lg:w-48 lg:h-48 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-blue-50 to-purple-50 p-1">
+                    <Avatar className="w-full h-full rounded-xl">
+                      <AvatarImage
+                        src={profileData.profileImage || "/placeholder.svg"}
+                        alt={`${profileData.name} - ${profileData.title}`}
+                        className="object-cover"
+                      />
+                      <AvatarFallback className="text-4xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-xl">
+                        {profileData.name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
                   </div>
                 </div>
 
@@ -249,26 +151,26 @@ export default function ModernProfile() {
                   </h3>
                   <div className="space-y-3 text-sm">
                     <a
-                      href="mailto:contact@vikasgoyanka.in"
+                      href={`mailto:${profileData.contact.email}`}
                       className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors group"
                     >
                       <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      <span>contact@vikasgoyanka.in</span>
+                      <span>{profileData.contact.email}</span>
                     </a>
                     <a
-                      href="tel:+917597441305"
+                      href={`tel:${profileData.contact.phone}`}
                       className="flex items-center gap-3 text-gray-700 hover:text-green-600 transition-colors group"
                     >
                       <Phone className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      <span>+91 7597441305</span>
+                      <span>{profileData.contact.phone}</span>
                     </a>
                     <div className="flex items-center gap-3 text-gray-700">
                       <MapPin className="w-4 h-4" />
-                      <span>New Delhi, India</span>
+                      <span>{profileData.contact.location}</span>
                     </div>
                     <div className="flex items-center gap-3 text-gray-700">
                       <Globe className="w-4 h-4" />
-                      <span>Available for consultations</span>
+                      <span>{profileData.contact.availability}</span>
                     </div>
                   </div>
                 </Card>
@@ -278,43 +180,29 @@ export default function ModernProfile() {
               <div className="flex-1">
                 <div className="mb-6">
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 flex items-center gap-3">
-                    Vikas Goyanka
+                    {profileData.name}
                     <Verified className="w-7 h-7 text-blue-500" />
                   </h1>
                   <div className="flex flex-wrap gap-2 mb-4">
-                    <Badge className="bg-blue-100 text-blue-800 px-3 py-1">
-                      <GraduationCap className="w-4 h-4 mr-1" />
-                      Law Student
-                    </Badge>
-                    <Badge className="bg-purple-100 text-purple-800 px-3 py-1">
-                      <Gavel className="w-4 h-4 mr-1" />
-                      Legal Researcher
-                    </Badge>
-                    <Badge className="bg-green-100 text-green-800 px-3 py-1">
-                      <Users className="w-4 h-4 mr-1" />
-                      Political Activist
-                    </Badge>
-                    <Badge className="bg-orange-100 text-orange-800 px-3 py-1">
-                      <Heart className="w-4 h-4 mr-1" />
-                      Social Worker
-                    </Badge>
+                    {profileData.badges.map((badge) => {
+                      const IconComponent = iconMap[badge.icon as keyof typeof iconMap]
+                      return (
+                        <Badge key={badge.id} className={`${badge.color} px-3 py-1`}>
+                          {IconComponent && <IconComponent className="w-4 h-4 mr-1" />}
+                          {badge.text}
+                        </Badge>
+                      )
+                    })}
                   </div>
                 </div>
 
                 <div className="prose prose-lg text-gray-700 mb-8">
-                  <p className="text-lg leading-relaxed">
-                    Passionate advocate for constitutional rights and social justice. Currently pursuing LLB while
-                    actively engaging in policy research and grassroots political work. Dedicated to bridging the gap
-                    between legal theory and practical governance to create meaningful change in Indian society.
-                  </p>
-                  <p className="text-base text-gray-600 mt-4">
-                    🏛️ Specializing in Constitutional Law & Human Rights
-                    <br />📊 Policy Research & Analysis
-                    <br />
-                    🗳️ Youth Political Engagement
-                    <br />
-                    ⚖️ Legal Aid & Community Service
-                  </p>
+                  <p className="text-lg leading-relaxed">{profileData.bio}</p>
+                  <div className="text-base text-gray-600 mt-4">
+                    {profileData.specializations.map((spec, index) => (
+                      <div key={index}>{spec}</div>
+                    ))}
+                  </div>
                   {/* Subscribe Button */}
                   <div className="mt-8">
                     <Button className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group">
@@ -325,26 +213,30 @@ export default function ModernProfile() {
                 </div>
               </div>
             </div>
+
             {/* Navigation Pages */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-              {navigationPages.map((page, index) => (
-                <Link key={index} href={page.href} className="group">
-                  <Card className="p-6 text-center hover:shadow-2xl transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-2 border-0 bg-white/90 backdrop-blur-sm overflow-hidden relative">
-                    <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-                    <div className="relative z-10">
-                      <div
-                        className={`w-14 h-14 ${page.color} rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-125 transition-all duration-300 shadow-lg group-hover:shadow-xl`}
-                      >
-                        <page.icon className="w-7 h-7 text-white" />
+              {navigationPages.map((page) => {
+                const IconComponent = iconMap[page.icon as keyof typeof iconMap]
+                return (
+                  <Link key={page.id} href={page.href} className="group">
+                    <Card className="p-6 text-center hover:shadow-2xl transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-2 border-0 bg-white/90 backdrop-blur-sm overflow-hidden relative">
+                      <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                      <div className="relative z-10">
+                        <div
+                          className={`w-14 h-14 ${page.color} rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-125 transition-all duration-300 shadow-lg group-hover:shadow-xl`}
+                        >
+                          {IconComponent && <IconComponent className="w-7 h-7 text-white" />}
+                        </div>
+                        <h3 className="font-semibold text-gray-900 text-sm mb-2 group-hover:text-gray-800">
+                          {page.title}
+                        </h3>
+                        <p className="text-xs text-gray-600 group-hover:text-gray-700">{page.description}</p>
                       </div>
-                      <h3 className="font-semibold text-gray-900 text-sm mb-2 group-hover:text-gray-800">
-                        {page.title}
-                      </h3>
-                      <p className="text-xs text-gray-600 group-hover:text-gray-700">{page.description}</p>
-                    </div>
-                  </Card>
-                </Link>
-              ))}
+                    </Card>
+                  </Link>
+                )
+              })}
             </div>
           </div>
 
@@ -358,11 +250,11 @@ export default function ModernProfile() {
                   Professional Experience
                 </h2>
                 <div className="space-y-6">
-                  {experience.map((exp, index) => (
-                    <div key={index} className="relative">
+                  {experience.map((exp) => (
+                    <div key={exp.id} className="relative">
                       <div className="flex gap-4 p-5 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-purple-50 transition-all duration-300 border border-gray-100">
                         <Avatar className="w-14 h-14 ring-2 ring-white shadow-md">
-                          <AvatarImage src={exp.logo || "/placeholder.svg"} />
+                          <AvatarImage src={exp.image || "/placeholder.svg"} />
                           <AvatarFallback className="bg-blue-600 text-white font-bold">
                             {exp.company
                               .split(" ")
@@ -408,8 +300,8 @@ export default function ModernProfile() {
                   Education
                 </h2>
                 <div className="space-y-6">
-                  {education.map((edu, index) => (
-                    <div key={index} className="relative">
+                  {education.map((edu) => (
+                    <div key={edu.id} className="relative">
                       <div className="border-l-4 border-purple-500 pl-6 pb-6">
                         <div className="absolute -left-2 top-0 w-4 h-4 bg-purple-500 rounded-full"></div>
                         <h3 className="font-bold text-gray-900 mb-1">{edu.degree}</h3>
@@ -437,28 +329,132 @@ export default function ModernProfile() {
               <Card className="p-6 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
                 <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
                   <Star className="w-6 h-6 text-yellow-500" />
-                  Core Skills
+                  Core Competencies
                 </h2>
-                <div className="space-y-4">
-                  {skills.map((skill, index) => (
-                    <div key={index}>
-                      <div className="flex justify-between items-center mb-2">
-                        <span className="font-medium text-gray-900">{skill.name}</span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="outline" className="text-xs">
-                            {skill.category}
-                          </Badge>
-                          <span className="text-sm text-gray-600">{skill.level}%</span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div
-                          className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-500"
-                          style={{ width: `${skill.level}%` }}
-                        ></div>
-                      </div>
+
+                {/* Skills by Category */}
+                <div className="space-y-6">
+                  {/* Legal Knowledge */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                      Legal Knowledge
+                    </h3>
+                    <div className="space-y-3">
+                      {skills
+                        .filter((skill) => skill.category === "Legal")
+                        .map((skill) => (
+                          <div key={skill.id} className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-900">{skill.name}</span>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < Math.round(skill.level / 20) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
                     </div>
-                  ))}
+                  </div>
+
+                  {/* Research Skills */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                      Research & Analysis
+                    </h3>
+                    <div className="space-y-3">
+                      {skills
+                        .filter((skill) => skill.category === "Research")
+                        .map((skill) => (
+                          <div key={skill.id} className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-900">{skill.name}</span>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < Math.round(skill.level / 20) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Communication Skills */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                      Communication & Leadership
+                    </h3>
+                    <div className="space-y-3">
+                      {skills
+                        .filter((skill) => skill.category === "Communication")
+                        .map((skill) => (
+                          <div key={skill.id} className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-900">{skill.name}</span>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < Math.round(skill.level / 20) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+
+                  {/* Other Skills */}
+                  <div>
+                    <h3 className="text-sm font-semibold text-gray-700 mb-3 uppercase tracking-wide">
+                      Other Expertise
+                    </h3>
+                    <div className="space-y-3">
+                      {skills
+                        .filter((skill) => !["Legal", "Research", "Communication"].includes(skill.category))
+                        .map((skill) => (
+                          <div key={skill.id} className="flex items-center justify-between">
+                            <span className="text-sm font-medium text-gray-900">{skill.name}</span>
+                            <div className="flex items-center gap-1">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-3 h-3 ${
+                                    i < Math.round(skill.level / 20) ? "text-yellow-400 fill-current" : "text-gray-300"
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Currently Learning */}
+                <div className="mt-6 pt-4 border-t border-gray-200">
+                  <h3 className="text-sm font-semibold text-gray-700 mb-2 uppercase tracking-wide">
+                    Currently Learning
+                  </h3>
+                  <div className="flex flex-wrap gap-2">
+                    <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                      Figma
+                    </Badge>
+                    <Badge variant="outline" className="text-xs bg-green-50 text-green-700 border-green-200">
+                      Next.js
+                    </Badge>
+                    <Badge variant="outline" className="text-xs bg-purple-50 text-purple-700 border-purple-200">
+                      Advanced Constitutional Law
+                    </Badge>
+                  </div>
                 </div>
               </Card>
             </div>
@@ -469,22 +465,22 @@ export default function ModernProfile() {
             <div className="flex items-center justify-center gap-8 mb-8">
               <button className="flex items-center gap-2 text-gray-900 border-t-2 border-gray-900 pt-4 px-4">
                 <div className="w-4 h-4 border-2 border-gray-900"></div>
-                <span className="font-semibold">RECENT WORK</span>
+                <span className="font-semibold">RECENT WORK ({recentWorkPosts.length})</span>
               </button>
               <button className="flex items-center gap-2 text-gray-500 pt-4 px-4 hover:text-gray-700">
                 <BookOpen className="w-4 h-4" />
-                <span className="font-medium">ARTICLES</span>
+                <span className="font-medium">ARTICLES ({articlePosts.length})</span>
               </button>
               <button className="flex items-center gap-2 text-gray-500 pt-4 px-4 hover:text-gray-700">
                 <Award className="w-4 h-4" />
-                <span className="font-medium">ACHIEVEMENTS</span>
+                <span className="font-medium">ACHIEVEMENTS ({achievementPosts.length})</span>
               </button>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {posts.map((post, index) => (
+              {currentPosts.map((post) => (
                 <Card
-                  key={index}
+                  key={post.id}
                   className="group cursor-pointer overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300"
                 >
                   <div className="relative aspect-square">
@@ -500,7 +496,8 @@ export default function ModernProfile() {
                   </div>
                   <div className="p-4">
                     <h3 className="font-semibold text-gray-900 mb-2">{post.title}</h3>
-                    <p className="text-sm text-gray-600">{post.date}</p>
+                    <p className="text-sm text-gray-600 mb-2">{post.date}</p>
+                    {post.description && <p className="text-xs text-gray-500">{post.description}</p>}
                   </div>
                 </Card>
               ))}
@@ -515,12 +512,17 @@ export default function ModernProfile() {
               <div className="md:col-span-2">
                 <div className="flex items-center gap-3 mb-4">
                   <Avatar className="w-12 h-12">
-                    <AvatarImage src="/placeholder.svg?height=48&width=48" />
-                    <AvatarFallback className="bg-blue-600 text-white font-bold">VG</AvatarFallback>
+                    <AvatarImage src={profileData.profileImage || "/placeholder.svg"} />
+                    <AvatarFallback className="bg-blue-600 text-white font-bold">
+                      {profileData.name
+                        .split(" ")
+                        .map((n) => n[0])
+                        .join("")}
+                    </AvatarFallback>
                   </Avatar>
                   <div>
-                    <h3 className="text-xl font-bold">Vikas Goyanka</h3>
-                    <p className="text-gray-300">Law Student & Political Activist</p>
+                    <h3 className="text-xl font-bold">{profileData.name}</h3>
+                    <p className="text-gray-300">{profileData.title}</p>
                   </div>
                 </div>
                 <p className="text-gray-300 mb-4 max-w-md">
@@ -528,15 +530,18 @@ export default function ModernProfile() {
                   advocacy and political engagement.
                 </p>
                 <div className="flex gap-4">
-                  {socialLinks.map((social, index) => (
-                    <Link
-                      key={index}
-                      href={social.href}
-                      className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
-                    >
-                      <social.icon className="w-5 h-5" />
-                    </Link>
-                  ))}
+                  {profileData.socialLinks.map((social) => {
+                    const IconComponent = iconMap[social.icon as keyof typeof iconMap]
+                    return (
+                      <Link
+                        key={social.id}
+                        href={social.href}
+                        className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                      >
+                        {IconComponent && <IconComponent className="w-5 h-5" />}
+                      </Link>
+                    )
+                  })}
                 </div>
               </div>
 
@@ -595,8 +600,8 @@ export default function ModernProfile() {
 
             <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
               <p>
-                &copy; {new Date().getFullYear()} Vikas Goyanka. All rights reserved. | Building a just society through
-                law and advocacy.
+                &copy; {new Date().getFullYear()} {profileData.name}. All rights reserved. | Building a just society
+                through law and advocacy.
               </p>
             </div>
           </div>
