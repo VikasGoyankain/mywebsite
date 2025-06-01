@@ -333,89 +333,94 @@ export default function ProfileManagement() {
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+    <div className="container mx-auto py-6 px-4 max-w-7xl">
+      {/* Header Section - More compact and responsive */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 bg-white/50 backdrop-blur-sm p-4 rounded-lg shadow-sm sticky top-0 z-50">
         <div>
-          <Button variant="outline" size="sm" asChild className="mb-2">
+          <Button variant="outline" size="sm" asChild className="mb-2 hover:bg-gray-50">
             <Link href="/admin" className="flex items-center">
               <ChevronLeft className="h-4 w-4 mr-1" />
               Back to Dashboard
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Profile Management</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Profile Management</h1>
+          <p className="text-sm text-muted-foreground mt-1">
             Update your personal information and contact details
           </p>
         </div>
         
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
           <Button 
             onClick={handleSaveChanges} 
             disabled={isSaving || !hasUnsavedChanges}
-            className="flex items-center gap-2"
+            className="flex items-center gap-2 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white shadow-sm hover:shadow-md transition-all duration-200"
           >
             {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Save Changes
           </Button>
           {lastSaved && (
-            <span className="text-xs text-muted-foreground">
+            <span className="text-xs text-muted-foreground bg-gray-50 px-2 py-1 rounded">
               Last saved: {new Date(lastSaved).toLocaleTimeString()}
             </span>
           )}
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Basic Profile Info */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Basic Information</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div>
-              <Label htmlFor="name">Name</Label>
-              <Input
-                id="name"
-                value={profileData.name}
-                onChange={(e) => updateProfileData({ name: e.target.value })}
-                placeholder="Your name"
-              />
-            </div>
-            <div>
-              <Label htmlFor="title">Title / Position</Label>
-              <Input
-                id="title"
-                value={profileData.title}
-                onChange={(e) => updateProfileData({ title: e.target.value })}
-                placeholder="e.g. Senior Legal Consultant"
-              />
-            </div>
-            <div>
-              <Label htmlFor="bio">Bio</Label>
-              <Textarea
-                id="bio"
-                rows={6}
-                value={profileData.bio}
-                onChange={(e) => updateProfileData({ bio: e.target.value })}
-                placeholder="Write a brief professional bio..."
-              />
-            </div>
-          </CardContent>
-        </Card>
+      {/* Main Grid - More responsive and adaptive */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-4">
+        {/* Left Column - Basic Info and Profile Image */}
+        <div className="lg:col-span-4 space-y-4">
+          {/* Basic Profile Info - More compact */}
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Basic Information</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div>
+                <Label htmlFor="name" className="text-sm">Name</Label>
+                <Input
+                  id="name"
+                  value={profileData.name}
+                  onChange={(e) => updateProfileData({ name: e.target.value })}
+                  placeholder="Your name"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="title" className="text-sm">Title / Position</Label>
+                <Input
+                  id="title"
+                  value={profileData.title}
+                  onChange={(e) => updateProfileData({ title: e.target.value })}
+                  placeholder="e.g. Senior Legal Consultant"
+                  className="mt-1"
+                />
+              </div>
+              <div>
+                <Label htmlFor="bio" className="text-sm">Bio</Label>
+                <Textarea
+                  id="bio"
+                  rows={4}
+                  value={profileData.bio}
+                  onChange={(e) => updateProfileData({ bio: e.target.value })}
+                  placeholder="Write a brief professional bio..."
+                  className="mt-1 resize-none"
+                />
+              </div>
+            </CardContent>
+          </Card>
 
-        {/* Additional Fields */}
-        <div className="flex flex-col gap-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Profile Image</CardTitle>
-              <CardDescription>Upload a profile image or provide an image URL</CardDescription>
+          {/* Profile Image - More compact */}
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Profile Image</CardTitle>
+              <CardDescription className="text-sm">Upload a profile image or provide an image URL</CardDescription>
             </CardHeader>
             <CardContent>
               <ProfilePhotoUploader
                 currentImageUrl={profileData.profileImage}
                 onImageSelect={(url, file) => {
                   if (file) {
-                    // Handle file upload to Upstash Redis
                     const formData = new FormData()
                     formData.append('file', file)
                     
@@ -440,7 +445,6 @@ export default function ProfileManagement() {
                       })
                     })
                   } else {
-                    // Direct URL update
                     updateProfileData({ profileImage: url })
                   }
                 }}
@@ -451,299 +455,317 @@ export default function ProfileManagement() {
             </CardContent>
           </Card>
 
-          {/* Contact Information */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Contact Information</CardTitle>
+          {/* Contact Information - More compact */}
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Contact Information</CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
+            <CardContent className="space-y-3">
               <div>
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email" className="text-sm">Email</Label>
                 <Input
                   id="email"
                   value={profileData.contact.email}
                   onChange={(e) => updateContact({ email: e.target.value })}
                   placeholder="your.email@example.com"
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="phone">Phone</Label>
+                <Label htmlFor="phone" className="text-sm">Phone</Label>
                 <Input
                   id="phone"
                   value={profileData.contact.phone}
                   onChange={(e) => updateContact({ phone: e.target.value })}
                   placeholder="+1234567890"
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="location">Location</Label>
+                <Label htmlFor="location" className="text-sm">Location</Label>
                 <Input
                   id="location"
                   value={profileData.contact.location}
                   onChange={(e) => updateContact({ location: e.target.value })}
                   placeholder="City, Country"
+                  className="mt-1"
                 />
               </div>
               <div>
-                <Label htmlFor="availability">Availability</Label>
+                <Label htmlFor="availability" className="text-sm">Availability</Label>
                 <Input
                   id="availability"
                   value={profileData.contact.availability}
                   onChange={(e) => updateContact({ availability: e.target.value })}
                   placeholder="e.g. Available for consultations"
+                  className="mt-1"
                 />
               </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Specializations */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Specializations</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex flex-wrap gap-2 mb-3">
-                {profileData.specializations.map((specialization, index) => (
-                  <Badge key={index} className="px-3 py-1 text-sm">
-                    {specialization}
-                    <button
-                      onClick={() =>
-                        updateProfileData({
-                          specializations: profileData.specializations.filter((_, i) => i !== index),
-                        })
-                      }
-                      className="ml-2 text-xs opacity-70 hover:opacity-100"
+        {/* Right Column - Specializations, Social Links, and Badges */}
+        <div className="lg:col-span-8 space-y-4">
+          {/* Specializations - More compact */}
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Specializations</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex flex-wrap gap-2">
+                  {profileData.specializations.map((specialization, index) => (
+                    <Badge 
+                      key={index} 
+                      className="px-3 py-1 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
                     >
-                      ×
-                    </button>
-                  </Badge>
-                ))}
-                {profileData.specializations.length === 0 && (
-                  <div className="text-muted-foreground italic">No specializations added yet.</div>
-                )}
-              </div>
-              <div className="flex gap-2">
-                <Input
-                  id="new-specialization"
-                  placeholder="Add a specialization..."
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      const value = e.currentTarget.value.trim()
+                      {specialization}
+                      <button
+                        onClick={() =>
+                          updateProfileData({
+                            specializations: profileData.specializations.filter((_, i) => i !== index),
+                          })
+                        }
+                        className="ml-2 text-xs opacity-70 hover:opacity-100"
+                      >
+                        ×
+                      </button>
+                    </Badge>
+                  ))}
+                  {profileData.specializations.length === 0 && (
+                    <div className="text-sm text-muted-foreground italic">No specializations added yet.</div>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    id="new-specialization"
+                    placeholder="Add a specialization..."
+                    className="flex-1"
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        const value = e.currentTarget.value.trim()
+                        if (value) {
+                          updateProfileData({
+                            specializations: [...profileData.specializations, value],
+                          })
+                          e.currentTarget.value = ""
+                        }
+                      }
+                    }}
+                  />
+                  <Button
+                    size="sm"
+                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                    onClick={() => {
+                      const input = document.getElementById("new-specialization") as HTMLInputElement
+                      const value = input.value.trim()
                       if (value) {
                         updateProfileData({
                           specializations: [...profileData.specializations, value],
                         })
-                        e.currentTarget.value = ""
+                        input.value = ""
                       }
-                    }
-                  }}
-                />
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    const input = document.getElementById("new-specialization") as HTMLInputElement
-                    const value = input.value.trim()
-                    if (value) {
-                      updateProfileData({
-                        specializations: [...profileData.specializations, value],
-                      })
-                      input.value = ""
-                    }
-                  }}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Social Links */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Social Links</CardTitle>
-            <CardDescription>Add your social media profiles</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {profileData.socialLinks.map((link) => (
-                <div key={link.id} className="flex items-center gap-4">
-                  <div className="relative w-10 h-10 flex items-center justify-center rounded-full overflow-hidden bg-gray-100">
-                    <img
-                      src={link.icon}
-                      alt={link.name}
-                      className="w-6 h-6"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{link.name}</div>
-                    <Input
-                      type="url"
-                      value={link.href}
-                      onChange={(e) => {
-                        const newLinks = [...profileData.socialLinks];
-                        const linkIndex = newLinks.findIndex(l => l.id === link.id);
-                        if (linkIndex !== -1) {
-                          newLinks[linkIndex].href = e.target.value;
-                          updateProfileData({ socialLinks: newLinks });
-                        }
-                      }}
-                      placeholder={SOCIAL_PLATFORMS.find(p => p.name === link.name)?.placeholder}
-                      className="mt-1"
-                    />
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => {
-                      const newLinks = profileData.socialLinks.filter(l => l.id !== link.id);
-                      updateProfileData({ socialLinks: newLinks });
                     }}
                   >
-                    <Trash2 className="h-4 w-4" />
+                    <Plus className="h-4 w-4" />
                   </Button>
                 </div>
-              ))}
-              <div className="flex items-center gap-4">
-                <Select
-                  value={socialForm.name}
-                  onValueChange={(value) => {
-                    const platform = SOCIAL_PLATFORMS.find(p => p.name === value);
-                    if (platform) {
-                      setSocialForm({
-                        name: platform.name,
-                        icon: platform.icon,
-                        href: '',
-                        color: platform.color
-                      });
-                    }
-                  }}
-                >
-                  <SelectTrigger className="w-[200px]">
-                    <SelectValue placeholder="Select platform" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SOCIAL_PLATFORMS.map((platform) => (
-                      <SelectItem key={platform.name} value={platform.name}>
-                        <div className="flex items-center gap-2">
-                          <div className="relative w-4 h-4 flex items-center justify-center">
-                            <img
-                              src={platform.icon}
-                              alt={platform.name}
-                              className="w-4 h-4"
-                              onError={(e) => {
-                                const target = e.target as HTMLImageElement;
-                                target.src = '/placeholder.svg';
-                              }}
-                            />
-                          </div>
-                          <span>{platform.name}</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                <Input
-                  type="url"
-                  value={socialForm.href}
-                  onChange={(e) => setSocialForm({ ...socialForm, href: e.target.value })}
-                  placeholder={SOCIAL_PLATFORMS.find(p => p.name === socialForm.name)?.placeholder}
-                  className="flex-1"
-                />
-                <Button
-                  onClick={() => {
-                    if (socialForm.name && socialForm.href) {
-                      const newLink = {
-                        id: Date.now(), // Generate a unique ID
-                        name: socialForm.name,
-                        icon: socialForm.icon,
-                        href: socialForm.href,
-                        color: socialForm.color
-                      };
-                      updateProfileData({
-                        socialLinks: [...profileData.socialLinks, newLink],
-                      });
-                      setSocialForm({ name: '', icon: '', href: '', color: '' });
-                    }
-                  }}
-                  disabled={!socialForm.name || !socialForm.href}
-                >
-                  Add
-                </Button>
               </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
 
-        {/* Personal Badges/Interests */}
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Badges</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditingBadge(null)
-                setBadgeForm({
-                  text: "",
-                  icon: "",
-                  color: "bg-blue-100 text-blue-800",
-                })
-                setIsBadgeDialogOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" /> Add Badge
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-wrap gap-2">
-              {profileData.badges.map((badge) => {
-                const IconComponent = iconMap[badge.icon as keyof typeof iconMap]
-                return (
-                  <Badge key={badge.id} className={`px-3 py-1 text-sm relative group ${badge.color}`}>
-                    {IconComponent && <IconComponent className="w-4 h-4 mr-1" />}
-                    <span>{badge.text}</span>
-                    <div className="absolute right-0 top-0 transform translate-x-1/2 -translate-y-1/2 hidden group-hover:flex gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 w-6 p-0 rounded-full bg-white"
-                        onClick={() => {
-                          setEditingBadge(badge.id);
-                          setBadgeForm({
-                            text: badge.text,
-                            icon: badge.icon,
-                            color: badge.color,
-                          });
-                          setIsBadgeDialogOpen(true);
+          {/* Social Links - More compact */}
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg">Social Links</CardTitle>
+              <CardDescription className="text-sm">Add your social media profiles</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {profileData.socialLinks.map((link) => (
+                  <div key={link.id} className="flex items-center gap-3 p-2 rounded-lg hover:bg-gray-50 transition-colors">
+                    <div className="relative w-8 h-8 flex items-center justify-center rounded-full overflow-hidden bg-gray-100">
+                      <img
+                        src={link.icon}
+                        alt={link.name}
+                        className="w-5 h-5"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
                         }}
-                      >
-                        <Edit className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        className="h-6 w-6 p-0 rounded-full bg-white text-red-500"
-                        onClick={() => deleteBadge(badge.id)}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                      />
                     </div>
-                  </Badge>
-                )
-              })}
-              {profileData.badges.length === 0 && (
-                <div className="text-muted-foreground italic w-full text-center py-4">No badges added yet.</div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                    <div className="flex-1 min-w-0">
+                      <div className="text-sm font-medium truncate">{link.name}</div>
+                      <Input
+                        type="url"
+                        value={link.href}
+                        onChange={(e) => {
+                          const newLinks = [...profileData.socialLinks];
+                          const linkIndex = newLinks.findIndex(l => l.id === link.id);
+                          if (linkIndex !== -1) {
+                            newLinks[linkIndex].href = e.target.value;
+                            updateProfileData({ socialLinks: newLinks });
+                          }
+                        }}
+                        placeholder={SOCIAL_PLATFORMS.find(p => p.name === link.name)?.placeholder}
+                        className="mt-1 h-8 text-sm"
+                      />
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      className="h-8 w-8 text-red-500 hover:text-red-600 hover:bg-red-50"
+                      onClick={() => {
+                        const newLinks = profileData.socialLinks.filter(l => l.id !== link.id);
+                        updateProfileData({ socialLinks: newLinks });
+                      }}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <div className="flex items-center gap-2 pt-2">
+                  <Select
+                    value={socialForm.name}
+                    onValueChange={(value) => {
+                      const platform = SOCIAL_PLATFORMS.find(p => p.name === value);
+                      if (platform) {
+                        setSocialForm({
+                          name: platform.name,
+                          icon: platform.icon,
+                          href: '',
+                          color: platform.color
+                        });
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="w-[180px] h-9">
+                      <SelectValue placeholder="Select platform" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SOCIAL_PLATFORMS.map((platform) => (
+                        <SelectItem key={platform.name} value={platform.name}>
+                          <div className="flex items-center gap-2">
+                            <div className="relative w-4 h-4 flex items-center justify-center">
+                              <img
+                                src={platform.icon}
+                                alt={platform.name}
+                                className="w-4 h-4"
+                                onError={(e) => {
+                                  const target = e.target as HTMLImageElement;
+                                  target.src = '/placeholder.svg';
+                                }}
+                              />
+                            </div>
+                            <span className="text-sm">{platform.name}</span>
+                          </div>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <Input
+                    type="url"
+                    value={socialForm.href}
+                    onChange={(e) => setSocialForm({ ...socialForm, href: e.target.value })}
+                    placeholder={SOCIAL_PLATFORMS.find(p => p.name === socialForm.name)?.placeholder}
+                    className="flex-1 h-9 text-sm"
+                  />
+                  <Button
+                    onClick={() => {
+                      if (socialForm.name && socialForm.href) {
+                        const newLink = {
+                          id: Date.now(),
+                          name: socialForm.name,
+                          icon: socialForm.icon,
+                          href: socialForm.href,
+                          color: socialForm.color
+                        };
+                        updateProfileData({
+                          socialLinks: [...profileData.socialLinks, newLink],
+                        });
+                        setSocialForm({ name: '', icon: '', href: '', color: '' });
+                      }
+                    }}
+                    disabled={!socialForm.name || !socialForm.href}
+                    className="h-9 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
+                  >
+                    Add
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Badges - More compact */}
+          <Card className="hover:shadow-md transition-shadow duration-200">
+            <CardHeader className="pb-3 flex flex-row items-center justify-between">
+              <CardTitle className="text-lg">Badges</CardTitle>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  setEditingBadge(null)
+                  setBadgeForm({
+                    text: "",
+                    icon: "",
+                    color: "bg-blue-100 text-blue-800",
+                  })
+                  setIsBadgeDialogOpen(true)
+                }}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white border-0"
+              >
+                <Plus className="h-4 w-4 mr-1" /> Add Badge
+              </Button>
+            </CardHeader>
+            <CardContent>
+              <div className="flex flex-wrap gap-2">
+                {profileData.badges.map((badge) => {
+                  const IconComponent = iconMap[badge.icon as keyof typeof iconMap]
+                  return (
+                    <Badge 
+                      key={badge.id} 
+                      className={`px-3 py-1 text-sm relative group ${badge.color} hover:shadow-md transition-all duration-200`}
+                    >
+                      {IconComponent && <IconComponent className="w-4 h-4 mr-1" />}
+                      <span>{badge.text}</span>
+                      <div className="absolute right-0 top-0 transform translate-x-1/2 -translate-y-1/2 hidden group-hover:flex gap-1">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0 rounded-full bg-white hover:bg-gray-50"
+                          onClick={() => {
+                            setEditingBadge(badge.id);
+                            setBadgeForm({
+                              text: badge.text,
+                              icon: badge.icon,
+                              color: badge.color,
+                            });
+                            setIsBadgeDialogOpen(true);
+                          }}
+                        >
+                          <Edit className="h-3 w-3" />
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="h-6 w-6 p-0 rounded-full bg-white hover:bg-red-50 text-red-500 hover:text-red-600"
+                          onClick={() => deleteBadge(badge.id)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    </Badge>
+                  )
+                })}
+                {profileData.badges.length === 0 && (
+                  <div className="text-sm text-muted-foreground italic w-full text-center py-4">No badges added yet.</div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       {/* Social Link Dialog */}
