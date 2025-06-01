@@ -1,6 +1,15 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { SkillsDataService, CertificateData } from '../../Skills/expertise-nexus-reveal/src/lib/redis';
+import { getCertificates, setCertificates } from '../../lib/expertise-nexus/redis';
 import { unstable_noStore } from 'next/cache';
+
+interface CertificateData {
+  id: string;
+  name: string;
+  issuer: string;
+  date: string;
+  url?: string;
+  description?: string;
+}
 
 // Validate API key for admin operations
 const validateApiKey = (req: NextApiRequest): boolean => {
@@ -22,94 +31,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // GET request - fetch all certificates or a specific certificate
+    // GET request - fetch all certificates
     if (req.method === 'GET') {
-      const certId = req.query.id as string;
-      const certificates = await SkillsDataService.getCertificates();
-      
-      if (certId) {
-        const certificate = certificates.find(c => c.id === certId);
-        if (!certificate) {
-          return res.status(404).json({ error: 'Certificate not found' });
-        }
-        return res.status(200).json(certificate);
-      }
-      
+      const certificates = await getCertificates();
       return res.status(200).json(certificates);
     }
     
-    // POST request - create a new certificate
-    else if (req.method === 'POST') {
-      const certificates = await SkillsDataService.getCertificates();
-      const newCertificate: CertificateData = {
-        ...req.body,
-        id: generateId()
-      };
+    // POST request - add a new certificate
+    if (req.method === 'POST') {
+      const certData = req.body as CertificateData;
       
-      // Validate required fields
-      if (!newCertificate.title || !newCertificate.issuer) {
-        return res.status(400).json({ error: 'Title and issuer are required' });
+      if (!certData.name || !certData.issuer || !certData.date) {
+        return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // Add the new certificate
-      const updatedCertificates = [...certificates, newCertificate];
-      await SkillsDataService.updateCertificates(updatedCertificates);
+      const certificates = await getCertificates() as CertificateData[];
+      const newCert = {
+        ...certData,
+        id: crypto.randomUUID()
+      };
       
-      return res.status(201).json(newCertificate);
+      await setCertificates([...certificates, newCert]);
+      return res.status(201).json(newCert);
     }
     
-    // PUT request - update an existing certificate
-    else if (req.method === 'PUT') {
-      const certId = req.query.id as string;
-      if (!certId) {
+    // PUT request - update a certificate
+    if (req.method === 'PUT') {
+      const { id, ...updateData } = req.body as CertificateData & { id: string };
+      
+      if (!id) {
         return res.status(400).json({ error: 'Certificate ID is required' });
       }
       
-      const certificates = await SkillsDataService.getCertificates();
-      const certIndex = certificates.findIndex(c => c.id === certId);
+      const certificates = await getCertificates() as CertificateData[];
+      const certIndex = certificates.findIndex(c => c.id === id);
       
       if (certIndex === -1) {
         return res.status(404).json({ error: 'Certificate not found' });
       }
       
-      // Update the certificate
-      const updatedCertificate = {
-        ...certificates[certIndex],
-        ...req.body,
-        id: certId // Ensure the ID remains the same
-      };
+      certificates[certIndex] = { ...certificates[certIndex], ...updateData };
+      await setCertificates(certificates);
       
-      certificates[certIndex] = updatedCertificate;
-      await SkillsDataService.updateCertificates(certificates);
-      
-      return res.status(200).json(updatedCertificate);
+      return res.status(200).json(certificates[certIndex]);
     }
     
-    // DELETE request - delete a certificate
-    else if (req.method === 'DELETE') {
-      const certId = req.query.id as string;
-      if (!certId) {
-        return res.status(400).json({ error: 'Certificate ID is required' });
+    // DELETE request - remove a certificate
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Valid certificate ID is required' });
       }
       
-      const certificates = await SkillsDataService.getCertificates();
-      const updatedCertificates = certificates.filter(c => c.id !== certId);
+      const certificates = await getCertificates() as CertificateData[];
+      const filteredCerts = certificates.filter(c => c.id !== id);
       
-      if (certificates.length === updatedCertificates.length) {
+      if (filteredCerts.length === certificates.length) {
         return res.status(404).json({ error: 'Certificate not found' });
       }
       
-      await SkillsDataService.updateCertificates(updatedCertificates);
-      return res.status(200).json({ success: true, message: 'Certificate deleted successfully' });
+      await setCertificates(filteredCerts);
+      return res.status(200).json({ message: 'Certificate deleted successfully' });
     }
     
-    // Handle unsupported methods
-    else {
-      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-    }
+    // Method not allowed
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Error in certificates API:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 } 

@@ -1,6 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { SkillsDataService, SkillData } from '../../Skills/expertise-nexus-reveal/src/lib/redis';
+import { getTopSkills, setTopSkills, getSkills } from '../../lib/expertise-nexus/redis';
 import { unstable_noStore } from 'next/cache';
+
+interface SkillData {
+  id: string;
+  name: string;
+  level: number;
+  category: string;
+  description?: string;
+}
 
 // Validate API key for admin operations
 const validateApiKey = (req: NextApiRequest): boolean => {
@@ -19,39 +27,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   try {
     // GET request - fetch all top skills
     if (req.method === 'GET') {
-      const topSkills = await SkillsDataService.getTopSkills();
+      const topSkills = await getTopSkills();
       return res.status(200).json(topSkills);
     }
     
-    // PUT request - update the top skills list
-    else if (req.method === 'PUT') {
+    // PUT request - update top skills
+    if (req.method === 'PUT') {
       const { skillIds } = req.body;
       
-      if (!skillIds || !Array.isArray(skillIds)) {
-        return res.status(400).json({ error: 'Valid skillIds array is required' });
+      if (!Array.isArray(skillIds)) {
+        return res.status(400).json({ error: 'Invalid request body. Expected an array of skill IDs.' });
       }
       
       // Get all skills to filter out valid IDs
-      const allSkills = await SkillsDataService.getSkills();
-      const validSkills: SkillData[] = allSkills.filter(skill => skillIds.includes(skill.id));
+      const allSkills = await getSkills() as SkillData[];
+      const validSkills = allSkills.filter((skill: SkillData) => skillIds.includes(skill.id));
       
       // Update the top skills
-      await SkillsDataService.updateTopSkills(validSkills);
+      await setTopSkills(validSkills);
       
       return res.status(200).json({ 
-        success: true, 
-        message: `${validSkills.length} top skills updated successfully`,
-        topSkills: validSkills
+        message: 'Top skills updated successfully',
+        updatedSkills: validSkills 
       });
     }
     
-    // Handle unsupported methods
-    else {
-      res.setHeader('Allow', ['GET', 'PUT']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-    }
+    // Method not allowed
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Error in top-skills API:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 } 

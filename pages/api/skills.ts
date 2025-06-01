@@ -1,6 +1,14 @@
 import { NextApiRequest, NextApiResponse } from 'next';
-import { SkillsDataService, SkillData } from '../../Skills/expertise-nexus-reveal/src/lib/redis';
+import { getSkills, setSkills } from '../../lib/expertise-nexus/redis';
 import { unstable_noStore } from 'next/cache';
+
+interface SkillData {
+  id: string;
+  name: string;
+  level: number;
+  category: string;
+  description?: string;
+}
 
 // Validate API key for admin operations
 const validateApiKey = (req: NextApiRequest): boolean => {
@@ -23,94 +31,74 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   }
 
   try {
-    // GET request - fetch all skills or a specific skill
+    // GET request - fetch all skills
     if (req.method === 'GET') {
-      const skillId = req.query.id as string;
-      const skills = await SkillsDataService.getSkills();
-      
-      if (skillId) {
-        const skill = skills.find(s => s.id === skillId);
-        if (!skill) {
-          return res.status(404).json({ error: 'Skill not found' });
-        }
-        return res.status(200).json(skill);
-      }
-      
+      const skills = await getSkills();
       return res.status(200).json(skills);
     }
     
-    // POST request - create a new skill
-    else if (req.method === 'POST') {
-      const skills = await SkillsDataService.getSkills();
-      const newSkill: SkillData = {
-        ...req.body,
-        id: generateId()
-      };
+    // POST request - add a new skill
+    if (req.method === 'POST') {
+      const skillData = req.body as SkillData;
       
-      // Validate required fields
-      if (!newSkill.name || !newSkill.category) {
-        return res.status(400).json({ error: 'Name and category are required' });
+      if (!skillData.name || !skillData.level || !skillData.category) {
+        return res.status(400).json({ error: 'Missing required fields' });
       }
       
-      // Add the new skill
-      const updatedSkills = [...skills, newSkill];
-      await SkillsDataService.updateSkills(updatedSkills);
+      const skills = await getSkills() as SkillData[];
+      const newSkill = {
+        ...skillData,
+        id: crypto.randomUUID()
+      };
       
+      await setSkills([...skills, newSkill]);
       return res.status(201).json(newSkill);
     }
     
-    // PUT request - update an existing skill
-    else if (req.method === 'PUT') {
-      const skillId = req.query.id as string;
-      if (!skillId) {
+    // PUT request - update a skill
+    if (req.method === 'PUT') {
+      const { id, ...updateData } = req.body as SkillData & { id: string };
+      
+      if (!id) {
         return res.status(400).json({ error: 'Skill ID is required' });
       }
       
-      const skills = await SkillsDataService.getSkills();
-      const skillIndex = skills.findIndex(s => s.id === skillId);
+      const skills = await getSkills() as SkillData[];
+      const skillIndex = skills.findIndex(s => s.id === id);
       
       if (skillIndex === -1) {
         return res.status(404).json({ error: 'Skill not found' });
       }
       
-      // Update the skill
-      const updatedSkill = {
-        ...skills[skillIndex],
-        ...req.body,
-        id: skillId // Ensure the ID remains the same
-      };
+      skills[skillIndex] = { ...skills[skillIndex], ...updateData };
+      await setSkills(skills);
       
-      skills[skillIndex] = updatedSkill;
-      await SkillsDataService.updateSkills(skills);
-      
-      return res.status(200).json(updatedSkill);
+      return res.status(200).json(skills[skillIndex]);
     }
     
-    // DELETE request - delete a skill
-    else if (req.method === 'DELETE') {
-      const skillId = req.query.id as string;
-      if (!skillId) {
-        return res.status(400).json({ error: 'Skill ID is required' });
+    // DELETE request - remove a skill
+    if (req.method === 'DELETE') {
+      const { id } = req.query;
+      
+      if (!id || typeof id !== 'string') {
+        return res.status(400).json({ error: 'Valid skill ID is required' });
       }
       
-      const skills = await SkillsDataService.getSkills();
-      const updatedSkills = skills.filter(s => s.id !== skillId);
+      const skills = await getSkills() as SkillData[];
+      const filteredSkills = skills.filter(s => s.id !== id);
       
-      if (skills.length === updatedSkills.length) {
+      if (filteredSkills.length === skills.length) {
         return res.status(404).json({ error: 'Skill not found' });
       }
       
-      await SkillsDataService.updateSkills(updatedSkills);
-      return res.status(200).json({ success: true, message: 'Skill deleted successfully' });
+      await setSkills(filteredSkills);
+      return res.status(200).json({ message: 'Skill deleted successfully' });
     }
     
-    // Handle unsupported methods
-    else {
-      res.setHeader('Allow', ['GET', 'POST', 'PUT', 'DELETE']);
-      return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
-    }
+    // Method not allowed
+    return res.status(405).json({ error: 'Method not allowed' });
   } catch (error) {
     console.error('Error in skills API:', error);
-    return res.status(500).json({ error: 'Internal Server Error' });
+    return res.status(500).json({ error: 'Internal server error' });
   }
 } 

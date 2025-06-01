@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { SkillsDataService } from '../../Skills/expertise-nexus-reveal/src/lib/redis'
+import { getSkills, getTopSkills } from '../../lib/expertise-nexus/redis'
 
 interface Skill {
   id: string
@@ -100,7 +100,7 @@ const groupSkillsByCategory = (skills: Skill[]) => {
   return Object.values(categories).filter(category => category.skills.length > 0);
 };
 
-export default function Skills() {
+export default async function SkillsPage() {
   const [expandedSector, setExpandedSector] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [certificates, setCertificates] = useState<Certificate[]>([])
@@ -109,24 +109,16 @@ export default function Skills() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
+  const skills = await getSkills();
+  const topSkills = await getTopSkills();
+
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Fetch all skills from Redis
-        const skills = await SkillsDataService.getSkills();
-        
-        if (skills && Array.isArray(skills)) {
-          // Group skills by category
-          const groupedSkills = groupSkillsByCategory(skills);
-          setSkillSectors(groupedSkills);
-          
-          // Set top 8 skills by proficiency
-          const sortedSkills = [...skills].sort((a, b) => b.proficiency - a.proficiency);
-          setTopSkills(sortedSkills.slice(0, 8));
-        } else {
-          setError("Failed to load skills data");
-        }
+        // Group skills by category
+        const groupedSkills = groupSkillsByCategory(skills);
+        setSkillSectors(groupedSkills);
         
         // Fetch certificates from Redis
         const certData = await SkillsDataService.getCertificates();
