@@ -1,4 +1,5 @@
 import { kv } from "@vercel/kv"
+import { Redis } from '@upstash/redis'
 
 export interface DatabaseProfile {
   profileData: any
@@ -11,6 +12,35 @@ export interface DatabaseProfile {
 }
 
 const PROFILE_KEY = "profile:main"
+
+// Check if Redis URL and token are available
+const redisUrl = process.env.UPSTASH_REDIS_REST_URL || 'https://new-bug-43861.upstash.io'
+const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_READ_ONLY_TOKEN || 'AqtVAAIgcDHGQG2g_Mt44DSzBwCLrNyyitx8un05_YCedaDhlaqAMg'
+
+// Initialize Redis client
+export const redis = new Redis({
+  url: redisUrl,
+  token: redisToken,
+})
+
+// Function to check if Redis is connected
+export async function isRedisConnected(): Promise<boolean> {
+  try {
+    await redis.ping()
+    return true
+  } catch (error) {
+    console.error('Redis connection error:', error)
+    return false
+  }
+}
+
+// Keys for different data collections
+export const REDIS_KEYS = {
+  SUBSCRIBERS: 'subscribers',
+  RESEARCH: 'research',
+  PROFILE: 'profile',
+  CASES_INDEX: 'cases:index'
+}
 
 export async function saveProfileToDatabase(data: DatabaseProfile) {
   try {
@@ -70,5 +100,45 @@ export async function listBackups() {
   } catch (error) {
     console.error("Failed to list backups:", error)
     return { success: false, error: "Failed to list backups" }
+  }
+}
+
+export async function setValue(key: string, value: any) {
+  try {
+    await kv.set(key, value)
+    return true
+  } catch (error) {
+    console.error('Error setting value in Redis:', error)
+    return false
+  }
+}
+
+export async function getValue(key: string) {
+  try {
+    const value = await kv.get(key)
+    return value
+  } catch (error) {
+    console.error('Error getting value from Redis:', error)
+    return null
+  }
+}
+
+export async function deleteValue(key: string) {
+  try {
+    await kv.del(key)
+    return true
+  } catch (error) {
+    console.error('Error deleting value from Redis:', error)
+    return false
+  }
+}
+
+export async function listKeys(pattern: string = '*') {
+  try {
+    const keys = await kv.keys(pattern)
+    return keys
+  } catch (error) {
+    console.error('Error listing keys from Redis:', error)
+    return []
   }
 }

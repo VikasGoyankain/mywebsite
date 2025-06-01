@@ -1,7 +1,14 @@
 import type React from "react"
-import type { Metadata } from "next"
+import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  themeColor: "#3B82F6",
+  colorScheme: "light",
+}
 
 export const metadata: Metadata = {
   title: "Vikas Goyanka - Law Student & Political Activist | Constitutional Rights Advocate",
@@ -13,6 +20,7 @@ export const metadata: Metadata = {
   creator: "Vikas Goyanka",
   publisher: "Vikas Goyanka",
   robots: "index, follow",
+  metadataBase: new URL("https://vikasgoyanka.in"),
   openGraph: {
     type: "website",
     locale: "en_IN",
@@ -37,12 +45,9 @@ export const metadata: Metadata = {
     creator: "@vikasgoyanka_in",
     images: ["/og-image.jpg"],
   },
-  viewport: "width=device-width, initial-scale=1",
-  themeColor: "#3B82F6",
   generator: "Next.js",
   applicationName: "Vikas Goyanka Portfolio",
   referrer: "origin-when-cross-origin",
-  colorScheme: "light",
   category: "portfolio",
 }
 

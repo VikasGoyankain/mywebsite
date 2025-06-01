@@ -296,7 +296,7 @@ export default function ModernProfile() {
               </Card>
             </div>
 
-            {/* Education & Skills */}
+            {/* Education Only - Removed Skills */}
             <div className="space-y-6">
               {/* Education */}
               <Card className="p-6 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
@@ -353,44 +353,22 @@ export default function ModernProfile() {
                   <div className="w-16 h-16 bg-amber-100 rounded-full flex items-center justify-center mb-6">
                     <Gavel className="w-8 h-8 text-amber-600" />
                   </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-2xl font-bold text-gray-900">Legal Expertise</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-amber-600">95%</span>
-                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-amber-500 rounded-full" style={{width: '95%'}}></div>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 mb-4">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Legal Expertise</h3>
+                  <p className="text-gray-600 mb-6">
                     Comprehensive legal knowledge including contract law, corporate governance, 
                     and regulatory compliance with 8+ years of practice.
                   </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="text-blue-600 font-medium">
                     {skills
                       .filter((skill) => skill.category === "Legal")
                       .map((skill, index) => (
-                        <Badge key={skill.id} variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 transition-colors">
+                        <span key={skill.id}>
+                          {index > 0 ? " • " : ""}
                           {skill.name}
-                        </Badge>
+                        </span>
                       ))}
                     {skills.filter((skill) => skill.category === "Legal").length === 0 && 
-                      <>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 transition-colors">
-                          Contract Law
-                        </Badge>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 transition-colors">
-                          Corporate Law
-                        </Badge>
-                        <Badge variant="outline" className="bg-blue-50 text-blue-600 border-blue-200 hover:bg-blue-100 transition-colors">
-                          Compliance
-                        </Badge>
-                      </>
-                    }
-                  </div>
-                  <div className="text-xs text-gray-500 flex items-center gap-2">
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>8+ years professional experience</span>
+                      "Contract Law • Corporate Law • Compliance"}
                   </div>
                 </div>
 
@@ -401,47 +379,22 @@ export default function ModernProfile() {
                   <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mb-6">
                     <Globe className="w-8 h-8 text-blue-600" />
                   </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-2xl font-bold text-gray-900">Technical Skills</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-blue-600">92%</span>
-                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-blue-500 rounded-full" style={{width: '92%'}}></div>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 mb-4">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Technical Skills</h3>
+                  <p className="text-gray-600 mb-6">
                     Modern technology stack expertise including web development, 
                     data analysis, and cloud architecture with proven results.
                   </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="text-green-600 font-medium">
                     {skills
                       .filter((skill) => skill.category === "Technical" || skill.category === "Research")
                       .map((skill, index) => (
-                        <Badge key={skill.id} variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100 transition-colors">
+                        <span key={skill.id}>
+                          {index > 0 ? " • " : ""}
                           {skill.name}
-                        </Badge>
+                        </span>
                       ))}
                     {skills.filter((skill) => skill.category === "Technical" || skill.category === "Research").length === 0 && 
-                      <>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100 transition-colors">
-                          React
-                        </Badge>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100 transition-colors">
-                          Python
-                        </Badge>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100 transition-colors">
-                          AWS
-                        </Badge>
-                        <Badge variant="outline" className="bg-green-50 text-green-600 border-green-200 hover:bg-green-100 transition-colors">
-                          Data Science
-                        </Badge>
-                      </>
-                    }
-                  </div>
-                  <div className="text-xs text-gray-500 flex items-center gap-2">
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>5+ years professional experience</span>
+                      "React • Python • AWS • Data Science"}
                   </div>
                 </div>
 
@@ -452,58 +405,34 @@ export default function ModernProfile() {
                   <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mb-6">
                     <Users className="w-8 h-8 text-purple-600" />
                   </div>
-                  <div className="flex items-center justify-between mb-3">
-                    <h3 className="text-2xl font-bold text-gray-900">Leadership</h3>
-                    <div className="flex items-center gap-1">
-                      <span className="text-sm font-bold text-purple-600">94%</span>
-                      <div className="w-16 h-1.5 bg-gray-200 rounded-full overflow-hidden">
-                        <div className="h-full bg-purple-500 rounded-full" style={{width: '94%'}}></div>
-                      </div>
-                    </div>
-                  </div>
-                  <p className="text-gray-600 mb-4">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-3">Leadership</h3>
+                  <p className="text-gray-600 mb-6">
                     Proven leadership capabilities with team management, strategic planning, 
                     and communication skills developed over 7+ years.
                   </p>
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="text-purple-600 font-medium">
                     {skills
                       .filter((skill) => skill.category === "Communication" || skill.category === "Leadership")
                       .map((skill, index) => (
-                        <Badge key={skill.id} variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 transition-colors">
+                        <span key={skill.id}>
+                          {index > 0 ? " • " : ""}
                           {skill.name}
-                        </Badge>
+                        </span>
                       ))}
                     {skills.filter((skill) => skill.category === "Communication" || skill.category === "Leadership").length === 0 && 
-                      <>
-                        <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 transition-colors">
-                          Team Management
-                        </Badge>
-                        <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 transition-colors">
-                          Strategy
-                        </Badge>
-                        <Badge variant="outline" className="bg-purple-50 text-purple-600 border-purple-200 hover:bg-purple-100 transition-colors">
-                          Communication
-                        </Badge>
-                      </>
-                    }
-                  </div>
-                  <div className="text-xs text-gray-500 flex items-center gap-2">
-                    <Briefcase className="w-3.5 h-3.5" />
-                    <span>7+ years professional experience</span>
+                      "Team Management • Strategy • Communication"}
                   </div>
                 </div>
               </div>
 
               <div className="text-center mt-12">
-                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105" asChild>
-                  <Link href="/skills">
-                    <div className="flex items-center gap-2">
-                      View Detailed Skills Analysis
-                      <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
-                        <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
-                      </svg>
-                    </div>
-                  </Link>
+                <Button className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-full shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105">
+                  <div className="flex items-center gap-2">
+                    View Detailed Skills Analysis
+                    <svg width="15" height="15" viewBox="0 0 15 15" fill="none" xmlns="http://www.w3.org/2000/svg" className="h-4 w-4">
+                      <path d="M8.14645 3.14645C8.34171 2.95118 8.65829 2.95118 8.85355 3.14645L12.8536 7.14645C13.0488 7.34171 13.0488 7.65829 12.8536 7.85355L8.85355 11.8536C8.65829 12.0488 8.34171 12.0488 8.14645 11.8536C7.95118 11.6583 7.95118 11.3417 8.14645 11.1464L11.2929 8H2.5C2.22386 8 2 7.77614 2 7.5C2 7.22386 2.22386 7 2.5 7H11.2929L8.14645 3.85355C7.95118 3.65829 7.95118 3.34171 8.14645 3.14645Z" fill="currentColor" fillRule="evenodd" clipRule="evenodd"></path>
+                    </svg>
+                  </div>
                 </Button>
               </div>
             </div>
@@ -634,11 +563,6 @@ export default function ModernProfile() {
                     </Link>
                   </li>
                   <li>
-                    <Link href="/skills" className="hover:text-white transition-colors">
-                      Skills & Expertise
-                    </Link>
-                  </li>
-                  <li>
                     <Link href="/research" className="hover:text-white transition-colors">
                       Research
                     </Link>
@@ -694,4 +618,4 @@ export default function ModernProfile() {
       </div>
     </div>
   )
-}
+} 
