@@ -2,38 +2,47 @@
 
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { ChevronDown, Award, BookOpen, Wrench, Filter, Star, Calendar, Download, ExternalLink } from 'lucide-react'
+import { ChevronDown, Award, BookOpen, Wrench, Filter, Star, Calendar, Download, ExternalLink, CheckCircle, Book } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getSkills, getTopSkills } from '../../lib/expertise-nexus/redis'
+import { getSkills, getTopSkills, getCertificates } from '../../lib/expertise-nexus/redis'
 
 interface Skill {
   id: string
   name: string
   category: string
-  proficiency: number
-  experience: string
-  icon: string
-  subSkills: string[]
-  books: string[]
-  achievements: string[]
-  tools: string[]
+  level: number
+  description?: string
+  icon?: string
+  subSkills?: string[]
+  books?: string[]
+  achievements?: string[]
+  tools?: string[]
 }
 
 interface Certificate {
   id: string
-  title: string
+  name: string
   issuer: string
   date: string
-  tags: string[]
   imageUrl: string
-  verificationUrl?: string
+  url?: string
+  tags?: string[]
+}
+
+interface SkillSector {
+  id: string
+  title: string
+  description: string
+  color: string
+  icon: string
+  skills: Skill[]
 }
 
 // Group skills by category
-const groupSkillsByCategory = (skills: Skill[]) => {
+const groupSkillsByCategory = (skills: Skill[]): SkillSector[] => {
   const categories = {
     'legal': {
       id: 'legal',
@@ -100,33 +109,43 @@ const groupSkillsByCategory = (skills: Skill[]) => {
   return Object.values(categories).filter(category => category.skills.length > 0);
 };
 
-export default async function SkillsPage() {
+export default function SkillsPage() {
   const [expandedSector, setExpandedSector] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState('all')
   const [certificates, setCertificates] = useState<Certificate[]>([])
   const [topSkills, setTopSkills] = useState<Skill[]>([])
-  const [skillSectors, setSkillSectors] = useState<any[]>([])
+  const [skillSectors, setSkillSectors] = useState<SkillSector[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
-
-  const skills = await getSkills();
-  const topSkills = await getTopSkills();
 
   useEffect(() => {
     const fetchData = async () => {
       setLoading(true);
       try {
-        // Group skills by category
-        const groupedSkills = groupSkillsByCategory(skills);
-        setSkillSectors(groupedSkills);
-        
-        // Fetch certificates from Redis
-        const certData = await SkillsDataService.getCertificates();
-        if (certData && Array.isArray(certData)) {
-          setCertificates(certData);
+        // Fetch all data in parallel
+        const [skillsData, topSkillsData, certData] = await Promise.all([
+          getSkills(),
+          getTopSkills(),
+          getCertificates()
+        ]);
+
+        if (skillsData && Array.isArray(skillsData)) {
+          // Group skills by category
+          const groupedSkills = groupSkillsByCategory(skillsData as Skill[]);
+          setSkillSectors(groupedSkills);
+          
+          // Set top skills
+          setTopSkills(topSkillsData as Skill[] || []);
+          
+          // Set certificates
+          if (certData && Array.isArray(certData)) {
+            setCertificates(certData as Certificate[]);
+          }
+        } else {
+          setError("Failed to load skills data");
         }
       } catch (err) {
-        console.error("Error fetching data from Redis:", err);
+        console.error("Error fetching data:", err);
         setError("Failed to load data. Please try again later.");
       } finally {
         setLoading(false);
@@ -138,7 +157,7 @@ export default async function SkillsPage() {
 
   const filteredCertificates = selectedFilter === 'all' 
     ? certificates 
-    : certificates.filter(cert => cert.tags.some(tag => tag.toLowerCase().includes(selectedFilter.toLowerCase())))
+    : certificates.filter(cert => cert.tags?.some(tag => tag.toLowerCase().includes(selectedFilter.toLowerCase())) ?? false);
 
   const toggleSector = (sectorId: string) => {
     setExpandedSector(expandedSector === sectorId ? null : sectorId)
@@ -234,28 +253,30 @@ export default async function SkillsPage() {
                   <div className="text-2xl">{skill.icon}</div>
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="text-sm font-semibold text-slate-700">{skill.proficiency}%</span>
+                    <span className="text-sm font-semibold text-slate-700">{skill.level}%</span>
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">{skill.name}</h3>
-                <p className="text-slate-600 text-sm mb-3">{skill.experience}</p>
+                <p className="text-slate-600 text-sm mb-3">{skill.description}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
-                  {skill.subSkills.slice(0, 3).map((subSkill, i) => (
+                  {skill.subSkills?.slice(0, 3).map((subSkill, i) => (
                     <Badge key={i} variant="outline" className="bg-slate-50">
                       {subSkill}
                     </Badge>
                   ))}
-                  {skill.subSkills.length > 3 && (
+                  {skill.subSkills && skill.subSkills.length > 3 && (
                     <Badge variant="outline" className="bg-slate-50">
                       +{skill.subSkills.length - 3} more
                     </Badge>
                   )}
                 </div>
-                <p className="text-xs text-slate-500">
-                  <span className="font-semibold">Tools: </span>
-                  {skill.tools.slice(0, 3).join(", ")}
-                  {skill.tools.length > 3 && ` +${skill.tools.length - 3} more`}
-                </p>
+                {skill.tools && skill.tools.length > 0 && (
+                  <p className="text-xs text-slate-500">
+                    <span className="font-semibold">Tools: </span>
+                    {skill.tools.slice(0, 3).join(", ")}
+                    {skill.tools.length > 3 && ` +${skill.tools.length - 3} more`}
+                  </p>
+                )}
               </motion.div>
             ))}
           </div>
@@ -323,7 +344,7 @@ export default async function SkillsPage() {
                                 <div className="text-2xl">{skill.icon}</div>
                                 <div>
                                   <h4 className="text-xl font-semibold text-slate-900">{skill.name}</h4>
-                                  <p className="text-slate-600">{skill.experience} • {skill.proficiency}% proficiency</p>
+                                  <p className="text-slate-600">{skill.description} • Level {skill.level}%</p>
                                 </div>
                               </div>
                             </div>
@@ -334,7 +355,7 @@ export default async function SkillsPage() {
                                   <Wrench className="w-4 h-4" /> Sub-skills
                                 </h5>
                                 <div className="flex flex-wrap gap-2">
-                                  {skill.subSkills.map((subSkill, i) => (
+                                  {skill.subSkills?.map((subSkill, i) => (
                                     <Badge key={i} variant="outline">{subSkill}</Badge>
                                   ))}
                                 </div>
@@ -344,11 +365,19 @@ export default async function SkillsPage() {
                                 <h5 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
                                   <Award className="w-4 h-4" /> Achievements
                                 </h5>
-                                <ul className="list-disc pl-5 text-sm text-slate-600">
-                                  {skill.achievements.map((achievement, i) => (
-                                    <li key={i}>{achievement}</li>
-                                  ))}
-                                </ul>
+                                {skill.achievements && skill.achievements.length > 0 && (
+                                  <div className="mt-4">
+                                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Key Achievements</h4>
+                                    <ul className="space-y-2">
+                                      {skill.achievements.map((achievement, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                                          <CheckCircle className="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0" />
+                                          <span>{achievement}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                             </div>
 
@@ -357,11 +386,19 @@ export default async function SkillsPage() {
                                 <h5 className="text-sm font-semibold text-slate-700 mb-2 flex items-center gap-1">
                                   <BookOpen className="w-4 h-4" /> Reference Materials
                                 </h5>
-                                <ul className="list-disc pl-5 text-sm text-slate-600">
-                                  {skill.books.map((book, i) => (
-                                    <li key={i}>{book}</li>
-                                  ))}
-                                </ul>
+                                {skill.books && skill.books.length > 0 && (
+                                  <div className="mt-4">
+                                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Recommended Books</h4>
+                                    <ul className="space-y-2">
+                                      {skill.books.map((book, i) => (
+                                        <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
+                                          <Book className="w-4 h-4 text-blue-500 mt-0.5 flex-shrink-0" />
+                                          <span>{book}</span>
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  </div>
+                                )}
                               </div>
                               
                               <div>
@@ -369,7 +406,7 @@ export default async function SkillsPage() {
                                   <Wrench className="w-4 h-4" /> Tools & Technologies
                                 </h5>
                                 <div className="flex flex-wrap gap-2">
-                                  {skill.tools.map((tool, i) => (
+                                  {skill.tools?.map((tool, i) => (
                                     <Badge key={i} variant="secondary" className="bg-slate-200">{tool}</Badge>
                                   ))}
                                 </div>
@@ -441,13 +478,13 @@ export default async function SkillsPage() {
                         <div className="absolute inset-0 flex items-center justify-center text-slate-300">
                           {cert.imageUrl === '/placeholder.svg' 
                             ? <Award className="w-16 h-16" /> 
-                            : <img src={cert.imageUrl} alt={cert.title} className="w-full h-full object-cover" />
+                            : <img src={cert.imageUrl} alt={cert.name} className="w-full h-full object-cover" />
                           }
                         </div>
                       </div>
                       
                       <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.title}</h3>
+                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
                         <div className="flex justify-between items-center mt-1 mb-2">
                           <p className="text-sm text-slate-700">{cert.issuer}</p>
                           <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -457,14 +494,14 @@ export default async function SkillsPage() {
                         </div>
                         
                         <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags.map((tag, i) => (
+                          {cert.tags?.map((tag, i) => (
                             <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
                           ))}
                         </div>
                         
-                        {cert.verificationUrl && (
+                        {cert.url && (
                           <a 
-                            href={cert.verificationUrl} 
+                            href={cert.url} 
                             target="_blank" 
                             rel="noopener noreferrer"
                             className="text-xs flex items-center gap-1 text-blue-600 hover:underline mt-2"
@@ -482,7 +519,7 @@ export default async function SkillsPage() {
                 {/* Technical certifications - filtered by the selectedFilter state */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {filteredCertificates.filter(cert => 
-                    cert.tags.some(tag => ['AWS', 'Cloud', 'Technical', 'Data Science', 'Python', 'ML'].includes(tag))
+                    cert.tags?.some(tag => ['AWS', 'Cloud', 'Technical', 'Data Science', 'Python', 'ML'].includes(tag))
                   ).map((cert, index) => (
                     <motion.div
                       key={cert.id}
@@ -497,13 +534,13 @@ export default async function SkillsPage() {
                         <div className="absolute inset-0 flex items-center justify-center text-slate-300">
                           {cert.imageUrl === '/placeholder.svg' 
                             ? <Award className="w-16 h-16" /> 
-                            : <img src={cert.imageUrl} alt={cert.title} className="w-full h-full object-cover" />
+                            : <img src={cert.imageUrl} alt={cert.name} className="w-full h-full object-cover" />
                           }
                         </div>
                       </div>
                       
                       <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.title}</h3>
+                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
                         <div className="flex justify-between items-center mt-1 mb-2">
                           <p className="text-sm text-slate-700">{cert.issuer}</p>
                           <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -513,7 +550,7 @@ export default async function SkillsPage() {
                         </div>
                         
                         <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags.map((tag, i) => (
+                          {cert.tags?.map((tag, i) => (
                             <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
                           ))}
                         </div>
@@ -528,7 +565,7 @@ export default async function SkillsPage() {
                 {/* Legal certifications */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {filteredCertificates.filter(cert => 
-                    cert.tags.some(tag => ['Legal', 'Law', 'Compliance'].includes(tag))
+                    cert.tags?.some(tag => ['Legal', 'Law', 'Compliance'].includes(tag))
                   ).map((cert, index) => (
                     <motion.div
                       key={cert.id}
@@ -546,7 +583,7 @@ export default async function SkillsPage() {
                       </div>
                       
                       <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.title}</h3>
+                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
                         <div className="flex justify-between items-center mt-1 mb-2">
                           <p className="text-sm text-slate-700">{cert.issuer}</p>
                           <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -556,7 +593,7 @@ export default async function SkillsPage() {
                         </div>
                         
                         <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags.map((tag, i) => (
+                          {cert.tags?.map((tag, i) => (
                             <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
                           ))}
                         </div>
@@ -570,7 +607,7 @@ export default async function SkillsPage() {
                 {/* Management certifications */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
                   {filteredCertificates.filter(cert => 
-                    cert.tags.some(tag => ['Management', 'Leadership', 'Agile'].includes(tag))
+                    cert.tags?.some(tag => ['Management', 'Leadership', 'Agile'].includes(tag))
                   ).map((cert, index) => (
                     <motion.div
                       key={cert.id}
@@ -588,7 +625,7 @@ export default async function SkillsPage() {
                       </div>
                       
                       <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.title}</h3>
+                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
                         <div className="flex justify-between items-center mt-1 mb-2">
                           <p className="text-sm text-slate-700">{cert.issuer}</p>
                           <div className="flex items-center gap-1 text-xs text-slate-500">
@@ -598,7 +635,7 @@ export default async function SkillsPage() {
                         </div>
                         
                         <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags.map((tag, i) => (
+                          {cert.tags?.map((tag, i) => (
                             <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
                           ))}
                         </div>
