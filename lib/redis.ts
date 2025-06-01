@@ -1,5 +1,4 @@
 import { kv } from "@vercel/kv"
-import { Redis } from '@upstash/redis'
 
 export interface DatabaseProfile {
   profileData: any
@@ -12,27 +11,6 @@ export interface DatabaseProfile {
 }
 
 const PROFILE_KEY = "profile:main"
-
-// Check if Redis URL and token are available
-const redisUrl = process.env.UPSTASH_REDIS_REST_URL || 'https://new-bug-43861.upstash.io'
-const redisToken = process.env.UPSTASH_REDIS_REST_TOKEN || process.env.KV_REST_API_READ_ONLY_TOKEN || 'AqtVAAIgcDHGQG2g_Mt44DSzBwCLrNyyitx8un05_YCedaDhlaqAMg'
-
-// Initialize Redis client
-export const redis = new Redis({
-  url: redisUrl,
-  token: redisToken,
-})
-
-// Function to check if Redis is connected
-export async function isRedisConnected(): Promise<boolean> {
-  try {
-    await redis.ping()
-    return true
-  } catch (error) {
-    console.error('Redis connection error:', error)
-    return false
-  }
-}
 
 // Keys for different data collections
 export const REDIS_KEYS = {
@@ -60,6 +38,10 @@ export async function saveProfileToDatabase(data: DatabaseProfile) {
 export async function loadProfileFromDatabase(): Promise<DatabaseProfile | null> {
   try {
     const data = await kv.get<DatabaseProfile>(PROFILE_KEY)
+    if (!data) {
+      console.log('No profile data found in database')
+      return null
+    }
     return data
   } catch (error) {
     console.error("Failed to load profile from database:", error)

@@ -31,7 +31,7 @@ export interface ProfileData {
 }
 
 export interface Experience {
-  id: number
+  id: string
   title: string
   company: string
   duration: string
@@ -42,7 +42,7 @@ export interface Experience {
 }
 
 export interface Education {
-  id: number
+  id: string
   degree: string
   institution: string
   year: string
@@ -52,7 +52,7 @@ export interface Education {
 }
 
 export interface Skill {
-  id: number
+  id: string
   name: string
   category: string
   proficiency: number
@@ -83,6 +83,8 @@ export interface NavigationPage {
   color: string
 }
 
+type SyncStatus = "idle" | "syncing" | "success" | "error"
+
 interface ProfileStore {
   profileData: ProfileData
   experience: Experience[]
@@ -90,13 +92,12 @@ interface ProfileStore {
   skills: Skill[]
   posts: Post[]
   navigationPages: NavigationPage[]
-
-  // Database sync properties
   isLoading: boolean
-  isSaving: boolean
-  lastSaved: string | null
-  syncStatus: "idle" | "syncing" | "success" | "error"
+  syncStatus: SyncStatus
   hasUnsavedChanges: boolean
+  lastSaved: string | null
+  lastUpdated: string | null
+  error: string | null
 
   // Profile actions
   updateProfileData: (data: Partial<ProfileData>) => void
@@ -110,18 +111,18 @@ interface ProfileStore {
 
   // Experience actions
   addExperience: (exp: Omit<Experience, "id">) => void
-  updateExperience: (id: number, exp: Partial<Experience>) => void
-  deleteExperience: (id: number) => void
+  updateExperience: (id: string, exp: Partial<Experience>) => void
+  deleteExperience: (id: string) => void
 
   // Education actions
   addEducation: (edu: Omit<Education, "id">) => void
-  updateEducation: (id: number, edu: Partial<Education>) => void
-  deleteEducation: (id: number) => void
+  updateEducation: (id: string, edu: Partial<Education>) => void
+  deleteEducation: (id: string) => void
 
   // Skills actions
   addSkill: (skill: Omit<Skill, "id">) => void
-  updateSkill: (id: number, skill: Partial<Skill>) => void
-  deleteSkill: (id: number) => void
+  updateSkill: (id: string, skill: Partial<Skill>) => void
+  deleteSkill: (id: string) => void
 
   // Posts actions
   addPost: (post: Omit<Post, "id">) => void
@@ -180,10 +181,11 @@ export const useProfileStore = create<ProfileStore>()(
 
       // Database sync state
       isLoading: false,
-      isSaving: false,
-      lastSaved: null,
       syncStatus: "idle",
       hasUnsavedChanges: false,
+      lastSaved: null,
+      lastUpdated: null,
+      error: null,
 
       // Profile actions
       updateProfileData: (data) => {
@@ -272,7 +274,7 @@ export const useProfileStore = create<ProfileStore>()(
       // Experience actions
       addExperience: (exp) => {
         set((state) => {
-          const newId = Math.max(...state.experience.map((e) => e.id), 0) + 1
+          const newId = `exp_${Date.now()}`
           return {
             experience: [...state.experience, { ...exp, id: newId }],
             hasUnsavedChanges: true,
@@ -297,7 +299,7 @@ export const useProfileStore = create<ProfileStore>()(
       // Education actions
       addEducation: (edu) => {
         set((state) => {
-          const newId = Math.max(...state.education.map((e) => e.id), 0) + 1
+          const newId = `edu_${Date.now()}`
           return {
             education: [...state.education, { ...edu, id: newId }],
             hasUnsavedChanges: true,
@@ -322,7 +324,7 @@ export const useProfileStore = create<ProfileStore>()(
       // Skills actions
       addSkill: (skill) => {
         set((state) => {
-          const newId = Math.max(...state.skills.map((s) => s.id), 0) + 1
+          const newId = `skill_${Date.now()}`
           return {
             skills: [...state.skills, { ...skill, id: newId }],
             hasUnsavedChanges: true,
@@ -443,87 +445,118 @@ export const useProfileStore = create<ProfileStore>()(
 
       // Database actions
       loadFromDatabase: async () => {
-        set({ isLoading: true, syncStatus: "syncing" })
-
         try {
-          const response = await fetch("/api/profile")
+          // Don't reload if we're already syncing
+          const currentState = get()
+          if (currentState.syncStatus === 'syncing') {
+            return
+          }
+
+          set({ 
+            syncStatus: 'syncing',
+            isLoading: true,
+            error: null 
+          })
+
+          const response = await fetch('/api/profile')
+          if (!response.ok) {
+            const errorMessage = `HTTP error! status: ${response.status}`
+            console.error(errorMessage)
+            set({ 
+              syncStatus: 'error',
+              isLoading: false,
+              error: errorMessage
+            })
+            return
+          }
+
           const result = await response.json()
 
-          if (result.success && result.data) {
-            const { profileData, experience, education, skills, posts, navigationPages } = result.data
-
-            set({
-              profileData: profileData,
-              experience: experience || [],
-              education: education || [],
-              skills: skills || [],
-              posts: posts || [],
-              navigationPages: navigationPages || [],
+          if (!result.success) {
+            const errorMessage = result.error || 'Failed to load profile data'
+            console.error(errorMessage)
+            set({ 
+              syncStatus: 'error',
               isLoading: false,
-              syncStatus: "success",
-              lastSaved: result.data.lastUpdated,
-              hasUnsavedChanges: false,
+              error: errorMessage
             })
-          } else {
-            // No data found, use empty defaults
-            set({
-              isLoading: false,
-              syncStatus: "idle",
-              hasUnsavedChanges: false,
-            })
+            return
           }
-        } catch (error: unknown) {
-          console.error("Failed to load from database:", error)
+
+          if (!result.data) {
+            const errorMessage = 'No data received from server'
+            console.error(errorMessage)
+            set({ 
+              syncStatus: 'error',
+              isLoading: false,
+              error: errorMessage
+            })
+            return
+          }
+
+          // Update all store data with the received data
           set({
+            profileData: result.data.profileData || defaultProfileData,
+            experience: result.data.experience || defaultExperience,
+            education: result.data.education || defaultEducation,
+            skills: result.data.skills || defaultSkills,
+            posts: result.data.posts || defaultPosts,
+            navigationPages: result.data.navigationPages || defaultNavigationPages,
+            lastUpdated: result.data.lastUpdated || new Date().toISOString(),
+            syncStatus: 'success',
             isLoading: false,
-            syncStatus: "error",
+            error: null
+          })
+        } catch (error) {
+          console.error('Error loading from database:', error)
+          set({ 
+            syncStatus: 'error',
+            isLoading: false,
+            error: error instanceof Error ? error.message : 'Failed to load profile data'
           })
         }
       },
 
       saveToDatabase: async () => {
-        set({ isSaving: true, syncStatus: "syncing" })
-
         try {
+          set({ syncStatus: 'syncing' })
           const state = get()
-          const payload = {
-            profileData: state.profileData,
-            experience: state.experience,
-            education: state.education,
-            skills: state.skills,
-            posts: state.posts,
-            navigationPages: state.navigationPages,
-          }
-
-          const response = await fetch("/api/profile", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+          const response = await fetch('/api/profile', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              profileData: state.profileData,
+              experience: state.experience,
+              education: state.education,
+              skills: state.skills,
+              posts: state.posts,
+              navigationPages: state.navigationPages,
+              lastUpdated: new Date().toISOString(),
+            }),
           })
+
           const result = await response.json()
-
-          if (result.success) {
-            set({
-              isSaving: false,
-              syncStatus: "success",
-              lastSaved: new Date().toISOString(),
-              hasUnsavedChanges: false,
-            })
-          } else {
-            set({
-              isSaving: false,
-              syncStatus: "error",
-            })
+          if (!result.success) {
+            throw new Error(result.error || 'Failed to save profile data')
           }
-          
-          return
-        } catch (error: unknown) {
-          console.error("Failed to save to database:", error)
+
           set({
-            isSaving: false,
-            syncStatus: "error",
+            syncStatus: 'success',
+            lastSaved: new Date().toISOString(),
+            hasUnsavedChanges: false,
           })
-          return
+
+          // Reset sync status after 3 seconds
+          setTimeout(() => {
+            set({ syncStatus: 'idle' })
+          }, 3000)
+        } catch (error) {
+          console.error('Error saving to database:', error)
+          set({
+            syncStatus: 'error',
+            error: error instanceof Error ? error.message : 'Failed to save profile data'
+          })
+          throw error
         }
       },
 
