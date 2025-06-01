@@ -99,21 +99,27 @@ export default function ModernProfile() {
 
             {/* Desktop Social Links */}
             <div className="hidden md:flex items-center gap-2">
-              {profileData.socialLinks.map((social, index) => {
-                const IconComponent = iconMap[social.icon as keyof typeof iconMap]
-                return (
-                  <Link
-                    key={social.id}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`p-2.5 rounded-full bg-gray-50 hover:bg-gray-100 transition-all duration-200 hover:scale-110 ${social.color}`}
-                    aria-label={`Visit ${social.name} profile`}
-                  >
-                    {IconComponent && <IconComponent className="w-4 h-4" />}
-                  </Link>
-                )
-              })}
+              {profileData.socialLinks.map((social) => (
+                <Link
+                  key={social.id}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className={`p-2 rounded-full transition-all duration-200 hover:scale-105 relative group`}
+                  aria-label={`Visit ${social.name} profile`}
+                >
+                  <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+                  <img
+                    src={social.icon}
+                    alt={social.name}
+                    className="w-3.5 h-3.5 relative z-10"
+                    onError={(e) => {
+                      const target = e.target as HTMLImageElement;
+                      target.src = '/placeholder.svg';
+                    }}
+                  />
+                </Link>
+              ))}
             </div>
 
             {/* Mobile Menu Button */}
@@ -610,18 +616,23 @@ export default function ModernProfile() {
                   advocacy and political engagement.
                 </p>
                 <div className="flex gap-4">
-                  {profileData.socialLinks.map((social) => {
-                    const IconComponent = iconMap[social.icon as keyof typeof iconMap]
-                    return (
-                      <Link
-                        key={social.id}
-                        href={social.href}
-                        className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
-                      >
-                        {IconComponent && <IconComponent className="w-5 h-5" />}
-                      </Link>
-                    )
-                  })}
+                  {profileData.socialLinks.map((social) => (
+                    <Link
+                      key={social.id}
+                      href={social.href}
+                      className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                    >
+                      <img
+                        src={social.icon}
+                        alt={social.name}
+                        className="w-5 h-5"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    </Link>
+                  ))}
                 </div>
               </div>
 

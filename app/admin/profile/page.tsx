@@ -12,6 +12,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { useToast } from "@/components/ui/use-toast"
 import { useProfileStore } from "@/lib/profile-store"
 import { ImageUploader } from "@/components/image-uploader"
+import { ProfilePhotoUploader } from "@/components/profile-photo-uploader"
 import {
   ChevronLeft,
   Save,
@@ -20,7 +21,217 @@ import {
   Edit,
   Loader2,
   X,
+  Award,
+  Star,
+  Heart,
+  BookOpen,
+  Briefcase,
+  GraduationCap,
+  Gavel,
+  Globe,
+  Users,
+  FileText,
+  MessageSquare,
+  Send,
+  Verified,
+  Clock,
+  Mail,
+  Phone,
+  MapPin,
+  Instagram,
+  Twitter,
+  Linkedin,
+  BookMarked,
+  School,
+  Mic,
+  Landmark,
+  Scale,
+  Lightbulb,
+  Users2,
+  Megaphone,
+  Vote,
+  ScrollText,
+  Building2,
+  Sparkles,
+  Brain,
+  Target,
+  Shield,
+  Handshake,
+  Scroll,
+  BookOpenCheck,
+  Presentation,
+  Speech,
+  Flag,
+  Crown,
 } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+
+const SOCIAL_PLATFORMS = [
+  {
+    name: 'LinkedIn',
+    icon: '/icons/linkedin.svg',
+    color: 'bg-blue-600',
+    placeholder: 'https://linkedin.com/in/yourusername'
+  },
+  {
+    name: 'GitHub',
+    icon: '/icons/github.svg',
+    color: 'bg-gray-900',
+    placeholder: 'https://github.com/yourusername'
+  },
+  {
+    name: 'Twitter',
+    icon: '/icons/twitter.svg',
+    color: 'bg-black',
+    placeholder: 'https://twitter.com/yourusername'
+  },
+  {
+    name: 'Instagram',
+    icon: '/icons/instagram.svg',
+    color: 'bg-gradient-to-tr from-yellow-400 via-red-500 to-purple-500',
+    placeholder: 'https://instagram.com/yourusername'
+  },
+  {
+    name: 'Facebook',
+    icon: '/icons/facebook.svg',
+    color: 'bg-blue-600',
+    placeholder: 'https://facebook.com/yourusername'
+  },
+  {
+    name: 'YouTube',
+    icon: '/icons/youtube.svg',
+    color: 'bg-red-600',
+    placeholder: 'https://youtube.com/@yourusername'
+  },
+  {
+    name: 'WhatsApp',
+    icon: '/icons/whatsapp.svg',
+    color: 'bg-green-500',
+    placeholder: 'https://wa.me/yourphonenumber'
+  },
+  {
+    name: 'Telegram',
+    icon: '/icons/telegram.svg',
+    color: 'bg-blue-400',
+    placeholder: 'https://t.me/yourusername'
+  },
+  {
+    name: 'Threads',
+    icon: '/icons/threads.svg',
+    color: 'bg-black',
+    placeholder: 'https://threads.net/@yourusername'
+  },
+  {
+    name: 'Pinterest',
+    icon: '/icons/pinterest.svg',
+    color: 'bg-red-600',
+    placeholder: 'https://pinterest.com/yourusername'
+  },
+  {
+    name: 'Quora',
+    icon: '/icons/quora.svg',
+    color: 'bg-red-500',
+    placeholder: 'https://quora.com/profile/yourusername'
+  },
+  {
+    name: 'Reddit',
+    icon: '/icons/reddit.svg',
+    color: 'bg-orange-500',
+    placeholder: 'https://reddit.com/user/yourusername'
+  },
+  {
+    name: 'Discord',
+    icon: '/icons/discord.svg',
+    color: 'bg-indigo-600',
+    placeholder: 'https://discord.com/users/yourusername'
+  }
+] as const;
+
+const iconMap = {
+  Award,
+  Star,
+  Heart,
+  BookOpen,
+  Briefcase,
+  GraduationCap,
+  Gavel,
+  Globe,
+  Users,
+  FileText,
+  MessageSquare,
+  Send,
+  Verified,
+  Clock,
+  Mail,
+  Phone,
+  MapPin,
+  Instagram,
+  Twitter,
+  Linkedin,
+  BookMarked,
+  School,
+  Mic,
+  Landmark,
+  Scale,
+  Lightbulb,
+  Users2,
+  Megaphone,
+  Vote,
+  ScrollText,
+  Building2,
+  Sparkles,
+  Brain,
+  Target,
+  Shield,
+  Handshake,
+  Scroll,
+  BookOpenCheck,
+  Presentation,
+  Speech,
+  Flag,
+  Crown,
+} as const;
+
+const BADGE_ICONS = [
+  { name: 'BookMarked', icon: 'BookMarked', description: 'Law Student' },
+  { name: 'School', icon: 'School', description: 'Student Leader' },
+  { name: 'Scale', icon: 'Scale', description: 'Legal Advocate' },
+  { name: 'Gavel', icon: 'Gavel', description: 'Legal Expert' },
+  { name: 'Landmark', icon: 'Landmark', description: 'Member of Parliament' },
+  { name: 'Mic', icon: 'Mic', description: 'Public Speaker' },
+  { name: 'Megaphone', icon: 'Megaphone', description: 'Political Activist' },
+  { name: 'Users2', icon: 'Users2', description: 'Social Worker' },
+  { name: 'Brain', icon: 'Brain', description: 'Intelligent' },
+  { name: 'Lightbulb', icon: 'Lightbulb', description: 'Smart' },
+  { name: 'Sparkles', icon: 'Sparkles', description: 'Rising Star' },
+  { name: 'Target', icon: 'Target', description: 'Goal Oriented' },
+  { name: 'Shield', icon: 'Shield', description: 'Protector of Rights' },
+  { name: 'Handshake', icon: 'Handshake', description: 'Diplomatic' },
+  { name: 'Scroll', icon: 'Scroll', description: 'Policy Expert' },
+  { name: 'BookOpenCheck', icon: 'BookOpenCheck', description: 'Academic Excellence' },
+  { name: 'Presentation', icon: 'Presentation', description: 'Public Policy Expert' },
+  { name: 'Speech', icon: 'Speech', description: 'Orator' },
+  { name: 'Flag', icon: 'Flag', description: 'National Leader' },
+  { name: 'Crown', icon: 'Crown', description: 'Leadership Excellence' },
+  { name: 'Award', icon: 'Award', description: 'Achievement' },
+  { name: 'Star', icon: 'Star', description: 'Excellence' },
+  { name: 'Heart', icon: 'Heart', description: 'Passion' },
+  { name: 'Briefcase', icon: 'Briefcase', description: 'Professional' },
+  { name: 'Globe', icon: 'Globe', description: 'International' },
+  { name: 'FileText', icon: 'FileText', description: 'Documentation' },
+  { name: 'MessageSquare', icon: 'MessageSquare', description: 'Communication' },
+  { name: 'Verified', icon: 'Verified', description: 'Certified' },
+  { name: 'Clock', icon: 'Clock', description: 'Time Management' },
+  { name: 'Vote', icon: 'Vote', description: 'Democratic Leader' },
+  { name: 'Building2', icon: 'Building2', description: 'Institution Builder' },
+  { name: 'ScrollText', icon: 'ScrollText', description: 'Policy Maker' },
+] as const;
 
 export default function ProfileManagement() {
   const { toast } = useToast()
@@ -197,19 +408,46 @@ export default function ProfileManagement() {
           <Card>
             <CardHeader>
               <CardTitle>Profile Image</CardTitle>
+              <CardDescription>Upload a profile image or provide an image URL</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="flex flex-col items-center gap-4">
-                <Avatar className="h-24 w-24">
-                  <AvatarImage src={profileData.profileImage} alt={profileData.name} />
-                  <AvatarFallback>{profileData.name?.substring(0, 2) || "XY"}</AvatarFallback>
-                </Avatar>
-                <ImageUploader
-                  currentImageUrl={profileData.profileImage}
-                  onImageSelect={(url) => updateProfileData({ profileImage: url })}
-                  buttonText="Change Profile Image"
-                />
-              </div>
+              <ProfilePhotoUploader
+                currentImageUrl={profileData.profileImage}
+                onImageSelect={(url, file) => {
+                  if (file) {
+                    // Handle file upload to Upstash Redis
+                    const formData = new FormData()
+                    formData.append('file', file)
+                    
+                    fetch('/api/upload', {
+                      method: 'POST',
+                      body: formData,
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                      if (data.success) {
+                        updateProfileData({ profileImage: data.url })
+                      } else {
+                        throw new Error(data.error || 'Failed to upload image')
+                      }
+                    })
+                    .catch(error => {
+                      console.error('Error uploading image:', error)
+                      toast({
+                        title: "Upload failed",
+                        description: "Failed to upload image to server. Please try again.",
+                        variant: "destructive",
+                      })
+                    })
+                  } else {
+                    // Direct URL update
+                    updateProfileData({ profileImage: url })
+                  }
+                }}
+                onImageRemove={() => {
+                  updateProfileData({ profileImage: "" })
+                }}
+              />
             </CardContent>
           </Card>
 
@@ -324,70 +562,121 @@ export default function ProfileManagement() {
 
         {/* Social Links */}
         <Card>
-          <CardHeader className="flex flex-row items-center justify-between">
+          <CardHeader>
             <CardTitle>Social Links</CardTitle>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setEditingSocial(null)
-                setSocialForm({
-                  name: "",
-                  icon: "",
-                  href: "",
-                  color: "bg-blue-100 text-blue-800",
-                })
-                setIsSocialDialogOpen(true)
-              }}
-            >
-              <Plus className="h-4 w-4 mr-1" /> Add Link
-            </Button>
+            <CardDescription>Add your social media profiles</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
+            <div className="space-y-4">
               {profileData.socialLinks.map((link) => (
-                <div key={link.id} className="flex items-center justify-between gap-2 border-b pb-2">
-                  <div className="flex items-center gap-2">
-                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${link.color}`}>
-                      <span className="text-sm">{link.icon}</span>
-                    </div>
-                    <div>
-                      <div className="font-medium">{link.name}</div>
-                      <a href={link.href} target="_blank" rel="noreferrer" className="text-xs text-blue-500 hover:underline">
-                        {link.href}
-                      </a>
-                    </div>
-                  </div>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setEditingSocial(link.id)
-                        setSocialForm({
-                          name: link.name,
-                          icon: link.icon,
-                          href: link.href,
-                          color: link.color,
-                        })
-                        setIsSocialDialogOpen(true)
+                <div key={link.id} className="flex items-center gap-4">
+                  <div className="relative w-10 h-10 flex items-center justify-center rounded-full overflow-hidden bg-gray-100">
+                    <img
+                      src={link.icon}
+                      alt={link.name}
+                      className="w-6 h-6"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
                       }}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
-                    <Button 
-                      variant="ghost" 
-                      size="sm" 
-                      onClick={() => deleteSocialLink(link.id)}
-                    >
-                      <Trash2 className="h-4 w-4 text-red-500" />
-                    </Button>
+                    />
                   </div>
+                  <div className="flex-1">
+                    <div className="text-sm font-medium">{link.name}</div>
+                    <Input
+                      type="url"
+                      value={link.href}
+                      onChange={(e) => {
+                        const newLinks = [...profileData.socialLinks];
+                        const linkIndex = newLinks.findIndex(l => l.id === link.id);
+                        if (linkIndex !== -1) {
+                          newLinks[linkIndex].href = e.target.value;
+                          updateProfileData({ socialLinks: newLinks });
+                        }
+                      }}
+                      placeholder={SOCIAL_PLATFORMS.find(p => p.name === link.name)?.placeholder}
+                      className="mt-1"
+                    />
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const newLinks = profileData.socialLinks.filter(l => l.id !== link.id);
+                      updateProfileData({ socialLinks: newLinks });
+                    }}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
                 </div>
               ))}
-              {profileData.socialLinks.length === 0 && (
-                <div className="text-muted-foreground italic text-center py-4">No social links added yet.</div>
-              )}
+              <div className="flex items-center gap-4">
+                <Select
+                  value={socialForm.name}
+                  onValueChange={(value) => {
+                    const platform = SOCIAL_PLATFORMS.find(p => p.name === value);
+                    if (platform) {
+                      setSocialForm({
+                        name: platform.name,
+                        icon: platform.icon,
+                        href: '',
+                        color: platform.color
+                      });
+                    }
+                  }}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Select platform" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {SOCIAL_PLATFORMS.map((platform) => (
+                      <SelectItem key={platform.name} value={platform.name}>
+                        <div className="flex items-center gap-2">
+                          <div className="relative w-4 h-4 flex items-center justify-center">
+                            <img
+                              src={platform.icon}
+                              alt={platform.name}
+                              className="w-4 h-4"
+                              onError={(e) => {
+                                const target = e.target as HTMLImageElement;
+                                target.src = '/placeholder.svg';
+                              }}
+                            />
+                          </div>
+                          <span>{platform.name}</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Input
+                  type="url"
+                  value={socialForm.href}
+                  onChange={(e) => setSocialForm({ ...socialForm, href: e.target.value })}
+                  placeholder={SOCIAL_PLATFORMS.find(p => p.name === socialForm.name)?.placeholder}
+                  className="flex-1"
+                />
+                <Button
+                  onClick={() => {
+                    if (socialForm.name && socialForm.href) {
+                      const newLink = {
+                        id: Date.now(), // Generate a unique ID
+                        name: socialForm.name,
+                        icon: socialForm.icon,
+                        href: socialForm.href,
+                        color: socialForm.color
+                      };
+                      updateProfileData({
+                        socialLinks: [...profileData.socialLinks, newLink],
+                      });
+                      setSocialForm({ name: '', icon: '', href: '', color: '' });
+                    }
+                  }}
+                  disabled={!socialForm.name || !socialForm.href}
+                >
+                  Add
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -395,7 +684,7 @@ export default function ProfileManagement() {
         {/* Personal Badges/Interests */}
         <Card>
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Badges & Skills</CardTitle>
+            <CardTitle>Badges</CardTitle>
             <Button
               variant="outline"
               size="sm"
@@ -414,38 +703,41 @@ export default function ProfileManagement() {
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-2">
-              {profileData.badges.map((badge) => (
-                <Badge key={badge.id} className={`px-3 py-1 text-sm relative group ${badge.color}`}>
-                  {badge.icon && <span className="mr-1">{badge.icon}</span>}
-                  {badge.text}
-                  <div className="absolute right-0 top-0 transform translate-x-1/2 -translate-y-1/2 hidden group-hover:flex gap-1">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 w-6 p-0 rounded-full bg-white"
-                      onClick={() => {
-                        setEditingBadge(badge.id)
-                        setBadgeForm({
-                          text: badge.text,
-                          icon: badge.icon,
-                          color: badge.color,
-                        })
-                        setIsBadgeDialogOpen(true)
-                      }}
-                    >
-                      <Edit className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      className="h-6 w-6 p-0 rounded-full bg-white text-red-500"
-                      onClick={() => deleteBadge(badge.id)}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                </Badge>
-              ))}
+              {profileData.badges.map((badge) => {
+                const IconComponent = iconMap[badge.icon as keyof typeof iconMap]
+                return (
+                  <Badge key={badge.id} className={`px-3 py-1 text-sm relative group ${badge.color}`}>
+                    {IconComponent && <IconComponent className="w-4 h-4 mr-1" />}
+                    <span>{badge.text}</span>
+                    <div className="absolute right-0 top-0 transform translate-x-1/2 -translate-y-1/2 hidden group-hover:flex gap-1">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 w-6 p-0 rounded-full bg-white"
+                        onClick={() => {
+                          setEditingBadge(badge.id);
+                          setBadgeForm({
+                            text: badge.text,
+                            icon: badge.icon,
+                            color: badge.color,
+                          });
+                          setIsBadgeDialogOpen(true);
+                        }}
+                      >
+                        <Edit className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="h-6 w-6 p-0 rounded-full bg-white text-red-500"
+                        onClick={() => deleteBadge(badge.id)}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  </Badge>
+                )
+              })}
               {profileData.badges.length === 0 && (
                 <div className="text-muted-foreground italic w-full text-center py-4">No badges added yet.</div>
               )}
@@ -464,45 +756,48 @@ export default function ProfileManagement() {
               </h3>
               <form onSubmit={handleSocialSubmit} className="space-y-4">
                 <div>
-                  <Label htmlFor="social-name">Platform Name</Label>
-                  <Input
-                    id="social-name"
+                  <Label htmlFor="social-platform">Platform</Label>
+                  <select
+                    id="social-platform"
+                    className="w-full p-2 border rounded-md"
                     value={socialForm.name}
-                    onChange={(e) => setSocialForm({ ...socialForm, name: e.target.value })}
-                    placeholder="e.g. LinkedIn"
+                    onChange={(e) => {
+                      const platform = SOCIAL_PLATFORMS.find(p => p.name === e.target.value);
+                      if (platform) {
+                        setSocialForm({
+                          name: platform.name,
+                          icon: platform.icon,
+                          href: "",
+                          color: platform.color,
+                        });
+                      }
+                    }}
                     required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="social-icon">Icon (emoji or symbol)</Label>
-                  <Input
-                    id="social-icon"
-                    value={socialForm.icon}
-                    onChange={(e) => setSocialForm({ ...socialForm, icon: e.target.value })}
-                    placeholder="e.g. 📱 or 🔗"
-                  />
+                  >
+                    <option value="">Select a platform</option>
+                    {SOCIAL_PLATFORMS.map((platform) => (
+                      <option key={platform.name} value={platform.name}>
+                        {platform.name}
+                      </option>
+                    ))}
+                  </select>
                 </div>
                 <div>
                   <Label htmlFor="social-url">URL</Label>
                   <Input
                     id="social-url"
+                    type="url"
                     value={socialForm.href}
                     onChange={(e) => setSocialForm({ ...socialForm, href: e.target.value })}
-                    placeholder="https://..."
+                    placeholder={SOCIAL_PLATFORMS.find(p => p.name === socialForm.name)?.placeholder || "https://..."}
                     required
                   />
                 </div>
-                <div className="flex justify-end gap-2 mt-6">
-                  <Button 
-                    type="button" 
-                    variant="outline" 
-                    onClick={() => setIsSocialDialogOpen(false)}
-                  >
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={() => setIsSocialDialogOpen(false)}>
                     Cancel
                   </Button>
-                  <Button type="submit">
-                    {editingSocial !== null ? "Update" : "Add"} Link
-                  </Button>
+                  <Button type="submit">Save</Button>
                 </div>
               </form>
             </div>
@@ -525,22 +820,39 @@ export default function ProfileManagement() {
                     id="badge-text"
                     value={badgeForm.text}
                     onChange={(e) => setBadgeForm({ ...badgeForm, text: e.target.value })}
-                    placeholder="e.g. React Expert"
+                    placeholder="e.g. Legal Expert"
                     required
                   />
                 </div>
                 <div>
-                  <Label htmlFor="badge-icon">Icon (emoji or symbol)</Label>
-                  <Input
-                    id="badge-icon"
-                    value={badgeForm.icon}
-                    onChange={(e) => setBadgeForm({ ...badgeForm, icon: e.target.value })}
-                    placeholder="e.g. 🔥 or ⚡"
-                  />
+                  <Label>Icon</Label>
+                  <div className="grid grid-cols-4 gap-2 mt-2">
+                    {BADGE_ICONS.map((icon) => {
+                      const IconComponent = iconMap[icon.icon as keyof typeof iconMap]
+                      return (
+                        <button
+                          key={icon.name}
+                          type="button"
+                          onClick={() => setBadgeForm({ ...badgeForm, icon: icon.name })}
+                          className={`p-2 rounded-lg border ${
+                            badgeForm.icon === icon.name
+                              ? 'border-primary bg-primary/10'
+                              : 'border-gray-200 hover:border-primary/50'
+                          } flex flex-col items-center gap-1 group`}
+                          title={icon.description}
+                        >
+                          {IconComponent && <IconComponent className="w-5 h-5" />}
+                          <span className="text-xs text-gray-500 group-hover:text-gray-700">
+                            {icon.name}
+                          </span>
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div>
                   <Label>Color</Label>
-                  <div className="grid grid-cols-4 gap-2 mt-1">
+                  <div className="grid grid-cols-4 gap-2 mt-2">
                     {[
                       "bg-blue-100 text-blue-800",
                       "bg-green-100 text-green-800",
@@ -570,7 +882,7 @@ export default function ProfileManagement() {
                   >
                     Cancel
                   </Button>
-                  <Button type="submit">
+                  <Button type="submit" disabled={!badgeForm.text || !badgeForm.icon}>
                     {editingBadge !== null ? "Update" : "Add"} Badge
                   </Button>
                 </div>

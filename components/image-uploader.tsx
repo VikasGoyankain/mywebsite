@@ -63,15 +63,71 @@ export function ImageUploader({
 
   // Optimize image for faster loading
   const optimizeImage = async (file: File): Promise<File> => {
-    // Simple file size validation - reject files over 5MB
-    if (file.size > 5 * 1024 * 1024) {
-      throw new Error("Image too large (max 5MB)")
+    // Increase max file size to 10MB
+    if (file.size > 10 * 1024 * 1024) {
+      throw new Error("Image too large (max 10MB)");
     }
     
-    // For more advanced optimization, you could use a library like browser-image-compression
-    // This is a placeholder for potential future enhancement
-    return file
-  }
+    // Create a canvas for image resizing
+    const img = new Image();
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Create a promise to handle image loading
+    const imageLoadPromise = new Promise<void>((resolve, reject) => {
+      img.onload = () => resolve();
+      img.onerror = () => reject(new Error('Failed to load image'));
+      img.src = URL.createObjectURL(file);
+    });
+    
+    try {
+      await imageLoadPromise;
+      
+      // Calculate new dimensions while maintaining aspect ratio
+      let width = img.width;
+      let height = img.height;
+      const maxDimension = 1200; // Max dimension for either width or height
+      
+      if (width > height && width > maxDimension) {
+        height = Math.round((height * maxDimension) / width);
+        width = maxDimension;
+      } else if (height > maxDimension) {
+        width = Math.round((width * maxDimension) / height);
+        height = maxDimension;
+      }
+      
+      // Set canvas dimensions
+      canvas.width = width;
+      canvas.height = height;
+      
+      // Draw and resize image
+      ctx?.drawImage(img, 0, 0, width, height);
+      
+      // Convert to blob with quality setting
+      const blob = await new Promise<Blob>((resolve, reject) => {
+        canvas.toBlob((blob) => {
+          if (blob) {
+            resolve(blob);
+          } else {
+            reject(new Error('Failed to create blob'));
+          }
+        }, 'image/jpeg', 0.85); // Use JPEG with 85% quality
+      });
+      
+      // Create a new file from the blob
+      return new File([blob], file.name, {
+        type: 'image/jpeg',
+        lastModified: Date.now(),
+      });
+    } catch (error) {
+      console.error("Error optimizing image:", error);
+      // If optimization fails, return the original file
+      return file;
+    } finally {
+      // Clean up
+      URL.revokeObjectURL(img.src);
+    }
+  };
 
   const handleButtonClick = () => {
     fileInputRef.current?.click()
