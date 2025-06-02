@@ -7,20 +7,9 @@ import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { getSkills, getTopSkills, getCertificates } from '../../lib/expertise-nexus/redis'
-
-interface Skill {
-  id: string
-  name: string
-  category: string
-  level: number
-  description?: string
-  icon?: string
-  subSkills?: string[]
-  books?: string[]
-  achievements?: string[]
-  tools?: string[]
-}
+import { useProfileStore } from '@/lib/profile-store'
+import { useDatabaseInit } from '@/hooks/use-database-init'
+import type { Skill } from '@/lib/profile-store'
 
 interface Certificate {
   id: string
@@ -118,42 +107,27 @@ export default function SkillsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      setLoading(true);
-      try {
-        // Fetch all data in parallel
-        const [skillsData, topSkillsData, certData] = await Promise.all([
-          getSkills(),
-          getTopSkills(),
-          getCertificates()
-        ]);
+  // Initialize database connection
+  useDatabaseInit()
 
-        if (skillsData && Array.isArray(skillsData)) {
-          // Group skills by category
-          const groupedSkills = groupSkillsByCategory(skillsData as Skill[]);
-          setSkillSectors(groupedSkills);
-          
-          // Set top skills
-          setTopSkills(topSkillsData as Skill[] || []);
-          
-          // Set certificates
-          if (certData && Array.isArray(certData)) {
-            setCertificates(certData as Certificate[]);
-          }
-        } else {
-          setError("Failed to load skills data");
-        }
-      } catch (err) {
-        console.error("Error fetching data:", err);
-        setError("Failed to load data. Please try again later.");
-      } finally {
-        setLoading(false);
+  // Get skills from profile store
+  const { skills, isLoading: storeLoading, error: storeError } = useProfileStore()
+
+  useEffect(() => {
+    if (!storeLoading) {
+      if (storeError) {
+        setError(storeError)
+      } else if (skills) {
+        // Group skills by category
+        const groupedSkills = groupSkillsByCategory(skills as Skill[]);
+        setSkillSectors(groupedSkills);
+        
+        // Set top skills (for now, just use the first 6 skills as top skills)
+        setTopSkills(skills.slice(0, 6) as Skill[]);
       }
-    };
-    
-    fetchData();
-  }, []);
+      setLoading(false)
+    }
+  }, [skills, storeLoading, storeError])
 
   const filteredCertificates = selectedFilter === 'all' 
     ? certificates 
@@ -253,11 +227,11 @@ export default function SkillsPage() {
                   <div className="text-2xl">{skill.icon}</div>
                   <div className="flex items-center gap-1">
                     <Star className="w-4 h-4 text-yellow-500 fill-current" />
-                    <span className="text-sm font-semibold text-slate-700">{skill.level}%</span>
+                    <span className="text-sm font-semibold text-slate-700">{skill.proficiency}%</span>
                   </div>
                 </div>
                 <h3 className="text-lg font-semibold text-slate-900 mb-2">{skill.name}</h3>
-                <p className="text-slate-600 text-sm mb-3">{skill.description}</p>
+                <p className="text-slate-600 text-sm mb-3">{skill.experience}</p>
                 <div className="flex flex-wrap gap-2 mb-4">
                   {skill.subSkills?.slice(0, 3).map((subSkill, i) => (
                     <Badge key={i} variant="outline" className="bg-slate-50">
@@ -344,7 +318,7 @@ export default function SkillsPage() {
                                 <div className="text-2xl">{skill.icon}</div>
                                 <div>
                                   <h4 className="text-xl font-semibold text-slate-900">{skill.name}</h4>
-                                  <p className="text-slate-600">{skill.description} • Level {skill.level}%</p>
+                                  <p className="text-slate-600">{skill.experience} • Level {skill.proficiency}%</p>
                                 </div>
                               </div>
                             </div>
@@ -367,7 +341,6 @@ export default function SkillsPage() {
                                 </h5>
                                 {skill.achievements && skill.achievements.length > 0 && (
                                   <div className="mt-4">
-                                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Key Achievements</h4>
                                     <ul className="space-y-2">
                                       {skill.achievements.map((achievement, i) => (
                                         <li key={i} className="flex items-start gap-2 text-sm text-slate-600">
@@ -388,7 +361,6 @@ export default function SkillsPage() {
                                 </h5>
                                 {skill.books && skill.books.length > 0 && (
                                   <div className="mt-4">
-                                    <h4 className="text-sm font-semibold text-slate-700 mb-2">Recommended Books</h4>
                                     <ul className="space-y-2">
                                       {skill.books.map((book, i) => (
                                         <li key={i} className="flex items-start gap-2 text-sm text-slate-600">

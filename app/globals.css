@@ -126,3 +126,32 @@ img {
     display: none !important;
   }
 }
+
+/* Unrestricted text input style */
+.text-input-unrestricted {
+  font-family: inherit;
+  font-size: inherit;
+  line-height: inherit;
+  color: inherit;
+  background-color: inherit;
+  -webkit-text-security: none;
+  -moz-text-security: none;
+  text-security: none;
+  -webkit-user-modify: read-write;
+  -moz-user-modify: read-write;
+  user-modify: read-write;
+  -webkit-user-select: text;
+  -moz-user-select: text;
+  user-select: text;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  text-transform: none;
+}
+
+/* Force all inputs to accept all characters */
+input, textarea {
+  -webkit-user-modify: read-write !important;
+  -moz-user-modify: read-write !important;
+  user-modify: read-write !important;
+}

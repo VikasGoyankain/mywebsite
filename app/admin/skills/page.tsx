@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Plus, Save, Trash2, AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react"
+import { Loader2, Plus, Save, Trash2, AlertCircle, CheckCircle2, ArrowLeft, PlusCircle } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 
@@ -134,6 +134,33 @@ export default function AdminSkillsPage() {
   const [skillForm, setSkillForm] = useState<SkillFormData>(defaultSkillForm)
   const [educationForm, setEducationForm] = useState<EducationFormData>(defaultEducationForm)
   const [experienceForm, setExperienceForm] = useState<ExperienceFormData>(defaultExperienceForm)
+
+  // Alternative input method for adding items
+  const [subSkillInput, setSubSkillInput] = useState("")
+  const [bookInput, setBookInput] = useState("")
+  const [achievementInput, setAchievementInput] = useState("")
+  const [toolInput, setToolInput] = useState("")
+
+  const addSubSkill = () => {
+    if (!subSkillInput.trim()) return
+    setSkillForm(prev => ({ ...prev, subSkills: [...prev.subSkills, subSkillInput.trim()] }))
+    setSubSkillInput("")
+  }
+  const addBook = () => {
+    if (!bookInput.trim()) return
+    setSkillForm(prev => ({ ...prev, books: [...prev.books, bookInput.trim()] }))
+    setBookInput("")
+  }
+  const addAchievement = () => {
+    if (!achievementInput.trim()) return
+    setSkillForm(prev => ({ ...prev, achievements: [...prev.achievements, achievementInput.trim()] }))
+    setAchievementInput("")
+  }
+  const addTool = () => {
+    if (!toolInput.trim()) return
+    setSkillForm(prev => ({ ...prev, tools: [...prev.tools, toolInput.trim()] }))
+    setToolInput("")
+  }
 
   // Reset form when selected item changes
   useEffect(() => {
@@ -360,27 +387,6 @@ export default function AdminSkillsPage() {
       console.error("Error saving changes:", error)
     } finally {
       setIsSubmitting(false)
-    }
-  }
-
-  // Handle array field changes with proper validation
-  const handleArrayChange = (form: "skill" | "education" | "experience", field: string, value: string) => {
-    // Split by both newlines and commas, then clean up
-    const items = value
-      .split(/[\n,]+/)
-      .map(item => item.trim())
-      .filter(item => item.length > 0)
-
-    switch (form) {
-      case "skill":
-        setSkillForm(prev => ({ ...prev, [field]: items }))
-        break
-      case "education":
-        setEducationForm(prev => ({ ...prev, [field]: items }))
-        break
-      case "experience":
-        // Experience form doesn't use array fields, but we'll keep the type for consistency
-        break
     }
   }
 
@@ -891,43 +897,203 @@ export default function AdminSkillsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="subSkills">Sub-skills (comma-separated)</Label>
-                        <Textarea
-                          id="subSkills"
-                          value={Array.isArray(skillForm.subSkills) ? skillForm.subSkills.join(", ") : ""}
-                          onChange={(e) => handleArrayChange("skill", "subSkills", e.target.value)}
-                          placeholder="e.g., React Hooks, Context API, Redux"
-                        />
+                        <Label htmlFor="subSkills">Sub-skills</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              value={subSkillInput}
+                              onChange={(e) => setSubSkillInput(e.target.value)}
+                              placeholder="Type a sub-skill"
+                              className="flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addSubSkill();
+                                }
+                              }}
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={addSubSkill}
+                              variant="outline"
+                            >
+                              <PlusCircle className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {Array.isArray(skillForm.subSkills) && skillForm.subSkills.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="px-2 py-1">
+                                {item}
+                                <button 
+                                  type="button"
+                                  className="ml-1 text-gray-500 hover:text-red-500"
+                                  onClick={() => {
+                                    setSkillForm(prev => ({
+                                      ...prev,
+                                      subSkills: prev.subSkills.filter((_, i) => i !== index)
+                                    }))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Type each sub-skill and click "Add" or press Enter
+                        </p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="books">Related Books (comma-separated)</Label>
-                        <Textarea
-                          id="books"
-                          value={Array.isArray(skillForm.books) ? skillForm.books.join(", ") : ""}
-                          onChange={(e) => handleArrayChange("skill", "books", e.target.value)}
-                          placeholder="e.g., Clean Code, Design Patterns"
-                        />
+                        <Label htmlFor="books">Related Books</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              value={bookInput}
+                              onChange={(e) => setBookInput(e.target.value)}
+                              placeholder="Type a book title"
+                              className="flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addBook();
+                                }
+                              }}
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={addBook}
+                              variant="outline"
+                            >
+                              <PlusCircle className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {Array.isArray(skillForm.books) && skillForm.books.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="px-2 py-1">
+                                {item}
+                                <button 
+                                  type="button"
+                                  className="ml-1 text-gray-500 hover:text-red-500"
+                                  onClick={() => {
+                                    setSkillForm(prev => ({
+                                      ...prev,
+                                      books: prev.books.filter((_, i) => i !== index)
+                                    }))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Type each book title and click "Add" or press Enter
+                        </p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="achievements">Achievements (comma-separated)</Label>
-                        <Textarea
-                          id="achievements"
-                          value={Array.isArray(skillForm.achievements) ? skillForm.achievements.join(", ") : ""}
-                          onChange={(e) => handleArrayChange("skill", "achievements", e.target.value)}
-                          placeholder="e.g., AWS Certified, Google Cloud Professional"
-                        />
+                        <Label htmlFor="achievements">Achievements</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              value={achievementInput}
+                              onChange={(e) => setAchievementInput(e.target.value)}
+                              placeholder="Type an achievement"
+                              className="flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addAchievement();
+                                }
+                              }}
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={addAchievement}
+                              variant="outline"
+                            >
+                              <PlusCircle className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {Array.isArray(skillForm.achievements) && skillForm.achievements.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="px-2 py-1">
+                                {item}
+                                <button 
+                                  type="button"
+                                  className="ml-1 text-gray-500 hover:text-red-500"
+                                  onClick={() => {
+                                    setSkillForm(prev => ({
+                                      ...prev,
+                                      achievements: prev.achievements.filter((_, i) => i !== index)
+                                    }))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Type each achievement and click "Add" or press Enter
+                        </p>
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="tools">Related Tools (comma-separated)</Label>
-                        <Textarea
-                          id="tools"
-                          value={Array.isArray(skillForm.tools) ? skillForm.tools.join(", ") : ""}
-                          onChange={(e) => handleArrayChange("skill", "tools", e.target.value)}
-                          placeholder="e.g., Git, Docker, Jenkins"
-                        />
+                        <Label htmlFor="tools">Related Tools</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              value={toolInput}
+                              onChange={(e) => setToolInput(e.target.value)}
+                              placeholder="Type a tool name"
+                              className="flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addTool();
+                                }
+                              }}
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={addTool}
+                              variant="outline"
+                            >
+                              <PlusCircle className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {Array.isArray(skillForm.tools) && skillForm.tools.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="px-2 py-1">
+                                {item}
+                                <button 
+                                  type="button"
+                                  className="ml-1 text-gray-500 hover:text-red-500"
+                                  onClick={() => {
+                                    setSkillForm(prev => ({
+                                      ...prev,
+                                      tools: prev.tools.filter((_, i) => i !== index)
+                                    }))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Type each tool name and click "Add" or press Enter
+                        </p>
                       </div>
 
                       <div className="flex justify-end gap-2">
@@ -1027,18 +1193,23 @@ export default function AdminSkillsPage() {
                           id="achievements"
                           value={Array.isArray(educationForm.achievements) ? educationForm.achievements.join("\n") : ""}
                           onChange={(e) => {
-                            // Split by both newlines and commas, then clean up
-                            const items = e.target.value
-                              .split(/[\n,]+/)
-                              .map(item => item.trim())
-                              .filter(item => item.length > 0)
+                            console.log("Raw education input:", e.target.value);
+                            // Direct assignment with simple splitting
+                            const inputValue = e.target.value;
+                            // Try to split by newlines first, then commas if no newlines
+                            const items = inputValue.includes('\n')
+                              ? inputValue.split('\n').map(item => item.trim()).filter(Boolean)
+                              : inputValue.includes(',')
+                                ? inputValue.split(',').map(item => item.trim()).filter(Boolean)
+                                : [inputValue].filter(Boolean);
                             setEducationForm(prev => ({ ...prev, achievements: items }))
                           }}
                           placeholder="Enter achievements (e.g., 🏆 Dean's List, Academic Excellence Award, Research Grant)"
-                          className="min-h-[100px] resize-y"
+                          className="min-h-[100px] resize-y text-input-unrestricted"
                         />
                         <p className="text-sm text-muted-foreground">
                           Tip: You can use emojis, symbols, and any special characters in your achievements.
+                          If you can't type commas or newlines, just type one achievement and save it first.
                         </p>
                       </div>
 
