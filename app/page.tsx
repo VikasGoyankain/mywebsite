@@ -110,15 +110,7 @@ export default function ModernProfile() {
 
   const { profileData, experience, education, skills, posts, navigationButtons } = useProfileStore()
 
-  // Get posts by section
-  const recentWorkPosts = posts.filter((post) => post.section === "recent-work")
-  const articlePosts = posts.filter((post) => post.section === "articles")
-  const achievementPosts = posts.filter((post) => post.section === "achievements")
 
-  // Current active tab (you can make this stateful if needed)
-  const [activeTab, setActiveTab] = useState("recent-work")
-  const currentPosts =
-    activeTab === "recent-work" ? recentWorkPosts : activeTab === "articles" ? articlePosts : achievementPosts
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -388,80 +380,8 @@ export default function ModernProfile() {
             </div>
           </div>
 
-          {/* Content Tabs */}
-          <div className="border-t border-gray-200 pt-8">
-            <div className="flex items-center justify-center gap-8 mb-8">
-              <button
-                onClick={() => setActiveTab("recent-work")}
-                className={`flex items-center gap-2 pt-4 px-4 ${
-                  activeTab === "recent-work"
-                    ? "text-gray-900 border-t-2 border-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <div
-                  className={`w-4 h-4 ${
-                    activeTab === "recent-work" ? "border-2 border-gray-900" : "border-2 border-gray-400"
-                  }`}
-                ></div>
-                <span className={activeTab === "recent-work" ? "font-semibold" : "font-medium"}>
-                  RECENT WORK ({recentWorkPosts.length})
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("articles")}
-                className={`flex items-center gap-2 pt-4 px-4 ${
-                  activeTab === "articles"
-                    ? "text-gray-900 border-t-2 border-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <BookOpen className="w-4 h-4" />
-                <span className={activeTab === "articles" ? "font-semibold" : "font-medium"}>
-                  ARTICLES ({articlePosts.length})
-                </span>
-              </button>
-              <button
-                onClick={() => setActiveTab("achievements")}
-                className={`flex items-center gap-2 pt-4 px-4 ${
-                  activeTab === "achievements"
-                    ? "text-gray-900 border-t-2 border-gray-900"
-                    : "text-gray-500 hover:text-gray-700"
-                }`}
-              >
-                <Award className="w-4 h-4" />
-                <span className={activeTab === "achievements" ? "font-semibold" : "font-medium"}>
-                  ACHIEVEMENTS ({achievementPosts.length})
-                </span>
-              </button>
-            </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {currentPosts.map((post) => (
-                <Card
-                  key={post.id}
-                  className="group cursor-pointer overflow-hidden border-0 shadow-md hover:shadow-xl transition-all duration-300"
-                >
-                  <div className="relative aspect-square">
-                    <Image
-                      src={post.image || "/placeholder.svg"}
-                      alt={post.title}
-                      fill
-                      className="object-cover group-hover:scale-105 transition-transform duration-300"
-                    />
-                    <div className="absolute top-3 left-3">
-                      <Badge className="bg-white/90 text-gray-800 backdrop-blur-sm">{post.category}</Badge>
-                    </div>
-                  </div>
-                  <div className="p-4">
-                    <h3 className="font-semibold text-gray-900 mb-2">{post.title}</h3>
-                    <p className="text-sm text-gray-600 mb-2">{post.date}</p>
-                    {post.description && <p className="text-xs text-gray-500">{post.description}</p>}
-                  </div>
-                </Card>
-              ))}
-            </div>
-          </div>
+
         </div>
 
         {/* Footer */}
