@@ -7,6 +7,8 @@ export interface DatabaseProfile {
   skills: any[]
   posts: any[]
   navigationPages: any[]
+  navigationButtons?: any[]
+  adminPassword?: string | null
   lastUpdated: string
 }
 

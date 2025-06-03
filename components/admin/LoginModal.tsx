@@ -47,12 +47,11 @@ export function LoginModal({ isOpen, setIsOpen, onLoginSuccess }: LoginModalProp
       if (response.ok) {
         toast.success('Login successful')
         setIsOpen(false)
-        // Call onLoginSuccess callback if provided
         onLoginSuccess?.()
-        // Refresh to ensure middleware picks up the new cookie
-        router.refresh()
+        router.push('/admin')
       } else {
         setError(data.message || 'Login failed')
+        toast.error(data.message || 'Login failed')
       }
     } catch (error) {
       setError('An error occurred during login')

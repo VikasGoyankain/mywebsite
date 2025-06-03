@@ -1,12 +1,19 @@
 import { NextRequest, NextResponse } from "next/server"
+import { loadProfileFromDatabase } from '@/lib/redis'
 
-// Function to verify admin credentials
-const verifyPassword = (password: string): boolean => {
-  // Get admin password from environment variable
-  const adminPassword = process.env.ADMIN_PASSWORD
-  
-  // Verify the password matches
-  return password === adminPassword
+// Password verification utility (same as in profile-store)
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  const hashedInput = await hashPassword(password)
+  return hashedInput === hashedPassword
 }
 
 // Generate a secure token for this session
@@ -26,8 +33,18 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    // Verify the password
-    const isValid = verifyPassword(password)
+    // Load hashed password from database
+    const profile = await loadProfileFromDatabase()
+    let hashedPassword = profile?.adminPassword || null
+    let isValid = false
+
+    if (hashedPassword) {
+      isValid = await verifyPassword(password, hashedPassword)
+    } else {
+      // Fallback to env variable for legacy support
+      const envPassword = process.env.ADMIN_PASSWORD
+      isValid = password === envPassword
+    }
     
     if (!isValid) {
       return NextResponse.json(

@@ -108,7 +108,7 @@ const iconMap = {
 export default function ModernProfile() {
   useDatabaseInit() // Initialize database connection
 
-  const { profileData, experience, education, skills, posts, navigationPages } = useProfileStore()
+  const { profileData, experience, education, skills, posts, navigationButtons } = useProfileStore()
 
   // Get posts by section
   const recentWorkPosts = posts.filter((post) => post.section === "recent-work")
@@ -273,24 +273,26 @@ export default function ModernProfile() {
               </div>
             </div>
 
-            {/* Navigation Pages */}
+            {/* Navigation Buttons */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-              {navigationPages.map((page) => {
-                const IconComponent = iconMap[page.icon as keyof typeof iconMap]
+              {navigationButtons.map((button) => {
+                const IconComponent = iconMap[button.icon as keyof typeof iconMap]
                 return (
-                  <Link key={page.id} href={page.href} className="group">
+                  <Link key={button.id} href={button.href} className="group">
                     <Card className="p-6 text-center hover:shadow-2xl transition-all duration-300 group-hover:scale-105 group-hover:-translate-y-2 border-0 bg-white/90 backdrop-blur-sm overflow-hidden relative">
                       <div className="absolute inset-0 bg-gradient-to-br from-transparent to-gray-50 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
                       <div className="relative z-10">
                         <div
-                          className={`w-14 h-14 ${page.color} rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-125 transition-all duration-300 shadow-lg group-hover:shadow-xl`}
+                          className={`w-14 h-14 ${button.color} rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-125 transition-all duration-300 shadow-lg group-hover:shadow-xl`}
                         >
                           {IconComponent && <IconComponent className="w-7 h-7 text-white" />}
                         </div>
                         <h3 className="font-semibold text-gray-900 text-sm mb-2 group-hover:text-gray-800">
-                          {page.title}
+                          {button.text}
                         </h3>
-                        <p className="text-xs text-gray-600 group-hover:text-gray-700">{page.description}</p>
+                        {button.description && (
+                          <p className="text-xs text-gray-600 group-hover:text-gray-700">{button.description}</p>
+                        )}
                       </div>
                     </Card>
                   </Link>

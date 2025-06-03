@@ -66,13 +66,19 @@ export async function GET(request: Request) {
 
       return NextResponse.json({
         success: true,
-        data: defaultData
+        data: {
+          ...defaultData,
+          adminPassword: null,
+        }
       })
     }
 
     return NextResponse.json({
       success: true,
-      data
+      data: {
+        ...data,
+        adminPassword: data.adminPassword ?? null,
+      }
     })
   } catch (error) {
     console.error('Error fetching profile data:', error)
@@ -98,7 +104,10 @@ export async function POST(request: Request) {
       )
     }
 
-    const saveResult = await saveProfileToDatabase(data)
+    const saveResult = await saveProfileToDatabase({
+      ...data,
+      adminPassword: data.adminPassword ?? null,
+    })
     if (!saveResult.success) {
       throw new Error('Failed to save profile data')
     }

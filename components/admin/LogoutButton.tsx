@@ -19,10 +19,7 @@ export function LogoutButton() {
       
       if (response.ok) {
         toast.success('Logged out successfully')
-        // Redirect to login page
         router.push('/admin-login')
-        // Refresh to ensure middleware picks up the cookie change
-        router.refresh()
       } else {
         toast.error('Failed to log out')
       }

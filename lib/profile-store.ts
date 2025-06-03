@@ -83,6 +83,16 @@ export interface NavigationPage {
   color: string
 }
 
+export interface NavigationButton {
+  id: string
+  text: string
+  href: string
+  icon: string
+  description: string
+  color: string
+  order: number
+}
+
 type SyncStatus = "idle" | "syncing" | "success" | "error"
 
 interface ProfileStore {
@@ -92,12 +102,14 @@ interface ProfileStore {
   skills: Skill[]
   posts: Post[]
   navigationPages: NavigationPage[]
+  navigationButtons: NavigationButton[]
   isLoading: boolean
   syncStatus: SyncStatus
   hasUnsavedChanges: boolean
   lastSaved: string | null
   lastUpdated: string | null
   error: string | null
+  adminPassword: string | null
 
   // Profile actions
   updateProfileData: (data: Partial<ProfileData>) => void
@@ -135,6 +147,11 @@ interface ProfileStore {
   updateNavigationPage: (id: number, page: Partial<NavigationPage>) => void
   deleteNavigationPage: (id: number) => void
 
+  // Navigation button actions
+  addNavigationButton: (button: Omit<NavigationButton, "id">) => void
+  updateNavigationButton: (id: string, button: Partial<NavigationButton>) => void
+  deleteNavigationButton: (id: string) => void
+
   // Utility actions
   resetToDefaults: () => void
   exportData: () => string
@@ -145,6 +162,10 @@ interface ProfileStore {
   saveToDatabase: () => Promise<void>
   createBackup: (backupName: string) => Promise<void>
   markAsChanged: () => void
+
+  // Password management
+  updateAdminPassword: (newPassword: string) => Promise<void>
+  verifyAdminPassword: (password: string) => Promise<boolean>
 }
 
 const defaultProfileData: ProfileData = {
@@ -178,6 +199,8 @@ export const useProfileStore = create<ProfileStore>()(
       skills: defaultSkills,
       posts: defaultPosts,
       navigationPages: defaultNavigationPages,
+      navigationButtons: [],
+      adminPassword: null,
 
       // Database sync state
       isLoading: false,
@@ -402,6 +425,33 @@ export const useProfileStore = create<ProfileStore>()(
         }))
       },
 
+      // Navigation button actions
+      addNavigationButton: (button) => {
+        set((state) => {
+          const newId = Date.now().toString()
+          return {
+            navigationButtons: [...state.navigationButtons, { ...button, id: newId }],
+            hasUnsavedChanges: true,
+          }
+        })
+      },
+
+      updateNavigationButton: (id, button) => {
+        set((state) => ({
+          navigationButtons: state.navigationButtons.map((b) => 
+            b.id === id ? { ...b, ...button } : b
+          ),
+          hasUnsavedChanges: true,
+        }))
+      },
+
+      deleteNavigationButton: (id) => {
+        set((state) => ({
+          navigationButtons: state.navigationButtons.filter((b) => b.id !== id),
+          hasUnsavedChanges: true,
+        }))
+      },
+
       // Utility actions
       resetToDefaults: () =>
         set({
@@ -411,6 +461,8 @@ export const useProfileStore = create<ProfileStore>()(
           skills: defaultSkills,
           posts: defaultPosts,
           navigationPages: defaultNavigationPages,
+          navigationButtons: [],
+          adminPassword: null,
           hasUnsavedChanges: true,
         }),
 
@@ -423,6 +475,7 @@ export const useProfileStore = create<ProfileStore>()(
           skills: state.skills,
           posts: state.posts,
           navigationPages: state.navigationPages,
+          navigationButtons: state.navigationButtons,
         })
       },
 
@@ -436,6 +489,8 @@ export const useProfileStore = create<ProfileStore>()(
             skills: parsed.skills || defaultSkills,
             posts: parsed.posts || defaultPosts,
             navigationPages: parsed.navigationPages || defaultNavigationPages,
+            navigationButtons: parsed.navigationButtons || [],
+            adminPassword: null,
             hasUnsavedChanges: true,
           })
         } catch (error) {
@@ -502,6 +557,8 @@ export const useProfileStore = create<ProfileStore>()(
             skills: result.data.skills || defaultSkills,
             posts: result.data.posts || defaultPosts,
             navigationPages: result.data.navigationPages || defaultNavigationPages,
+            navigationButtons: result.data.navigationButtons || [],
+            adminPassword: result.data.adminPassword ?? null,
             lastUpdated: result.data.lastUpdated || new Date().toISOString(),
             syncStatus: 'success',
             isLoading: false,
@@ -531,6 +588,8 @@ export const useProfileStore = create<ProfileStore>()(
               skills: state.skills,
               posts: state.posts,
               navigationPages: state.navigationPages,
+              navigationButtons: state.navigationButtons,
+              adminPassword: state.adminPassword,
               lastUpdated: new Date().toISOString(),
             }),
           })
@@ -572,6 +631,7 @@ export const useProfileStore = create<ProfileStore>()(
               skills: state.skills,
               posts: state.posts,
               navigationPages: state.navigationPages,
+              navigationButtons: state.navigationButtons,
               timestamp: new Date().toISOString(),
             },
           }
@@ -593,10 +653,46 @@ export const useProfileStore = create<ProfileStore>()(
       markAsChanged: () => {
         set({ hasUnsavedChanges: true })
       },
+
+      // Password management
+      updateAdminPassword: async (newPassword) => {
+        try {
+          // Hash the password before storing
+          const hashedPassword = await hashPassword(newPassword)
+          set((state) => ({
+            adminPassword: hashedPassword,
+            hasUnsavedChanges: true,
+          }))
+        } catch (error) {
+          console.error("Failed to update password:", error)
+          throw error
+        }
+      },
+
+      verifyAdminPassword: async (password) => {
+        const state = get()
+        if (!state.adminPassword) return false
+        return await verifyPassword(password, state.adminPassword)
+      },
     }),
     {
       name: "profile-storage",
-      version: 3, // Increment version for migration
+      version: 4, // Increment version for new password and navigation button features
     },
   ),
 )
+
+// Password hashing utilities
+async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder()
+  const data = encoder.encode(password)
+  const hash = await crypto.subtle.digest('SHA-256', data)
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('')
+}
+
+async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  const hashedInput = await hashPassword(password)
+  return hashedInput === hashedPassword
+}

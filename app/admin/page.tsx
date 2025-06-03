@@ -13,7 +13,7 @@ import {
   Award,
   LogOut,
   Settings,
-} from "lucide-react"
+  FileText } from "lucide-react"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import Link from "next/link"
 import { LogoutButton } from "@/components/admin/LogoutButton"
@@ -40,6 +40,35 @@ export default function AdminDashboardWrapper() {
       </Suspense>
     </ErrorBoundary>
   );
+}
+
+interface DashboardCardProps {
+  title: string
+  description: string
+  icon: React.ReactNode
+  linkHref: string
+  linkText: string
+}
+
+function DashboardCard({ title, description, icon, linkHref, linkText }: DashboardCardProps) {
+  return (
+    <Card className="overflow-hidden transition-all hover:shadow-md">
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-lg font-medium">{title}</CardTitle>
+        <div className="rounded-full bg-primary/10 p-2 text-primary">
+          {icon}
+        </div>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm text-muted-foreground mb-4">{description}</p>
+        <Button asChild variant="default" className="w-full">
+          <Link href={linkHref}>
+            {linkText}
+          </Link>
+        </Button>
+      </CardContent>
+    </Card>
+  )
 }
 
 function AdminDashboard() {
@@ -134,36 +163,14 @@ function AdminDashboard() {
           linkHref="/admin/settings"
           linkText="Manage Settings"
         />
+        <DashboardCard
+          title="Posts"
+          description="Manage your professional insights and articles"
+          icon={<FileText className="h-5 w-5" />}
+          linkHref="/admin/posts"
+          linkText="Manage Posts"
+        />
       </div>
     </div>
-  )
-}
-
-interface DashboardCardProps {
-  title: string
-  description: string
-  icon: React.ReactNode
-  linkHref: string
-  linkText: string
-}
-
-function DashboardCard({ title, description, icon, linkHref, linkText }: DashboardCardProps) {
-  return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg font-medium">{title}</CardTitle>
-        <div className="rounded-full bg-primary/10 p-2 text-primary">
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">{description}</p>
-        <Button asChild variant="default" className="w-full">
-          <Link href={linkHref}>
-            {linkText}
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
   )
 }
