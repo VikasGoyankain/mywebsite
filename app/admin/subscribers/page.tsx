@@ -270,10 +270,10 @@ export default function AdminSubscribers() {
         throw new Error(data.message || 'Failed to send message')
       }
       
-      // Success message
+      // Success message with more details
       toast({
         title: "Message sent successfully",
-        description: `SMS: ${data.smsSentCount || 0}, Email: ${data.emailSentCount || 0}`,
+        description: `Email sent from contact@vikasgoyanka.in to ${data.emailSentCount || 0} subscribers, SMS sent to ${data.smsSentCount || 0} subscribers`,
         variant: "default"
       })
       

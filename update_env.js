@@ -10,6 +10,12 @@
  * 4. Add the following environment variables:
  *    - ADMIN_API_KEY: admin-secret-key-12345
  *    - NEXT_PUBLIC_ADMIN_API_KEY: admin-secret-key-12345
+ *    - EMAIL_SMTP_HOST: smtp.zeptomail.in
+ *    - EMAIL_SMTP_PORT: 587
+ *    - EMAIL_SMTP_USER: emailapikey
+ *    - EMAIL_SMTP_PASS: PHtE6r0FF7rogmUvoRFW4KS6F5P3N4snrOI2LlFE4o9CDKVVSk1Xot4qkzCz/RksXPATHfGdzN1q5b6bu+3TIT3oPTpLX2qyqK3sx/VYSPOZsbq6x00Ys14ccETZXY/octdp0yLQvdrdNA==
+ *    - EMAIL_FROM_ADDRESS: contact@vikasgoyanka.in
+ *    - EMAIL_FROM_NAME: Vikas Goyanka
  * 
  * 5. Once added, redeploy your application:
  *    - Go to "Deployments" tab

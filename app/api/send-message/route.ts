@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { redis, REDIS_KEYS, isRedisConnected } from '@/lib/redis'
 import { kv } from '@vercel/kv'
 import axios from 'axios'
+import nodemailer from 'nodemailer'
 
 // Type definition for a subscriber
 type Subscriber = {
@@ -68,53 +69,52 @@ const sendSMS = async (phoneNumber: string, message: string) => {
   }
 }
 
-// Send email via Resend API or similar service
+// Create Zoho Mail transporter
+const createEmailTransporter = () => {
+  return nodemailer.createTransport({
+    host: process.env.EMAIL_SMTP_HOST || "smtp.zeptomail.in",
+    port: parseInt(process.env.EMAIL_SMTP_PORT || "587"),
+    secure: false, // true for 465, false for other ports
+    auth: {
+      user: process.env.EMAIL_SMTP_USER || "emailapikey",
+      pass: process.env.EMAIL_SMTP_PASS || "PHtE6r0FF7rogmUvoRFW4KS6F5P3N4snrOI2LlFE4o9CDKVVSk1Xot4qkzCz/RksXPATHfGdzN1q5b6bu+3TIT3oPTpLX2qyqK3sx/VYSPOZsbq6x00Ys14ccETZXY/octdp0yLQvdrdNA=="
+    }
+  });
+};
+
+// Send email via Zoho Mail
 const sendEmail = async (email: string, fullName: string, subject: string, message: string) => {
   if (!email) return { success: false, error: 'No email provided' };
   
   try {
-    // For now, we'll just log the email sending attempt
-    // In production, you would use a service like Resend, SendGrid, etc.
-    console.log(`Would send email to ${email} with subject: ${subject}`);
+    const transporter = createEmailTransporter();
     
-    // Mock successful email sending
-    return { 
-      success: true, 
-      messageId: `mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
-      note: "Email sending is currently mocked. Implement a real email service in production."
+    const mailOptions = {
+      from: `"${process.env.EMAIL_FROM_NAME || 'Vikas Goyanka'}" <${process.env.EMAIL_FROM_ADDRESS || 'contact@vikasgoyanka.in'}>`,
+      to: email,
+      subject: subject || 'Update from Vikas Goyanka',
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Hello ${fullName},</h2>
+          <div style="margin: 20px 0; line-height: 1.5;">
+            ${message.replace(/\n/g, '<br>')}
+          </div>
+          <p style="margin-top: 30px; color: #555;">
+            Best regards,<br>
+            <strong>Vikas Goyanka</strong>
+          </p>
+        </div>
+      `,
+      text: `Hello ${fullName},\n\n${message}\n\nBest regards,\nVikas Goyanka`
     };
     
-    /* Example implementation with an email API:
+    const info = await transporter.sendMail(mailOptions);
     
-    const response = await fetch('https://api.emailservice.com/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': `Bearer ${process.env.EMAIL_API_KEY}`
-      },
-      body: JSON.stringify({
-        from: 'Vikas Goyanka <updates@vikasgoyanka.com>',
-        to: email,
-        subject: subject,
-        html: `
-          <div>
-            <p>Hello ${fullName},</p>
-            <div>${message.replace(/\n/g, '<br>')}</div>
-            <p>Best regards,<br>Vikas Goyanka</p>
-          </div>
-        `,
-        text: message
-      })
-    });
-    
-    const data = await response.json();
-    
-    if (response.ok) {
-      return { success: true, messageId: data.id };
-    } else {
-      return { success: false, error: data.error || 'Failed to send email' };
-    }
-    */
+    console.log('Email sent successfully:', info.messageId);
+    return { 
+      success: true, 
+      messageId: info.messageId
+    };
   } catch (error: any) {
     console.error('Error sending email:', error);
     return { 
