@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { redis, REDIS_KEYS, isRedisConnected } from '@/lib/redis'
 import { kv } from '@vercel/kv'
+import { sendWelcomeEmail, shouldSendWelcomeEmail } from '@/lib/welcome-email'
 
 // Type definition for a subscriber
 type Subscriber = {
@@ -349,9 +350,25 @@ export async function POST(request: Request) {
     
     console.log(`Subscriber ${isNewSubscription ? 'added' : 'updated'}: ${fullName} (${normalizedPhone || normalizedEmail}) stored in ${type}`);
     
+    // Send welcome email if this is a new subscription or email was added/updated
+    let emailResult = null;
+    const isEmailNew = normalizedEmail && (!existingSubscriberByPhone?.email || existingSubscriberByPhone.email !== normalizedEmail);
+    const isEmailUpdated = normalizedEmail && existingSubscriberByEmail && existingSubscriberByEmail.email !== normalizedEmail;
+    
+    if (normalizedEmail && shouldSendWelcomeEmail(isNewSubscription, Boolean(isEmailNew || isEmailUpdated))) {
+      console.log(`Sending welcome email to ${normalizedEmail}`);
+      emailResult = await sendWelcomeEmail(normalizedEmail, fullName.trim());
+      console.log('Welcome email result:', emailResult);
+    }
+    
     // Return success response
     return NextResponse.json(
-      { message: updateMessage, success: true, isNewSubscription }, 
+      { 
+        message: updateMessage, 
+        success: true, 
+        isNewSubscription,
+        emailSent: emailResult?.success || false
+      }, 
       { status: isNewSubscription ? 201 : 200 }
     );
     

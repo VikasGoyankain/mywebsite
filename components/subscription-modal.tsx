@@ -125,9 +125,16 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
       }
       
       // Different toast messages based on whether it's a new subscription or update
+      let toastMessage = data.message || "You'll receive updates soon.";
+      
+      // Add information about the welcome email if one was sent
+      if (data.emailSent && email) {
+        toastMessage += ` A welcome email has been sent to ${email}.`;
+      }
+      
       toast({
         title: data.isNewSubscription ? "You're subscribed!" : "Subscription updated",
-        description: data.message || "You'll receive updates soon.",
+        description: toastMessage,
         variant: "default"
       })
       
