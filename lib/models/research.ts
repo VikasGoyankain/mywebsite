@@ -15,6 +15,14 @@ export interface ResearchStudy {
   views: number
 }
 
+export interface ResearchDomainItem {
+  id: string
+  name: string
+  description?: string
+  createdAt: string
+}
+
+// Default domains - these will be used as initial data
 export enum ResearchDomain {
   LAW = "Law",
   CONSTITUTION = "Constitutional Law",
@@ -27,6 +35,13 @@ export enum ResearchDomain {
   SOCIAL_JUSTICE = "Social Justice",
   OTHER = "Other"
 }
+
+export const DEFAULT_RESEARCH_DOMAINS: ResearchDomainItem[] = Object.values(ResearchDomain).map((domain, index) => ({
+  id: `domain-${index + 1}`,
+  name: domain,
+  description: `Research related to ${domain.toLowerCase()}`,
+  createdAt: new Date().toISOString()
+}));
 
 export const DEFAULT_RESEARCH_STUDIES: ResearchStudy[] = [
   {

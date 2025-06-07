@@ -1,81 +1,69 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { redis } from '@/lib/redis'
 import { v4 as uuidv4 } from 'uuid'
+import { imagekit } from '@/lib/imagekit'
 
-export async function POST(request: NextRequest) {
+export async function POST(req: NextRequest) {
   try {
-    const formData = await request.formData()
-    const file = formData.get('file') as File
+    const data = await req.json()
+    const { file, fileName, folder = 'uploads' } = data
     
     if (!file) {
       return NextResponse.json(
-        { success: false, error: 'No file provided' },
+        { error: 'File data is required' }, 
         { status: 400 }
       )
     }
-
-    // Validate file type
-    if (!file.type.startsWith('image/')) {
-      return NextResponse.json(
-        { success: false, error: 'Invalid file type. Only images are allowed.' },
-        { status: 400 }
-      )
-    }
-
-    // Validate file size (max 10MB)
-    if (file.size > 10 * 1024 * 1024) {
-      return NextResponse.json(
-        { success: false, error: 'File too large. Maximum size is 10MB.' },
-        { status: 400 }
-      )
-    }
-
-    // Convert file to base64
-    const bytes = await file.arrayBuffer()
-    const buffer = Buffer.from(bytes)
-    const base64 = buffer.toString('base64')
-    const dataUrl = `data:${file.type};base64,${base64}`
-
-    // Generate a unique key for the image
-    const imageKey = `profile:image:${uuidv4()}`
     
-    // Store in Redis
-    await redis.set(imageKey, {
-      dataUrl,
-      type: file.type,
-      name: file.name,
-      size: file.size,
-      uploadedAt: new Date().toISOString(),
+    // Handle base64 data
+    let fileData = file
+    if (file.includes('base64,')) {
+      fileData = file.split('base64,')[1]
+    }
+    
+    // Upload to ImageKit
+    const uploadResponse = await imagekit.upload({
+      file: fileData,
+      fileName: fileName || `upload_${Date.now()}`,
+      folder: folder,
+      useUniqueFileName: true,
     })
-
-    // Return the image key as the URL
-    // In a production environment, you might want to use a CDN or object storage
-    // and return a public URL instead
+    
     return NextResponse.json({
-      success: true,
-      url: `/api/image/${imageKey}`,
+      url: uploadResponse.url,
+      fileId: uploadResponse.fileId,
+      success: true
     })
-  } catch (error) {
-    console.error('Error uploading file:', error)
+  } catch (error: any) {
+    console.error('ImageKit upload error:', error)
     return NextResponse.json(
-      { success: false, error: 'Failed to upload file' },
+      { error: error.message || 'Upload failed' }, 
       { status: 500 }
     )
   }
 }
 
-// Optional: Add a GET endpoint to serve the images
+// Endpoint to handle GET requests - either for auth parameters or image retrieval
 export async function GET(request: NextRequest) {
-  try {
-    const imageKey = request.nextUrl.searchParams.get('key')
-    
-    if (!imageKey) {
+  // Check if we're requesting auth parameters or an image
+  const imageKey = request.nextUrl.searchParams.get('key')
+  
+  // If no key is provided, return auth parameters for client-side uploads
+  if (!imageKey) {
+    try {
+      const authenticationParameters = imagekit.getAuthenticationParameters()
+      return NextResponse.json(authenticationParameters)
+    } catch (error: any) {
+      console.error('ImageKit auth error:', error)
       return NextResponse.json(
-        { success: false, error: 'No image key provided' },
-        { status: 400 }
+        { error: error.message || 'Authentication failed' }, 
+        { status: 500 }
       )
     }
-
+  }
+  
+  // If key is provided, retrieve the image from Redis
+  try {
     const imageData = await redis.get(imageKey)
     
     if (!imageData) {

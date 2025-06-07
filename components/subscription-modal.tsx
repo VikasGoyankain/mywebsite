@@ -12,7 +12,7 @@ import {
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { BellRing, Check, X, Loader2, AlertCircle } from 'lucide-react'
+import { BellRing, Check, X, Loader2, AlertCircle, Mail, Phone } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface SubscriptionModalProps {
@@ -24,7 +24,8 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
   const { toast } = useToast()
   const [fullName, setFullName] = useState('')
   const [phoneNumber, setPhoneNumber] = useState('')
-  const [errors, setErrors] = useState<{ fullName?: string; phoneNumber?: string }>({})
+  const [email, setEmail] = useState('')
+  const [errors, setErrors] = useState<{ fullName?: string; phoneNumber?: string; email?: string }>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
   
   // Handle phone number input with validation
@@ -40,22 +41,55 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
       setErrors(prev => ({...prev, phoneNumber: undefined}))
     }
   }
+
+  // Handle email input with validation
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value
+    setEmail(value)
+    
+    // Clear error when user types
+    if (errors.email) {
+      setErrors(prev => ({...prev, email: undefined}))
+    }
+  }
   
   const validateForm = () => {
-    const newErrors: { fullName?: string; phoneNumber?: string } = {}
+    const newErrors: { fullName?: string; phoneNumber?: string; email?: string } = {}
     
     // Validate name
     if (!fullName.trim()) {
       newErrors.fullName = 'Name is required'
     }
     
-    // Validate phone number
-    if (!phoneNumber.trim()) {
-      newErrors.phoneNumber = 'Mobile number is required'
-    } else if (phoneNumber.length !== 10) {
-      newErrors.phoneNumber = 'Mobile number must be exactly 10 digits'
-    } else if (!phoneNumber.match(/^[6-9]\d{9}$/)) {
-      newErrors.phoneNumber = 'Must be a valid Indian mobile number (without +91/0)'
+    // Validate that at least one contact method is provided
+    if (!phoneNumber && !email) {
+      newErrors.phoneNumber = 'Either mobile number or email is required'
+      newErrors.email = 'Either mobile number or email is required'
+    }
+    
+    // Validate phone number if provided
+    if (phoneNumber) {
+      if (phoneNumber.length !== 10) {
+        newErrors.phoneNumber = 'Mobile number must be exactly 10 digits'
+      } else if (!phoneNumber.match(/^[6-9]\d{9}$/)) {
+        newErrors.phoneNumber = 'Must be a valid Indian mobile number (without +91/0)'
+      }
+    }
+    
+    // Validate email if provided
+    if (email) {
+      // Basic email validation
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+      if (!emailRegex.test(email)) {
+        newErrors.email = 'Please enter a valid email address'
+      }
+      
+      // Check for common disposable email domains
+      const disposableDomains = ['yopmail.com', 'tempmail.com', 'mailinator.com', 'temp-mail.org', 'guerrillamail.com']
+      const domain = email.split('@')[1]?.toLowerCase()
+      if (domain && disposableDomains.includes(domain)) {
+        newErrors.email = 'Please use a non-disposable email address'
+      }
     }
     
     setErrors(newErrors)
@@ -79,7 +113,8 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
         },
         body: JSON.stringify({
           fullName,
-          phoneNumber,
+          phoneNumber: phoneNumber || undefined,
+          email: email || undefined,
         }),
       })
       
@@ -89,15 +124,17 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
         throw new Error(data.message || 'Failed to subscribe')
       }
       
+      // Different toast messages based on whether it's a new subscription or update
       toast({
-        title: "You're subscribed!",
-        description: "You'll receive updates soon.",
+        title: data.isNewSubscription ? "You're subscribed!" : "Subscription updated",
+        description: data.message || "You'll receive updates soon.",
         variant: "default"
       })
       
       // Reset form and close modal
       setFullName('')
       setPhoneNumber('')
+      setEmail('')
       onClose()
       
     } catch (error: any) {
@@ -145,8 +182,32 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
           </div>
           
           <div className="space-y-2">
+            <Label htmlFor="email" className="flex items-center gap-1">
+              <Mail className="h-4 w-4" /> Email Address
+            </Label>
+            <Input 
+              id="email" 
+              type="email"
+              value={email}
+              onChange={handleEmailChange}
+              placeholder="your.email@example.com"
+              className={errors.email ? 'border-red-500' : ''}
+              disabled={isSubmitting}
+            />
+            {errors.email ? (
+              <p className="text-xs text-red-500 flex items-center gap-1">
+                <AlertCircle className="h-3 w-3" /> {errors.email}
+              </p>
+            ) : (
+              <p className="text-xs text-gray-500">
+                Either email or mobile number is required
+              </p>
+            )}
+          </div>
+          
+          <div className="space-y-2">
             <Label htmlFor="phoneNumber" className="flex items-center gap-1">
-              Mobile Number <span className="text-xs text-gray-500">(10 digits)</span>
+              <Phone className="h-4 w-4" /> Mobile Number <span className="text-xs text-gray-500">(10 digits)</span>
             </Label>
             <Input 
               id="phoneNumber" 
@@ -172,7 +233,7 @@ export function SubscriptionModal({ isOpen, onClose }: SubscriptionModalProps) {
           <div className="bg-blue-50 p-2 rounded-md text-xs text-gray-600 flex items-start gap-2">
             <Check className="h-4 w-4 text-green-500 mt-0.5" /> 
             <div>
-              Your number will never be shared publicly. It will be used only for sending important updates related to our services.
+              Your contact information will never be shared publicly. It will be used only for sending important updates related to our services.
             </div>
           </div>
           

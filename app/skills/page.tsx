@@ -9,17 +9,9 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { useProfileStore } from '@/lib/profile-store'
 import { useDatabaseInit } from '@/hooks/use-database-init'
-import type { Skill } from '@/lib/profile-store'
-
-interface Certificate {
-  id: string
-  name: string
-  issuer: string
-  date: string
-  imageUrl: string
-  url?: string
-  tags?: string[]
-}
+import type { Skill, Certificate, ProfileData } from '@/lib/profile-store'
+import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar'
+import Link from 'next/link'
 
 interface SkillSector {
   id: string
@@ -101,17 +93,18 @@ const groupSkillsByCategory = (skills: Skill[]): SkillSector[] => {
 export default function SkillsPage() {
   const [expandedSector, setExpandedSector] = useState<string | null>(null)
   const [selectedFilter, setSelectedFilter] = useState('all')
-  const [certificates, setCertificates] = useState<Certificate[]>([])
   const [topSkills, setTopSkills] = useState<Skill[]>([])
   const [skillSectors, setSkillSectors] = useState<SkillSector[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [experienceYears, setExperienceYears] = useState<number>(0)
+  const [certificateCount, setCertificateCount] = useState<number>(0)
 
   // Initialize database connection
   useDatabaseInit()
 
-  // Get skills from profile store
-  const { skills, isLoading: storeLoading, error: storeError } = useProfileStore()
+  // Get skills and certificates from profile store
+  const { skills, certificates = [], profileData, isLoading: storeLoading, error: storeError } = useProfileStore()
 
   useEffect(() => {
     if (!storeLoading) {
@@ -124,14 +117,29 @@ export default function SkillsPage() {
         
         // Set top skills (for now, just use the first 6 skills as top skills)
         setTopSkills(skills.slice(0, 6) as Skill[]);
+
+        // Calculate experience years from March 1, 2023
+        const startDate = new Date('2023-03-01');
+        const currentDate = new Date();
+        const diffInYears = (currentDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 365.25);
+        setExperienceYears(Math.floor(diffInYears));
+
+        // Set certificate count
+        setCertificateCount(certificates.length);
       }
       setLoading(false)
     }
-  }, [skills, storeLoading, storeError])
+  }, [skills, certificates, storeLoading, storeError])
 
+  // Filter certificates based on selected filter
   const filteredCertificates = selectedFilter === 'all' 
     ? certificates 
-    : certificates.filter(cert => cert.tags?.some(tag => tag.toLowerCase().includes(selectedFilter.toLowerCase())) ?? false);
+    : certificates.filter(cert => cert.category?.toLowerCase().includes(selectedFilter.toLowerCase()));
+
+  // Get unique certificate categories for tabs
+  const uniqueCategories = Array.from(new Set(certificates.map(cert => cert.category)))
+    .filter(Boolean)
+    .sort();
 
   const toggleSector = (sectorId: string) => {
     setExpandedSector(expandedSector === sectorId ? null : sectorId)
@@ -191,8 +199,8 @@ export default function SkillsPage() {
               transition={{ delay: 0.6, duration: 0.6 }}
               className="mt-8 flex flex-wrap justify-center gap-4"
             >
-              <Badge variant="secondary" className="text-lg px-4 py-2">8+ Years Experience</Badge>
-              <Badge variant="secondary" className="text-lg px-4 py-2">50+ Certifications</Badge>
+              <Badge variant="secondary" className="text-lg px-4 py-2">{experienceYears}+ Years Experience</Badge>
+              <Badge variant="secondary" className="text-lg px-4 py-2">{certificateCount}+ Certifications</Badge>
               <Badge variant="secondary" className="text-lg px-4 py-2">Multi-Disciplinary</Badge>
             </motion.div>
           </motion.div>
@@ -412,11 +420,17 @@ export default function SkillsPage() {
           <div className="mb-8">
             <Tabs defaultValue="all">
               <div className="flex justify-between items-center mb-6">
-                <TabsList>
+                <TabsList className="overflow-x-auto flex-wrap">
                   <TabsTrigger value="all" onClick={() => setSelectedFilter('all')}>All</TabsTrigger>
-                  <TabsTrigger value="technical" onClick={() => setSelectedFilter('technical')}>Technical</TabsTrigger>
-                  <TabsTrigger value="legal" onClick={() => setSelectedFilter('legal')}>Legal</TabsTrigger>
-                  <TabsTrigger value="management" onClick={() => setSelectedFilter('management')}>Management</TabsTrigger>
+                  {uniqueCategories.map(category => (
+                    <TabsTrigger 
+                      key={category} 
+                      value={category?.toLowerCase() || ''} 
+                      onClick={() => setSelectedFilter(category?.toLowerCase() || '')}
+                    >
+                      {category}
+                    </TabsTrigger>
+                  ))}
                 </TabsList>
                 
                 <div className="flex items-center gap-2">
@@ -427,229 +441,275 @@ export default function SkillsPage() {
                     value={selectedFilter}
                   >
                     <option value="all">All Certifications</option>
-                    <option value="aws">AWS</option>
-                    <option value="legal">Legal</option>
-                    <option value="management">Management</option>
-                    <option value="data">Data Science</option>
+                    {uniqueCategories.map(category => (
+                      <option key={category} value={category?.toLowerCase() || ''}>{category}</option>
+                    ))}
                   </select>
                 </div>
               </div>
               
               <TabsContent value="all" className="mt-0">
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {filteredCertificates.map((cert, index) => (
-                    <motion.div
-                      key={cert.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.6 }}
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200"
-                    >
-                      <div className="aspect-[4/3] relative bg-slate-100">
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-300">
-                          {cert.imageUrl === '/placeholder.svg' 
-                            ? <Award className="w-16 h-16" /> 
-                            : <img src={cert.imageUrl} alt={cert.name} className="w-full h-full object-cover" />
-                          }
+                {certificates.length === 0 ? (
+                  <div className="text-center py-12 bg-slate-50 rounded-lg">
+                    <Award className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-slate-700">No certificates added yet</h3>
+                    <p className="text-slate-500 mt-2">Add certificates from the admin panel to display them here.</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {filteredCertificates.map((cert, index) => (
+                      <motion.div
+                        key={cert.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.1, duration: 0.6 }}
+                        whileHover={{ y: -5, scale: 1.02 }}
+                        className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200"
+                      >
+                        <div className="aspect-[4/3] relative bg-slate-100">
+                          {cert.imageUrl ? (
+                            <img 
+                              src={cert.imageUrl} 
+                              alt={cert.name} 
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Certificate';
+                              }}
+                            />
+                          ) : (
+                            <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+                              <Award className="w-16 h-16" />
+                            </div>
+                          )}
                         </div>
-                      </div>
-                      
-                      <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
-                        <div className="flex justify-between items-center mt-1 mb-2">
-                          <p className="text-sm text-slate-700">{cert.issuer}</p>
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                        
+                        <div className="p-4">
+                          <h3 className="font-semibold text-slate-900">{cert.name}</h3>
+                          <div className="flex justify-between items-center mt-1 mb-2">
+                            <p className="text-sm text-slate-700">{cert.issuer}</p>
+                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                              <Calendar className="w-3 h-3" />
+                              {cert.date ? new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : 'No date'}
+                            </div>
                           </div>
+                          
+                          {cert.category && (
+                            <Badge variant="secondary" className="text-xs bg-slate-100 mb-2">
+                              {cert.category}
+                            </Badge>
+                          )}
+                          
+                          {cert.credentialUrl && (
+                            <a 
+                              href={cert.credentialUrl} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              className="text-xs flex items-center gap-1 text-blue-600 hover:underline mt-2"
+                            >
+                              <ExternalLink className="w-3 h-3" /> Verify Certificate
+                            </a>
+                          )}
+
+                          {cert.expiry && (
+                            <p className="text-xs text-slate-500 mt-2">
+                              Expires: {new Date(cert.expiry).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                            </p>
+                          )}
                         </div>
-                        
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags?.map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
-                          ))}
-                        </div>
-                        
-                        {cert.url && (
-                          <a 
-                            href={cert.url} 
-                            target="_blank" 
-                            rel="noopener noreferrer"
-                            className="text-xs flex items-center gap-1 text-blue-600 hover:underline mt-2"
-                          >
-                            <ExternalLink className="w-3 h-3" /> Verify Certificate
-                          </a>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
               </TabsContent>
               
-              <TabsContent value="technical" className="mt-0">
-                {/* Technical certifications - filtered by the selectedFilter state */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {filteredCertificates.filter(cert => 
-                    cert.tags?.some(tag => ['AWS', 'Cloud', 'Technical', 'Data Science', 'Python', 'ML'].includes(tag))
-                  ).map((cert, index) => (
-                    <motion.div
-                      key={cert.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.6 }}
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200"
-                    >
-                      {/* Certificate content (same as above) */}
-                      <div className="aspect-[4/3] relative bg-slate-100">
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-300">
-                          {cert.imageUrl === '/placeholder.svg' 
-                            ? <Award className="w-16 h-16" /> 
-                            : <img src={cert.imageUrl} alt={cert.name} className="w-full h-full object-cover" />
-                          }
-                        </div>
-                      </div>
-                      
-                      <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
-                        <div className="flex justify-between items-center mt-1 mb-2">
-                          <p className="text-sm text-slate-700">{cert.issuer}</p>
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+              {/* Dynamic tabs for each category */}
+              {uniqueCategories.map(category => (
+                <TabsContent key={category} value={category?.toLowerCase() || ''} className="mt-0">
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {certificates
+                      .filter(cert => cert.category?.toLowerCase() === category?.toLowerCase())
+                      .map((cert, index) => (
+                        <motion.div
+                          key={cert.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          whileInView={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.1, duration: 0.6 }}
+                          whileHover={{ y: -5, scale: 1.02 }}
+                          className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200"
+                        >
+                          <div className="aspect-[4/3] relative bg-slate-100">
+                            {cert.imageUrl ? (
+                              <img 
+                                src={cert.imageUrl} 
+                                alt={cert.name} 
+                                className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Certificate';
+                                }}
+                              />
+                            ) : (
+                              <div className="absolute inset-0 flex items-center justify-center text-slate-300">
+                                <Award className="w-16 h-16" />
+                              </div>
+                            )}
                           </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags?.map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              {/* Other tabs with similar content */}
-              <TabsContent value="legal" className="mt-0">
-                {/* Legal certifications */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {filteredCertificates.filter(cert => 
-                    cert.tags?.some(tag => ['Legal', 'Law', 'Compliance'].includes(tag))
-                  ).map((cert, index) => (
-                    <motion.div
-                      key={cert.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.6 }}
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200"
-                    >
-                      {/* Certificate content */}
-                      <div className="aspect-[4/3] relative bg-slate-100">
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-300">
-                          <Award className="w-16 h-16" />
-                        </div>
-                      </div>
-                      
-                      <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
-                        <div className="flex justify-between items-center mt-1 mb-2">
-                          <p className="text-sm text-slate-700">{cert.issuer}</p>
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                          
+                          <div className="p-4">
+                            <h3 className="font-semibold text-slate-900">{cert.name}</h3>
+                            <div className="flex justify-between items-center mt-1 mb-2">
+                              <p className="text-sm text-slate-700">{cert.issuer}</p>
+                              <div className="flex items-center gap-1 text-xs text-slate-500">
+                                <Calendar className="w-3 h-3" />
+                                {cert.date ? new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' }) : 'No date'}
+                              </div>
+                            </div>
+                            
+                            {cert.category && (
+                              <Badge variant="secondary" className="text-xs bg-slate-100 mb-2">
+                                {cert.category}
+                              </Badge>
+                            )}
+                            
+                            {cert.credentialUrl && (
+                              <a 
+                                href={cert.credentialUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs flex items-center gap-1 text-blue-600 hover:underline mt-2"
+                              >
+                                <ExternalLink className="w-3 h-3" /> Verify Certificate
+                              </a>
+                            )}
+                            
+                            {cert.expiry && (
+                              <p className="text-xs text-slate-500 mt-2">
+                                Expires: {new Date(cert.expiry).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
+                              </p>
+                            )}
                           </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags?.map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </TabsContent>
-              
-              <TabsContent value="management" className="mt-0">
-                {/* Management certifications */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {filteredCertificates.filter(cert => 
-                    cert.tags?.some(tag => ['Management', 'Leadership', 'Agile'].includes(tag))
-                  ).map((cert, index) => (
-                    <motion.div
-                      key={cert.id}
-                      initial={{ opacity: 0, y: 20 }}
-                      whileInView={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.1, duration: 0.6 }}
-                      whileHover={{ y: -5, scale: 1.02 }}
-                      className="bg-white rounded-xl shadow-md overflow-hidden border border-slate-200"
-                    >
-                      {/* Certificate content */}
-                      <div className="aspect-[4/3] relative bg-slate-100">
-                        <div className="absolute inset-0 flex items-center justify-center text-slate-300">
-                          <Award className="w-16 h-16" />
-                        </div>
-                      </div>
-                      
-                      <div className="p-4">
-                        <h3 className="font-semibold text-slate-900">{cert.name}</h3>
-                        <div className="flex justify-between items-center mt-1 mb-2">
-                          <p className="text-sm text-slate-700">{cert.issuer}</p>
-                          <div className="flex items-center gap-1 text-xs text-slate-500">
-                            <Calendar className="w-3 h-3" />
-                            {new Date(cert.date).toLocaleDateString('en-US', { year: 'numeric', month: 'short' })}
-                          </div>
-                        </div>
-                        
-                        <div className="flex flex-wrap gap-1 mb-3">
-                          {cert.tags?.map((tag, i) => (
-                            <Badge key={i} variant="secondary" className="text-xs bg-slate-100">{tag}</Badge>
-                          ))}
-                        </div>
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              </TabsContent>
+                        </motion.div>
+                      ))}
+                  </div>
+                </TabsContent>
+              ))}
             </Tabs>
-          </div>
-          
-          <div className="text-center mt-8">
-            <Button className="bg-gradient-to-r from-blue-600 to-purple-600 text-white px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all">
-              <Download className="w-4 h-4 mr-2" /> Download CV & Credentials
-            </Button>
           </div>
         </div>
       </section>
       
-      {/* Call to Action */}
-      <section className="py-16 bg-gradient-to-br from-slate-900 to-blue-900 text-white">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.6 }}
-          >
-            <h2 className="text-3xl md:text-4xl font-bold mb-6">Ready to work together?</h2>
-            <p className="text-xl text-slate-300 max-w-3xl mx-auto mb-8">
-              Looking for expertise across legal, technical, and leadership domains? Let's discuss how my skills can help achieve your goals.
-            </p>
-            <div className="flex flex-wrap justify-center gap-4">
-              <Button className="bg-white text-slate-900 hover:bg-slate-100 px-6 py-2 rounded-lg shadow-lg hover:shadow-xl transition-all">
-                Contact Me
-              </Button>
-              <Button variant="outline" className="border-white text-white hover:bg-white/10 px-6 py-2 rounded-lg">
-                View Portfolio
-              </Button>
+      {/* Footer */}
+      <footer className="bg-gradient-to-r from-gray-900 to-blue-900 text-white mt-16">
+        <div className="px-4 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-3 mb-4">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={profileData?.profileImage || "/placeholder.svg"} />
+                  <AvatarFallback className="bg-blue-600 text-white font-bold">
+                    {profileData?.name
+                      ? profileData.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                      : ""}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-xl font-bold">{profileData?.name || ""}</h3>
+                  <p className="text-gray-300">{profileData?.title || ""}</p>
+                </div>
+              </div>
+              <p className="text-gray-300 mb-4 max-w-md">
+                Committed to advancing constitutional rights, social justice, and democratic values through legal
+                advocacy and political engagement.
+              </p>
+              <div className="flex gap-4">
+                {profileData?.socialLinks?.map((social) => (
+                  <Link
+                    key={social.id}
+                    href={social.href}
+                    className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                  >
+                    <img
+                      src={social.icon}
+                      alt={social.name}
+                      className="w-5 h-5"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </Link>
+                ))}
+              </div>
             </div>
-          </motion.div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-gray-300">
+                <li>
+                  <Link href="/about" className="hover:text-white transition-colors">
+                    About Me
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/skills" className="hover:text-white transition-colors">
+                    Skills & Expertise
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/research" className="hover:text-white transition-colors">
+                    Research
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className="hover:text-white transition-colors">
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/speaking" className="hover:text-white transition-colors">
+                    Speaking
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-gray-300">
+                <li>
+                  <Link href="/privacy" className="hover:text-white transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="hover:text-white transition-colors">
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/disclaimer" className="hover:text-white transition-colors">
+                    Legal Disclaimer
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-white transition-colors">
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-700 mt-8 pt-8 text-center text-gray-400">
+            <p>
+              &copy; {new Date().getFullYear()} {profileData?.name || ""}. All rights reserved. | Building a just society
+              through law and advocacy.
+            </p>
+          </div>
         </div>
-      </section>
+      </footer>
     </div>
   )
 } 

@@ -5,15 +5,19 @@ export interface Comment {
   timestamp: Date;
 }
 
+export interface Media {
+  id: string;
+  type: 'image' | 'video';
+  url: string;
+  caption?: string;
+}
+
 export interface Post {
   id: string;
-  type: 'text' | 'image' | 'video';
   title?: string;
   content: string;
   author: string;
   timestamp: Date;
   tags: string[];
-  comments: Comment[];
-  imageUrl?: string;
-  videoUrl?: string;
+  media: Media[];
 }

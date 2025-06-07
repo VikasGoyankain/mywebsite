@@ -1,5 +1,20 @@
 import { kv } from "@vercel/kv"
 
+// Export the kv instance as redis for backward compatibility
+export const redis = kv
+
+// Function to check if Redis is connected
+export async function isRedisConnected() {
+  try {
+    // Simple ping to check if kv is working
+    await kv.ping()
+    return true
+  } catch (error) {
+    console.error("Redis connection check failed:", error)
+    return false
+  }
+}
+
 export interface DatabaseProfile {
   profileData: any
   experience: any[]

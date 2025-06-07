@@ -51,6 +51,19 @@ export interface Education {
   achievements: string[]
 }
 
+export interface Certificate {
+  id: string
+  name: string
+  issuer: string
+  date: string
+  expiry: string
+  category: string
+  credentialId: string
+  credentialUrl: string
+  imageUrl: string
+  description: string
+}
+
 export interface Skill {
   id: string
   name: string
@@ -100,6 +113,7 @@ interface ProfileStore {
   experience: Experience[]
   education: Education[]
   skills: Skill[]
+  certificates: Certificate[]
   posts: Post[]
   navigationPages: NavigationPage[]
   navigationButtons: NavigationButton[]
@@ -135,6 +149,11 @@ interface ProfileStore {
   addSkill: (skill: Omit<Skill, "id">) => void
   updateSkill: (id: string, skill: Partial<Skill>) => void
   deleteSkill: (id: string) => void
+
+  // Certificates actions
+  addCertificate: (cert: Omit<Certificate, "id">) => void
+  updateCertificate: (id: string, cert: Partial<Certificate>) => void
+  deleteCertificate: (id: string) => void
 
   // Posts actions
   addPost: (post: Omit<Post, "id">) => void
@@ -187,6 +206,7 @@ const defaultProfileData: ProfileData = {
 const defaultExperience: Experience[] = []
 const defaultEducation: Education[] = []
 const defaultSkills: Skill[] = []
+const defaultCertificates: Certificate[] = []
 const defaultPosts: Post[] = []
 const defaultNavigationPages: NavigationPage[] = []
 
@@ -197,6 +217,7 @@ export const useProfileStore = create<ProfileStore>()(
       experience: defaultExperience,
       education: defaultEducation,
       skills: defaultSkills,
+      certificates: defaultCertificates,
       posts: defaultPosts,
       navigationPages: defaultNavigationPages,
       navigationButtons: [],
@@ -369,6 +390,33 @@ export const useProfileStore = create<ProfileStore>()(
         }))
       },
 
+      // Certificates actions
+      addCertificate: (cert) => {
+        set((state) => ({
+          certificates: [
+            ...state.certificates,
+            { ...cert, id: crypto.randomUUID() }
+          ],
+          hasUnsavedChanges: true,
+        }))
+      },
+
+      updateCertificate: (id, cert) => {
+        set((state) => ({
+          certificates: state.certificates.map((c) =>
+            c.id === id ? { ...c, ...cert } : c
+          ),
+          hasUnsavedChanges: true,
+        }))
+      },
+
+      deleteCertificate: (id) => {
+        set((state) => ({
+          certificates: state.certificates.filter((c) => c.id !== id),
+          hasUnsavedChanges: true,
+        }))
+      },
+
       // Posts actions
       addPost: (post) => {
         set((state) => {
@@ -459,6 +507,7 @@ export const useProfileStore = create<ProfileStore>()(
           experience: defaultExperience,
           education: defaultEducation,
           skills: defaultSkills,
+          certificates: defaultCertificates,
           posts: defaultPosts,
           navigationPages: defaultNavigationPages,
           navigationButtons: [],
@@ -473,6 +522,7 @@ export const useProfileStore = create<ProfileStore>()(
           experience: state.experience,
           education: state.education,
           skills: state.skills,
+          certificates: state.certificates,
           posts: state.posts,
           navigationPages: state.navigationPages,
           navigationButtons: state.navigationButtons,
@@ -487,6 +537,7 @@ export const useProfileStore = create<ProfileStore>()(
             experience: parsed.experience || defaultExperience,
             education: parsed.education || defaultEducation,
             skills: parsed.skills || defaultSkills,
+            certificates: parsed.certificates || defaultCertificates,
             posts: parsed.posts || defaultPosts,
             navigationPages: parsed.navigationPages || defaultNavigationPages,
             navigationButtons: parsed.navigationButtons || [],
@@ -555,6 +606,7 @@ export const useProfileStore = create<ProfileStore>()(
             experience: result.data.experience || defaultExperience,
             education: result.data.education || defaultEducation,
             skills: result.data.skills || defaultSkills,
+            certificates: result.data.certificates || defaultCertificates,
             posts: result.data.posts || defaultPosts,
             navigationPages: result.data.navigationPages || defaultNavigationPages,
             navigationButtons: result.data.navigationButtons || [],
@@ -586,6 +638,7 @@ export const useProfileStore = create<ProfileStore>()(
               experience: state.experience,
               education: state.education,
               skills: state.skills,
+              certificates: state.certificates,
               posts: state.posts,
               navigationPages: state.navigationPages,
               navigationButtons: state.navigationButtons,
@@ -629,6 +682,7 @@ export const useProfileStore = create<ProfileStore>()(
               experience: state.experience,
               education: state.education,
               skills: state.skills,
+              certificates: state.certificates,
               posts: state.posts,
               navigationPages: state.navigationPages,
               navigationButtons: state.navigationButtons,

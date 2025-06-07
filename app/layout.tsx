@@ -11,9 +11,9 @@ export const viewport: Viewport = {
 }
 
 export const metadata: Metadata = {
-  title: "Vikas Goyanka - Law Student & Political Activist | Constitutional Rights Advocate",
+  title: "Vikas Goyanka",
   description:
-    "Passionate advocate for constitutional rights and social justice. Law student specializing in Constitutional Law & Human Rights, actively engaged in policy research and grassroots political work.",
+    "Passionate for constitutional rights and social justice. Law student specializing in Constitutional Law, Cyber Laws & Human Rights, actively engaged in policy research and grassroots political work.",
   keywords:
     "Vikas Goyanka, law student, political activist, constitutional law, human rights, legal research, policy analysis, social justice, Delhi, India",
   authors: [{ name: "Vikas Goyanka" }],
@@ -107,7 +107,7 @@ export default function RootLayout({
           }}
         />
       </head>
-      <body className="antialiased">
+      <body className="antialiased" suppressHydrationWarning>
         {children}
         <Toaster />
       </body>

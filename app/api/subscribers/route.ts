@@ -6,8 +6,10 @@ import { kv } from '@vercel/kv'
 type Subscriber = {
   id: string
   fullName: string
-  phoneNumber: string
+  phoneNumber?: string
+  email?: string
   dateJoined: string
+  lastUpdated?: string
 }
 
 // Generate a simple UUID (simplified version)
@@ -41,6 +43,8 @@ const getStorage = async () => {
 
 // Validate phone number with stronger security for Indian mobile numbers
 const validatePhoneNumber = (phoneNumber: string): { valid: boolean; message?: string; normalizedPhone?: string } => {
+  if (!phoneNumber) return { valid: true, normalizedPhone: undefined };
+
   // Remove spaces, dashes, parentheses
   let normalizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '')
   
@@ -84,6 +88,38 @@ const validatePhoneNumber = (phoneNumber: string): { valid: boolean; message?: s
   return { valid: true, normalizedPhone }
 }
 
+// Validate email with security checks
+const validateEmail = (email: string): { valid: boolean; message?: string; normalizedEmail?: string } => {
+  if (!email) return { valid: true, normalizedEmail: undefined };
+
+  // Trim and normalize
+  const normalizedEmail = email.trim().toLowerCase();
+  
+  // Basic format validation
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  if (!emailRegex.test(normalizedEmail)) {
+    return { valid: false, message: 'Invalid email format' }
+  }
+  
+  // Check for common disposable email domains
+  const disposableDomains = [
+    'yopmail.com', 'tempmail.com', 'mailinator.com', 'temp-mail.org', 
+    'guerrillamail.com', 'sharklasers.com', '10minutemail.com', 'throwawaymail.com'
+  ]
+  const domain = normalizedEmail.split('@')[1]
+  if (disposableDomains.includes(domain)) {
+    return { valid: false, message: 'Please use a non-disposable email address' }
+  }
+  
+  // Check for suspicious TLDs
+  const suspiciousTLDs = ['.xyz', '.top', '.work', '.loan']
+  if (suspiciousTLDs.some(tld => domain.endsWith(tld))) {
+    return { valid: false, message: 'Email domain not accepted' }
+  }
+  
+  return { valid: true, normalizedEmail }
+}
+
 export async function POST(request: Request) {
   try {
     // Get storage client
@@ -91,7 +127,7 @@ export async function POST(request: Request) {
     
     // Parse request body
     const body = await request.json()
-    const { fullName, phoneNumber } = body
+    const { fullName, phoneNumber, email } = body
     
     // Validate input
     if (!fullName || !fullName.trim()) {
@@ -101,75 +137,223 @@ export async function POST(request: Request) {
       )
     }
     
-    if (!phoneNumber || !phoneNumber.trim()) {
+    // Ensure at least one contact method is provided
+    if (!phoneNumber && !email) {
       return NextResponse.json(
-        { message: 'Phone number is required' }, 
+        { message: 'Either phone number or email is required' }, 
         { status: 400 }
       )
     }
     
-    // Enhanced phone number validation
-    const validation = validatePhoneNumber(phoneNumber)
-    if (!validation.valid) {
+    // Enhanced phone number validation (if provided)
+    let normalizedPhone: string | undefined = undefined;
+    if (phoneNumber) {
+      const phoneValidation = validatePhoneNumber(phoneNumber)
+      if (!phoneValidation.valid) {
+        return NextResponse.json(
+          { message: phoneValidation.message || 'Invalid phone number format' }, 
+          { status: 400 }
+        )
+      }
+      normalizedPhone = phoneValidation.normalizedPhone;
+    }
+    
+    // Email validation (if provided)
+    let normalizedEmail: string | undefined = undefined;
+    if (email) {
+      const emailValidation = validateEmail(email)
+      if (!emailValidation.valid) {
       return NextResponse.json(
-        { message: validation.message || 'Invalid phone number format' }, 
+          { message: emailValidation.message || 'Invalid email format' }, 
         { status: 400 }
       )
     }
+      normalizedEmail = emailValidation.normalizedEmail;
+    }
     
-    const normalizedPhone = validation.normalizedPhone as string
+    // Generate a unique ID for potential new subscriber
+    const subscriberId = generateId();
     
-    // Check if phone number already exists
-    let exists = false
+    // Check for existing subscribers by phone or email
+    let existingSubscriberByPhone: Subscriber | null = null;
+    let existingSubscriberByEmail: Subscriber | null = null;
+    let phoneId: string | null = null;
+    let emailId: string | null = null;
+    
+    // Check for existing phone number
+    if (normalizedPhone) {
     if (type === 'redis') {
-      const existingSubscribers = await client.hgetall(REDIS_KEYS.SUBSCRIBERS) as Record<string, Subscriber> || {}
-      exists = Object.values(existingSubscribers).some(
-        sub => sub.phoneNumber === normalizedPhone
-      )
+        const existingSubscribers = await client.hgetall(REDIS_KEYS.SUBSCRIBERS) as Record<string, string> || {}
+        for (const [key, value] of Object.entries(existingSubscribers)) {
+          try {
+            const subscriber = typeof value === 'string' ? JSON.parse(value) : value;
+            if (subscriber.phoneNumber === normalizedPhone) {
+              existingSubscriberByPhone = subscriber;
+              break;
+            }
+          } catch (e) {
+            console.error(`Error parsing subscriber data:`, e);
+          }
+        }
     } else {
       // For Vercel KV
-      const existingSubscriber = await client.get(`subscribers:${normalizedPhone}`)
-      exists = !!existingSubscriber
+        phoneId = await client.get(`subscribers:phone:${normalizedPhone}`) as string;
+        if (phoneId) {
+          existingSubscriberByPhone = await client.get(`subscribers:id:${phoneId}`) as Subscriber;
+        }
+      }
     }
     
-    if (exists) {
-      return NextResponse.json(
-        { message: 'You are already subscribed with this phone number' }, 
-        { status: 409 }
-      )
+    // Check for existing email
+    if (normalizedEmail) {
+      if (type === 'redis') {
+        const existingSubscribers = await client.hgetall(REDIS_KEYS.SUBSCRIBERS) as Record<string, string> || {}
+        for (const [key, value] of Object.entries(existingSubscribers)) {
+          try {
+            const subscriber = typeof value === 'string' ? JSON.parse(value) : value;
+            if (subscriber.email === normalizedEmail) {
+              existingSubscriberByEmail = subscriber;
+              break;
+            }
+          } catch (e) {
+            console.error(`Error parsing subscriber data:`, e);
+          }
+        }
+      } else {
+        // For Vercel KV
+        emailId = await client.get(`subscribers:email:${normalizedEmail}`) as string;
+        if (emailId) {
+          existingSubscriberByEmail = await client.get(`subscribers:id:${emailId}`) as Subscriber;
+        }
+      }
     }
     
-    // Create new subscriber
-    const newSubscriber: Subscriber = {
-      id: generateId(),
+    // Handle different update scenarios
+    let updatedSubscriber: Subscriber | null = null;
+    let isNewSubscription = false;
+    let updateMessage = 'Subscription successful';
+    
+    // Case 1: Both phone and email match to the same subscriber
+    if (existingSubscriberByPhone && existingSubscriberByEmail && existingSubscriberByPhone.id === existingSubscriberByEmail.id) {
+      // Just update the name if it's different
+      updatedSubscriber = {
+        ...existingSubscriberByPhone,
+        fullName: fullName.trim(),
+        lastUpdated: new Date().toISOString()
+      };
+      updateMessage = 'Your subscription information has been updated';
+    }
+    // Case 2: Phone matches but email is new or different
+    else if (existingSubscriberByPhone) {
+      updatedSubscriber = {
+        ...existingSubscriberByPhone,
+        fullName: fullName.trim(), // Update name
+        email: normalizedEmail, // Add or update email
+        lastUpdated: new Date().toISOString()
+      };
+      updateMessage = 'Your subscription has been updated with your email';
+    }
+    // Case 3: Email matches but phone is new or different
+    else if (existingSubscriberByEmail) {
+      updatedSubscriber = {
+        ...existingSubscriberByEmail,
+        fullName: fullName.trim(), // Update name
+        phoneNumber: normalizedPhone, // Add or update phone
+        lastUpdated: new Date().toISOString()
+      };
+      updateMessage = 'Your subscription has been updated with your phone number';
+    }
+    // Case 4: Both phone and email exist but for different subscribers
+    else if (phoneId && emailId && phoneId !== emailId) {
+      // This is a complex case - we'll merge the records by keeping the phone record
+      // and updating it with the email, then delete the email-only record
+      updatedSubscriber = {
+        ...existingSubscriberByPhone!,
+        fullName: fullName.trim(),
+        email: normalizedEmail,
+        lastUpdated: new Date().toISOString()
+      };
+      updateMessage = 'Your subscription information has been consolidated';
+      
+      // We'll need to delete the email-only record later
+    }
+    // Case 5: New subscription
+    else {
+      updatedSubscriber = {
+        id: subscriberId,
       fullName: fullName.trim(),
       phoneNumber: normalizedPhone,
+        email: normalizedEmail,
       dateJoined: new Date().toISOString()
+      };
+      isNewSubscription = true;
+      updateMessage = 'Subscription successful';
     }
     
-    // Store in database
+    // Store updated subscriber in database
     if (type === 'redis') {
-      // Fix: Use correct Redis hset format - should be key, field, value
+      // Store in Redis hash
+      const key = normalizedPhone || normalizedEmail || subscriberId;
       await client.hset(REDIS_KEYS.SUBSCRIBERS, {
-        [normalizedPhone]: JSON.stringify(newSubscriber)
-      })
+        [key]: JSON.stringify(updatedSubscriber)
+      });
     } else {
       // For Vercel KV
-      await client.set(`subscribers:${normalizedPhone}`, newSubscriber)
+      const targetId = updatedSubscriber.id;
       
-      // Also maintain a list of all subscribers
-      const subscribersList = await client.get('subscribers:list') as string[] || []
-      subscribersList.push(normalizedPhone)
-      await client.set('subscribers:list', subscribersList)
+      // Store the subscriber object
+      await client.set(`subscribers:id:${targetId}`, updatedSubscriber);
+      
+      // Update or create phone index
+      if (normalizedPhone) {
+        // If this is an update and the phone number has changed, remove old index
+        if (!isNewSubscription && existingSubscriberByEmail && !existingSubscriberByEmail.phoneNumber) {
+          // This means we're adding a phone to an email-only subscription
+          // No need to delete any old phone index
+        }
+        
+        // Set the new phone index
+        await client.set(`subscribers:phone:${normalizedPhone}`, targetId);
+      }
+      
+      // Update or create email index
+      if (normalizedEmail) {
+        // If this is an update and the email has changed, remove old index
+        if (!isNewSubscription && existingSubscriberByPhone && !existingSubscriberByPhone.email) {
+          // This means we're adding an email to a phone-only subscription
+          // No need to delete any old email index
+        }
+        
+        // Set the new email index
+        await client.set(`subscribers:email:${normalizedEmail}`, targetId);
+      }
+      
+      // Handle the special case of merging two records (Case 4)
+      if (phoneId && emailId && phoneId !== emailId) {
+        // Delete the email-only record
+        await client.del(`subscribers:id:${emailId}`);
+        
+        // Update the subscribers list to remove the deleted ID
+        const subscribersList = await client.get('subscribers:list') as string[] || [];
+        const updatedList = subscribersList.filter(id => id !== emailId);
+        await client.set('subscribers:list', updatedList);
+      }
+      
+      // If this is a new subscription, add to the list
+      if (isNewSubscription) {
+        const subscribersList = await client.get('subscribers:list') as string[] || [];
+        subscribersList.push(subscriberId);
+        await client.set('subscribers:list', subscribersList);
+      }
     }
     
-    console.log(`New subscriber: ${fullName} (${normalizedPhone}) stored in ${type}`)
+    console.log(`Subscriber ${isNewSubscription ? 'added' : 'updated'}: ${fullName} (${normalizedPhone || normalizedEmail}) stored in ${type}`);
     
     // Return success response
     return NextResponse.json(
-      { message: 'Subscription successful', success: true }, 
-      { status: 201 }
-    )
+      { message: updateMessage, success: true, isNewSubscription }, 
+      { status: isNewSubscription ? 201 : 200 }
+    );
     
   } catch (error) {
     console.error('Error handling subscription:', error)
@@ -206,13 +390,13 @@ export async function GET(request: Request) {
       const redisSubscribers = await client.hgetall(REDIS_KEYS.SUBSCRIBERS) as Record<string, string> || {}
       
       // Parse stringified JSON objects from Redis
-      for (const [phone, value] of Object.entries(redisSubscribers)) {
+      for (const [key, value] of Object.entries(redisSubscribers)) {
         try {
-          subscribers[phone] = typeof value === 'string' ? JSON.parse(value) : value
+          subscribers[key] = typeof value === 'string' ? JSON.parse(value) : value
         } catch (e) {
-          console.error(`Error parsing subscriber data for ${phone}:`, e)
+          console.error(`Error parsing subscriber data for ${key}:`, e)
           // Keep the original value as fallback
-          subscribers[phone] = value as any
+          subscribers[key] = value as any
         }
       }
     } else {
@@ -220,10 +404,10 @@ export async function GET(request: Request) {
       const subscribersList = await client.get('subscribers:list') as string[] || []
       
       // Build subscribers object from individual keys
-      for (const phone of subscribersList) {
-        const subscriber = await client.get(`subscribers:${phone}`) as Subscriber
+      for (const id of subscribersList) {
+        const subscriber = await client.get(`subscribers:id:${id}`) as Subscriber
         if (subscriber) {
-          subscribers[phone] = subscriber
+          subscribers[id] = subscriber
         }
       }
     }
@@ -245,7 +429,9 @@ export async function DELETE(request: Request) {
   try {
     const url = new URL(request.url)
     const apiKey = url.searchParams.get('apiKey')
-    const phoneNumber = url.searchParams.get('phoneNumber')
+    const subscriberId = url.searchParams.get('id')
+    const phoneNumber = url.searchParams.get('phone')
+    const email = url.searchParams.get('email')
     
     // API key validation
     if (apiKey !== process.env.ADMIN_API_KEY && apiKey !== process.env.NEXT_PUBLIC_ADMIN_API_KEY) {
@@ -255,10 +441,10 @@ export async function DELETE(request: Request) {
       )
     }
     
-    // Validate phone number
-    if (!phoneNumber) {
+    // Need at least one identifier
+    if (!subscriberId && !phoneNumber && !email) {
       return NextResponse.json(
-        { message: 'Phone number is required' }, 
+        { message: 'Subscriber ID, phone number, or email is required' }, 
         { status: 400 }
       )
     }
@@ -266,20 +452,69 @@ export async function DELETE(request: Request) {
     // Get storage client
     const { client, type } = await getStorage()
     
-    // Delete the subscriber
-    if (type === 'redis') {
-      // From Redis
-      await client.hdel(REDIS_KEYS.SUBSCRIBERS, phoneNumber)
-    } else {
-      // From Vercel KV
-      await client.del(`subscribers:${phoneNumber}`)
-      
-      // Also update the list
-      const subscribersList = await client.get('subscribers:list') as string[] || []
-      const updatedList = subscribersList.filter(phone => phone !== phoneNumber)
-      await client.set('subscribers:list', updatedList)
+    let targetId: string | null = subscriberId;
+    let targetPhone: string | null = phoneNumber;
+    let targetEmail: string | null = email;
+    
+    // If we have a phone/email but not an ID, look up the ID
+    if (!targetId && (targetPhone || targetEmail)) {
+      if (targetPhone) {
+        if (type === 'kv') {
+          targetId = await client.get(`subscribers:phone:${targetPhone}`) as string;
+        }
+      } else if (targetEmail) {
+        if (type === 'kv') {
+          targetId = await client.get(`subscribers:email:${targetEmail}`) as string;
+        }
+      }
     }
     
+    // If we have an ID but not phone/email, look up the subscriber to get those
+    if (targetId && (!targetPhone || !targetEmail)) {
+      if (type === 'kv') {
+        const subscriber = await client.get(`subscribers:id:${targetId}`) as Subscriber;
+        if (subscriber) {
+          targetPhone = subscriber.phoneNumber || null;
+          targetEmail = subscriber.email || null;
+        }
+      }
+    }
+    
+    // Delete the subscriber
+    if (type === 'redis') {
+      // From Redis hash
+      if (targetPhone) {
+        await client.hdel(REDIS_KEYS.SUBSCRIBERS, targetPhone)
+      }
+      if (targetEmail) {
+        await client.hdel(REDIS_KEYS.SUBSCRIBERS, targetEmail)
+      }
+    } else {
+      // From Vercel KV
+      // Delete the main subscriber record
+      if (targetId) {
+        await client.del(`subscribers:id:${targetId}`)
+      }
+      
+      // Delete phone index
+      if (targetPhone) {
+        await client.del(`subscribers:phone:${targetPhone}`)
+      }
+      
+      // Delete email index
+      if (targetEmail) {
+        await client.del(`subscribers:email:${targetEmail}`)
+      }
+      
+      // Update the list of subscribers
+      if (targetId) {
+      const subscribersList = await client.get('subscribers:list') as string[] || []
+        const updatedList = subscribersList.filter(id => id !== targetId)
+      await client.set('subscribers:list', updatedList)
+      }
+    }
+    
+    // Return success
     return NextResponse.json(
       { message: 'Subscriber deleted successfully' }, 
       { status: 200 }

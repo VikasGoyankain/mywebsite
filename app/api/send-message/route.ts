@@ -7,7 +7,8 @@ import axios from 'axios'
 type Subscriber = {
   id: string
   fullName: string
-  phoneNumber: string
+  phoneNumber?: string
+  email?: string
   dateJoined: string
 }
 
@@ -25,6 +26,8 @@ const getStorage = async () => {
 
 // Send SMS via Message Central API
 const sendSMS = async (phoneNumber: string, message: string) => {
+  if (!phoneNumber) return { success: false, error: 'No phone number provided' };
+  
   try {
     // Make sure phone is just the 10 digits (strip any country code if present)
     let normalizedPhone = phoneNumber.replace(/[\s\-\(\)]/g, '')
@@ -65,11 +68,67 @@ const sendSMS = async (phoneNumber: string, message: string) => {
   }
 }
 
+// Send email via Resend API or similar service
+const sendEmail = async (email: string, fullName: string, subject: string, message: string) => {
+  if (!email) return { success: false, error: 'No email provided' };
+  
+  try {
+    // For now, we'll just log the email sending attempt
+    // In production, you would use a service like Resend, SendGrid, etc.
+    console.log(`Would send email to ${email} with subject: ${subject}`);
+    
+    // Mock successful email sending
+    return { 
+      success: true, 
+      messageId: `mock-${Date.now()}-${Math.random().toString(36).substring(2, 9)}`,
+      note: "Email sending is currently mocked. Implement a real email service in production."
+    };
+    
+    /* Example implementation with an email API:
+    
+    const response = await fetch('https://api.emailservice.com/send', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.EMAIL_API_KEY}`
+      },
+      body: JSON.stringify({
+        from: 'Vikas Goyanka <updates@vikasgoyanka.com>',
+        to: email,
+        subject: subject,
+        html: `
+          <div>
+            <p>Hello ${fullName},</p>
+            <div>${message.replace(/\n/g, '<br>')}</div>
+            <p>Best regards,<br>Vikas Goyanka</p>
+          </div>
+        `,
+        text: message
+      })
+    });
+    
+    const data = await response.json();
+    
+    if (response.ok) {
+      return { success: true, messageId: data.id };
+    } else {
+      return { success: false, error: data.error || 'Failed to send email' };
+    }
+    */
+  } catch (error: any) {
+    console.error('Error sending email:', error);
+    return { 
+      success: false, 
+      error: error.message || 'Failed to send email' 
+    };
+  }
+};
+
 export async function POST(request: Request) {
   try {
     // Parse request body
     const body = await request.json()
-    const { message, apiKey } = body
+    const { message, subject, apiKey, messageType = 'all' } = body
     
     // API key validation
     if (apiKey !== process.env.ADMIN_API_KEY && apiKey !== process.env.NEXT_PUBLIC_ADMIN_API_KEY) {
@@ -98,11 +157,11 @@ export async function POST(request: Request) {
       const redisSubscribers = await client.hgetall(REDIS_KEYS.SUBSCRIBERS) as Record<string, string> || {}
       
       // Parse stringified JSON objects from Redis
-      for (const [phone, value] of Object.entries(redisSubscribers)) {
+      for (const [key, value] of Object.entries(redisSubscribers)) {
         try {
-          subscribers[phone] = typeof value === 'string' ? JSON.parse(value) : value
+          subscribers[key] = typeof value === 'string' ? JSON.parse(value) : value
         } catch (e) {
-          console.error(`Error parsing subscriber data for ${phone}:`, e)
+          console.error(`Error parsing subscriber data for ${key}:`, e)
         }
       }
     } else {
@@ -110,10 +169,10 @@ export async function POST(request: Request) {
       const subscribersList = await client.get('subscribers:list') as string[] || []
       
       // Build subscribers object from individual keys
-      for (const phone of subscribersList) {
-        const subscriber = await client.get(`subscribers:${phone}`) as Subscriber
+      for (const id of subscribersList) {
+        const subscriber = await client.get(`subscribers:id:${id}`) as Subscriber
         if (subscriber) {
-          subscribers[phone] = subscriber
+          subscribers[id] = subscriber
         }
       }
     }
@@ -127,30 +186,57 @@ export async function POST(request: Request) {
     }
     
     // Send message to all subscribers
-    const results = []
+    const smsResults = []
+    const emailResults = []
     const failures = []
     
     for (const subscriber of Object.values(subscribers)) {
-      const result = await sendSMS(subscriber.phoneNumber, message)
+      // Send SMS if phone number is available and messageType is 'sms' or 'all'
+      if (subscriber.phoneNumber && (messageType === 'sms' || messageType === 'all')) {
+        const result = await sendSMS(subscriber.phoneNumber, message)
+        
+        if (result.success) {
+          smsResults.push({
+            phoneNumber: subscriber.phoneNumber,
+            name: subscriber.fullName,
+            success: true
+          })
+        } else {
+          failures.push({
+            phoneNumber: subscriber.phoneNumber,
+            name: subscriber.fullName,
+            error: result.error,
+            type: 'sms'
+          })
+        }
+      }
       
-      if (result.success) {
-        results.push({
-          phoneNumber: subscriber.phoneNumber,
-          name: subscriber.fullName,
-          success: true
-        })
-      } else {
-        failures.push({
-          phoneNumber: subscriber.phoneNumber,
-          name: subscriber.fullName,
-          error: result.error
-        })
+      // Send email if email is available and messageType is 'email' or 'all'
+      if (subscriber.email && (messageType === 'email' || messageType === 'all')) {
+        const emailSubject = subject || 'Update from Vikas Goyanka';
+        const result = await sendEmail(subscriber.email, subscriber.fullName, emailSubject, message)
+        
+        if (result.success) {
+          emailResults.push({
+            email: subscriber.email,
+            name: subscriber.fullName,
+            success: true
+          })
+        } else {
+          failures.push({
+            email: subscriber.email,
+            name: subscriber.fullName,
+            error: result.error,
+            type: 'email'
+          })
+        }
       }
     }
     
     // Return results
     return NextResponse.json({
-      sentCount: results.length,
+      smsSentCount: smsResults.length,
+      emailSentCount: emailResults.length,
       failedCount: failures.length,
       totalSubscribers: Object.keys(subscribers).length,
       failures: failures.length > 0 ? failures : undefined

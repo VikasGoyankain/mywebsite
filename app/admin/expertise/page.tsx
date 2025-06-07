@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useRef } from "react"
 import { useProfileStore } from "@/lib/profile-store"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import { Button } from "@/components/ui/button"
@@ -12,9 +12,11 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Plus, Save, Trash2, AlertCircle, CheckCircle2, ArrowLeft, PlusCircle } from "lucide-react"
+import { Loader2, Plus, Save, Trash2, AlertCircle, CheckCircle2, ArrowLeft, PlusCircle, Edit, Settings, Upload, ExternalLink, Calendar, Image } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+import { Certificate } from "@/lib/profile-store"
+import { uploadToImageKit } from '@/lib/imagekit'
 
 // Form interfaces
 interface SkillFormData {
@@ -46,6 +48,10 @@ interface ExperienceFormData {
   description: string
   type: string
   image: string
+}
+
+interface CertificateFormData extends Omit<Certificate, 'id'> {
+  id: string
 }
 
 // Default form data with empty arrays
@@ -80,7 +86,21 @@ const defaultExperienceForm: ExperienceFormData = {
   image: ""
 }
 
-const CATEGORIES = [
+const defaultCertificateForm: CertificateFormData = {
+  id: "",
+  name: "",
+  issuer: "",
+  date: "",
+  expiry: "",
+  category: "",
+  credentialId: "",
+  credentialUrl: "",
+  imageUrl: "",
+  description: ""
+}
+
+// Default categories list
+const DEFAULT_CATEGORIES = [
   "Programming Languages",
   "Frameworks",
   "Databases",
@@ -100,6 +120,16 @@ const EXPERIENCE_TYPES = [
   "Volunteer"
 ]
 
+// Create a function to convert file to base64
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
+};
+
 export default function AdminSkillsPage() {
   // Initialize database connection
   useDatabaseInit()
@@ -109,6 +139,7 @@ export default function AdminSkillsPage() {
     skills = [],
     education = [],
     experience = [],
+    certificates = [],
     syncStatus,
     isLoading,
     error,
@@ -121,25 +152,38 @@ export default function AdminSkillsPage() {
     addExperience,
     updateExperience,
     deleteExperience,
+    addCertificate,
+    updateCertificate,
+    deleteCertificate,
     saveToDatabase
   } = useProfileStore()
 
   // Local state
   const [activeTab, setActiveTab] = useState("skills")
-  const [formTab, setFormTab] = useState<"skills" | "education" | "experience" | null>(null)
+  const [formTab, setFormTab] = useState<"skills" | "education" | "experience" | "certificates" | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showCategoryManager, setShowCategoryManager] = useState(false)
+  
+  // Categories state
+  const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
+  const [newCategory, setNewCategory] = useState("")
+  const [editingCategory, setEditingCategory] = useState<{index: number, value: string} | null>(null)
 
   // Form data state
   const [skillForm, setSkillForm] = useState<SkillFormData>(defaultSkillForm)
   const [educationForm, setEducationForm] = useState<EducationFormData>(defaultEducationForm)
   const [experienceForm, setExperienceForm] = useState<ExperienceFormData>(defaultExperienceForm)
+  const [certificateForm, setCertificateForm] = useState<CertificateFormData>(defaultCertificateForm)
 
   // Alternative input method for adding items
   const [subSkillInput, setSubSkillInput] = useState("")
   const [bookInput, setBookInput] = useState("")
   const [achievementInput, setAchievementInput] = useState("")
   const [toolInput, setToolInput] = useState("")
+
+  const [isUploading, setIsUploading] = useState<boolean>(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const addSubSkill = () => {
     if (!subSkillInput.trim()) return
@@ -228,30 +272,23 @@ export default function AdminSkillsPage() {
     setIsSubmitting(true)
 
     try {
+      // Ensure category is not empty
+      const skillData = {
+        name: skillForm.name,
+        category: skillForm.category.trim() || "Uncategorized",
+        proficiency: skillForm.proficiency,
+        experience: skillForm.experience,
+        icon: skillForm.icon,
+        subSkills: skillForm.subSkills,
+        books: skillForm.books,
+        achievements: skillForm.achievements,
+        tools: skillForm.tools
+      }
+      
       if (selectedId === null) {
-        addSkill({
-          name: skillForm.name,
-          category: skillForm.category,
-          proficiency: skillForm.proficiency,
-          experience: skillForm.experience,
-          icon: skillForm.icon,
-          subSkills: skillForm.subSkills,
-          books: skillForm.books,
-          achievements: skillForm.achievements,
-          tools: skillForm.tools
-        })
+        addSkill(skillData)
       } else {
-        updateSkill(selectedId, {
-          name: skillForm.name,
-          category: skillForm.category,
-          proficiency: skillForm.proficiency,
-          experience: skillForm.experience,
-          icon: skillForm.icon,
-          subSkills: skillForm.subSkills,
-          books: skillForm.books,
-          achievements: skillForm.achievements,
-          tools: skillForm.tools
-        })
+        updateSkill(selectedId, skillData)
       }
 
       await saveToDatabase()
@@ -345,8 +382,76 @@ export default function AdminSkillsPage() {
     }
   }
 
+  const handleCertificateImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+    
+    setIsUploading(true);
+    try {
+      // Convert file to base64
+      const base64Data = await fileToBase64(file);
+      
+      // Upload to ImageKit
+      const imageUrl = await uploadToImageKit(
+        base64Data,
+        file.name,
+        "certificates"
+      );
+      
+      // Update form with new image URL
+      setCertificateForm(prev => ({ ...prev, imageUrl }));
+      
+      toast.success("Image uploaded successfully");
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      toast.error("Failed to upload image");
+    } finally {
+      setIsUploading(false);
+      // Clear the file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleCertificateSubmit = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setIsSubmitting(true)
+
+    try {
+      const certificateData = {
+        name: certificateForm.name,
+        issuer: certificateForm.issuer,
+        date: certificateForm.date,
+        expiry: certificateForm.expiry || "",
+        category: certificateForm.category.trim() || "Uncategorized",
+        credentialId: certificateForm.credentialId,
+        credentialUrl: certificateForm.credentialUrl,
+        imageUrl: certificateForm.imageUrl,
+        description: certificateForm.description
+      }
+      
+      if (selectedId === null) {
+        addCertificate(certificateData)
+      } else {
+        updateCertificate(selectedId, certificateData)
+      }
+
+      await saveToDatabase()
+      toast.success(selectedId === null ? "Certificate added successfully" : "Certificate updated successfully")
+      setSelectedId(null)
+      setFormTab(null)
+      setActiveTab("certificates")
+    } catch (error) {
+      toast.error("Failed to save certificate")
+      console.error("Error saving certificate:", error)
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
   // Handle deletions with proper loading state
-  const handleDelete = async (type: "skills" | "education" | "experience", id: string) => {
+  const handleDelete = async (type: "skills" | "education" | "experience" | "certificates", id: string) => {
     if (!confirm("Are you sure you want to delete this entry?")) return
 
     setIsSubmitting(true)
@@ -360,6 +465,9 @@ export default function AdminSkillsPage() {
           break
         case "experience":
           deleteExperience(id)
+          break
+        case "certificates":
+          deleteCertificate(id)
           break
       }
       await saveToDatabase()
@@ -380,6 +488,10 @@ export default function AdminSkillsPage() {
   const handleManualSave = async () => {
     setIsSubmitting(true)
     try {
+      // Save categories to localStorage again to ensure they persist
+      saveCategoriesToLocalStorage(categories)
+      
+      // Save all other data to the database
       await saveToDatabase()
       toast.success("Changes saved successfully")
     } catch (error) {
@@ -391,14 +503,33 @@ export default function AdminSkillsPage() {
   }
 
   // Handle edit button click
-  const handleEdit = (type: "skills" | "education" | "experience", id: string) => {
+  const handleEdit = (type: "skills" | "education" | "experience" | "certificates", id: string) => {
     setSelectedId(id)
     setFormTab(type)
     setActiveTab("form") // Switch to form tab
+    
+    // If editing a certificate, populate the form
+    if (type === "certificates") {
+      const certificate = certificates.find(cert => cert.id === id)
+      if (certificate) {
+        setCertificateForm({
+          id: certificate.id,
+          name: certificate.name || "",
+          issuer: certificate.issuer || "",
+          date: certificate.date || "",
+          expiry: certificate.expiry || "",
+          category: certificate.category || "",
+          credentialId: certificate.credentialId || "",
+          credentialUrl: certificate.credentialUrl || "",
+          imageUrl: certificate.imageUrl || "",
+          description: certificate.description || ""
+        })
+      }
+    }
   }
 
   // Handle add new button click
-  const handleAddNew = (type: "skills" | "education" | "experience") => {
+  const handleAddNew = (type: "skills" | "education" | "experience" | "certificates") => {
     setSelectedId(null) // Clear any selected item
     setFormTab(type) // Set the form type
     setActiveTab("form") // Switch to form tab
@@ -414,7 +545,94 @@ export default function AdminSkillsPage() {
       case "experience":
         setExperienceForm(defaultExperienceForm)
         break
+      case "certificates":
+        setCertificateForm(defaultCertificateForm)
+        break
     }
+  }
+
+  // Functions to manage categories
+  const addCategory = () => {
+    if (!newCategory.trim()) return
+    if (categories.includes(newCategory.trim())) {
+      toast.error("This category already exists")
+      return
+    }
+    setCategories([...categories, newCategory.trim()])
+    setNewCategory("")
+    toast.success("Category added successfully")
+    saveCategoriesToLocalStorage([...categories, newCategory.trim()])
+  }
+  
+  const updateCategory = () => {
+    if (!editingCategory) return
+    if (!editingCategory.value.trim()) {
+      toast.error("Category name cannot be empty")
+      return
+    }
+    if (categories.includes(editingCategory.value.trim()) && categories[editingCategory.index] !== editingCategory.value.trim()) {
+      toast.error("This category already exists")
+      return
+    }
+    
+    const updatedCategories = [...categories]
+    updatedCategories[editingCategory.index] = editingCategory.value.trim()
+    setCategories(updatedCategories)
+    
+    // Update any skills using the old category name
+    const oldCategoryName = categories[editingCategory.index]
+    skills.forEach(skill => {
+      if (skill.category === oldCategoryName) {
+        updateSkill(skill.id, { category: editingCategory.value.trim() })
+      }
+    })
+    
+    setEditingCategory(null)
+    toast.success("Category updated successfully")
+    saveCategoriesToLocalStorage(updatedCategories)
+  }
+  
+  const deleteCategory = (index: number) => {
+    if (!confirm(`Are you sure you want to delete "${categories[index]}"?`)) return
+    
+    // Check if any skills are using this category
+    const categoryName = categories[index]
+    const skillsUsingCategory = skills.filter(skill => skill.category === categoryName)
+    
+    if (skillsUsingCategory.length > 0) {
+      if (!confirm(`This will set ${skillsUsingCategory.length} skill(s) to "Uncategorized". Continue?`)) return
+      
+      // Update skills to use "Uncategorized"
+      skillsUsingCategory.forEach(skill => {
+        updateSkill(skill.id, { category: "Uncategorized" })
+      })
+    }
+    
+    const updatedCategories = [...categories]
+    updatedCategories.splice(index, 1)
+    setCategories(updatedCategories)
+    toast.success("Category deleted successfully")
+    saveCategoriesToLocalStorage(updatedCategories)
+  }
+  
+  // Load categories from localStorage on component mount
+  useEffect(() => {
+    const savedCategories = localStorage.getItem('skillCategories')
+    if (savedCategories) {
+      try {
+        const parsedCategories = JSON.parse(savedCategories)
+        if (Array.isArray(parsedCategories) && parsedCategories.length > 0) {
+          setCategories(parsedCategories)
+        }
+      } catch (e) {
+        console.error('Error parsing saved categories:', e)
+      }
+    }
+  }, [])
+  
+  // Save categories to localStorage
+  const saveCategoriesToLocalStorage = (cats: string[]) => {
+    localStorage.setItem('skillCategories', JSON.stringify(cats))
   }
 
   return (
@@ -491,11 +709,31 @@ export default function AdminSkillsPage() {
                 </Badge>
               )}
             </TabsTrigger>
+            <TabsTrigger
+              value="certificates"
+              className="data-[state=active]:border-b-2 data-[state=active]:border-primary rounded-none px-4 py-2"
+            >
+              Certificates
+              {Array.isArray(certificates) && certificates.length > 0 && (
+                <Badge variant="secondary" className="ml-2">
+                  {certificates.length}
+                </Badge>
+              )}
+            </TabsTrigger>
           </TabsList>
 
           {/* Skills Tab Content */}
           <TabsContent value="skills" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-between">
+              <Button
+                variant="outline"
+                onClick={() => setShowCategoryManager(!showCategoryManager)}
+                className="hover:bg-accent"
+              >
+                <Settings className="w-4 h-4 mr-2" />
+                {showCategoryManager ? 'Hide' : 'Manage'} Categories
+              </Button>
+              
               <Button
                 variant="outline"
                 onClick={() => handleAddNew("skills")}
@@ -505,6 +743,105 @@ export default function AdminSkillsPage() {
                 New Skill
               </Button>
             </div>
+            
+            {/* Category Manager Section */}
+            {showCategoryManager && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Manage Skill Categories</CardTitle>
+                  <CardDescription>
+                    Add, edit, or remove skill categories. Changes will affect how skills are categorized.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    {/* Add new category */}
+                    <div className="flex gap-2">
+                      <Input
+                        value={newCategory}
+                        onChange={(e) => setNewCategory(e.target.value)}
+                        placeholder="New category name"
+                        className="flex-1"
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            addCategory();
+                          }
+                        }}
+                      />
+                      <Button 
+                        onClick={addCategory}
+                        disabled={!newCategory.trim()}
+                      >
+                        <PlusCircle className="w-4 h-4 mr-1" />
+                        Add Category
+                      </Button>
+                    </div>
+                    
+                    {/* List of categories */}
+                    <div className="border rounded-lg p-4">
+                      <h3 className="font-medium mb-2">Current Categories</h3>
+                      {categories.length === 0 ? (
+                        <p className="text-muted-foreground text-sm">No categories defined</p>
+                      ) : (
+                        <div className="space-y-2">
+                          {categories.map((category, index) => (
+                            <div key={index} className="flex items-center justify-between p-2 bg-accent/30 rounded-md">
+                              {editingCategory && editingCategory.index === index ? (
+                                <div className="flex-1 flex gap-2">
+                                  <Input
+                                    value={editingCategory.value}
+                                    onChange={(e) => setEditingCategory({...editingCategory, value: e.target.value})}
+                                    className="flex-1"
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter') {
+                                        e.preventDefault();
+                                        updateCategory();
+                                      }
+                                    }}
+                                  />
+                                  <Button size="sm" onClick={updateCategory}>Save</Button>
+                                  <Button 
+                                    size="sm" 
+                                    variant="ghost" 
+                                    onClick={() => setEditingCategory(null)}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <>
+                                  <span>{category}</span>
+                                  <div className="flex gap-1">
+                                    <Button 
+                                      size="sm"
+                                      variant="ghost"
+                                      onClick={() => setEditingCategory({index, value: category})}
+                                    >
+                                      <Edit className="w-3 h-3 mr-1" />
+                                      Edit
+                                    </Button>
+                                    <Button 
+                                      size="sm"
+                                      variant="ghost" 
+                                      className="text-destructive"
+                                      onClick={() => deleteCategory(index)}
+                                    >
+                                      <Trash2 className="w-3 h-3 mr-1" />
+                                      Delete
+                                    </Button>
+                                  </div>
+                                </>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {Array.isArray(skills) && skills.map((skill) => (
@@ -799,6 +1136,126 @@ export default function AdminSkillsPage() {
             </div>
           </TabsContent>
 
+          {/* Certificates Tab Content */}
+          <TabsContent value="certificates" className="space-y-4">
+            <div className="flex justify-end">
+              <Button
+                variant="outline"
+                onClick={() => handleAddNew("certificates")}
+                className="hover:bg-accent"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Certificate
+              </Button>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {Array.isArray(certificates) && certificates.map((cert) => (
+                <Card key={cert.id} className="relative">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle className="flex items-center gap-2">
+                          {cert.name || "Unnamed Certificate"}
+                        </CardTitle>
+                        <CardDescription>{cert.issuer || "Issuer not specified"}</CardDescription>
+                      </div>
+                      <Badge variant="secondary">
+                        {cert.date || "Date not specified"}
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {cert.category && (
+                        <Badge variant="outline" className="mb-2">
+                          {cert.category}
+                        </Badge>
+                      )}
+                      {cert.imageUrl && (
+                        <div className="mb-2 overflow-hidden rounded-md border">
+                          <img 
+                            src={cert.imageUrl} 
+                            alt={cert.name} 
+                            className="w-full h-32 object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).src = 'https://placehold.co/400x200?text=Certificate+Image';
+                            }}
+                          />
+                        </div>
+                      )}
+                      {cert.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2">
+                          {cert.description}
+                        </p>
+                      )}
+                      {cert.credentialUrl && (
+                        <div className="flex items-center mt-2">
+                          <ExternalLink className="w-3 h-3 mr-1 text-muted-foreground" />
+                          <a 
+                            href={cert.credentialUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-xs text-primary hover:underline"
+                          >
+                            View Credential
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit("certificates", cert.id)}
+                        className="hover:bg-accent"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-primary"
+                        >
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete("certificates", cert.id)}
+                        className="hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {(!Array.isArray(certificates) || certificates.length === 0) && (
+                <Card className="col-span-full">
+                  <CardContent className="flex flex-col items-center justify-center py-8">
+                    <p className="text-lg text-muted-foreground mb-4">No certificates added yet</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleAddNew("certificates")}
+                      className="hover:bg-accent"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Certificate
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Form Tab Content */}
           {formTab && (
             <TabsContent value="form" className="mt-6">
@@ -852,11 +1309,12 @@ export default function AdminSkillsPage() {
                               <SelectValue placeholder="Select a category" />
                             </SelectTrigger>
                             <SelectContent>
-                              {CATEGORIES.map((category) => (
+                              {categories.map((category) => (
                                 <SelectItem key={category} value={category}>
                                   {category}
                                 </SelectItem>
                               ))}
+                              <SelectItem value="Uncategorized">Uncategorized</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -1353,6 +1811,207 @@ export default function AdminSkillsPage() {
                             <>
                               <Save className="w-4 h-4 mr-2" />
                               {selectedId === null ? "Add Experience" : "Update Experience"}
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </form>
+                  )}
+
+                  {formTab === "certificates" && (
+                    <form onSubmit={handleCertificateSubmit} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor="name">Certificate Name</Label>
+                          <Input
+                            id="name"
+                            value={certificateForm.name}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, name: e.target.value }))}
+                            placeholder="e.g., AWS Certified Solutions Architect"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="issuer">Issuing Organization</Label>
+                          <Input
+                            id="issuer"
+                            value={certificateForm.issuer}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, issuer: e.target.value }))}
+                            placeholder="e.g., Amazon Web Services"
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="date">Issue Date</Label>
+                          <Input
+                            id="date"
+                            type="date"
+                            value={certificateForm.date}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, date: e.target.value }))}
+                            required
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="expiry">Expiry Date (Optional)</Label>
+                          <Input
+                            id="expiry"
+                            type="date"
+                            value={certificateForm.expiry}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, expiry: e.target.value }))}
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="category">Category</Label>
+                          <Select
+                            value={certificateForm.category}
+                            onValueChange={(value) => setCertificateForm(prev => ({ ...prev, category: value }))}
+                            required
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select a category" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {categories.map((category) => (
+                                <SelectItem key={category} value={category}>
+                                  {category}
+                                </SelectItem>
+                              ))}
+                              <SelectItem value="Uncategorized">Uncategorized</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="credentialId">Credential ID (Optional)</Label>
+                          <Input
+                            id="credentialId"
+                            value={certificateForm.credentialId}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, credentialId: e.target.value }))}
+                            placeholder="e.g., ABC123XYZ"
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="credentialUrl">Credential URL (Optional)</Label>
+                          <Input
+                            id="credentialUrl"
+                            type="url"
+                            value={certificateForm.credentialUrl}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, credentialUrl: e.target.value }))}
+                            placeholder="e.g., https://www.credly.com/badges/..."
+                          />
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="imageUrl">Certificate Image</Label>
+                          <div className="space-y-4">
+                            <div>
+                              <Label className="text-sm text-muted-foreground mb-2 block">Option 1: Upload Image</Label>
+                              <div className="flex items-center gap-3">
+                                <Input
+                                  ref={fileInputRef}
+                                  type="file"
+                                  accept="image/*"
+                                  onChange={handleCertificateImageUpload}
+                                  className="hidden"
+                                  id="certificateFileInput"
+                                />
+                                <Button 
+                                  type="button" 
+                                  variant="outline" 
+                                  className="w-full flex items-center justify-center gap-2"
+                                  onClick={() => fileInputRef.current?.click()}
+                                  disabled={isUploading}
+                                >
+                                  {isUploading ? (
+                                    <>
+                                      <Loader2 className="h-4 w-4 animate-spin" />
+                                      <span>Uploading...</span>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Upload className="h-4 w-4" />
+                                      <span>Choose Image</span>
+                                    </>
+                                  )}
+                                </Button>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Upload an image from your device. It will be stored securely on ImageKit.
+                              </p>
+                            </div>
+
+                            <div>
+                              <Label className="text-sm text-muted-foreground mb-2 block">Option 2: Image URL</Label>
+                              <Input
+                                id="imageUrl"
+                                type="url"
+                                value={certificateForm.imageUrl}
+                                onChange={(e) => setCertificateForm(prev => ({ ...prev, imageUrl: e.target.value }))}
+                                placeholder="e.g., https://example.com/certificate.jpg"
+                                required
+                              />
+                              <p className="text-xs text-muted-foreground mt-1">
+                                Enter a direct URL to your certificate image.
+                              </p>
+                            </div>
+
+                            {certificateForm.imageUrl && (
+                              <div className="mt-2 border rounded-md p-2">
+                                <p className="text-xs font-medium mb-2">Preview:</p>
+                                <div className="relative aspect-[4/3] w-full max-w-[200px] mx-auto overflow-hidden rounded border bg-slate-50">
+                                  <img 
+                                    src={certificateForm.imageUrl} 
+                                    alt="Certificate preview" 
+                                    className="object-contain w-full h-full"
+                                    onError={(e) => {
+                                      (e.target as HTMLImageElement).src = 'https://placehold.co/400x300?text=Image+Error';
+                                    }}
+                                  />
+                                </div>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 md:col-span-2">
+                          <Label htmlFor="description">Description (Optional)</Label>
+                          <Textarea
+                            id="description"
+                            value={certificateForm.description}
+                            onChange={(e) => setCertificateForm(prev => ({ ...prev, description: e.target.value }))}
+                            placeholder="Briefly describe what this certificate represents"
+                            className="min-h-[100px]"
+                          />
+                        </div>
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedId(null)
+                            setFormTab(null)
+                            setActiveTab("certificates")
+                          }}
+                        >
+                          Cancel
+                        </Button>
+                        <Button type="submit" disabled={isSubmitting}>
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-4 h-4 mr-2" />
+                              {selectedId === null ? "Add Certificate" : "Update Certificate"}
                             </>
                           )}
                         </Button>

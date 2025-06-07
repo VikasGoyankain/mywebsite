@@ -6,12 +6,15 @@ import { useState, useRef, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Upload, X, ImageIcon } from "lucide-react"
 import Image from "next/image"
+import { uploadToImageKit } from '@/lib/imagekit'
+import { toast } from 'sonner'
 
 interface ImageUploaderProps {
   currentImageUrl: string
   onImageSelect: (imageUrl: string, file?: File) => void
   className?: string
   buttonText?: string
+  uploadFolder?: string
 }
 
 export function ImageUploader({
@@ -19,6 +22,7 @@ export function ImageUploader({
   onImageSelect,
   className = "",
   buttonText = "Upload Image",
+  uploadFolder = "uploads"
 }: ImageUploaderProps) {
   const [previewUrl, setPreviewUrl] = useState<string | null>(null)
   const [isHovering, setIsHovering] = useState(false)
@@ -34,6 +38,16 @@ export function ImageUploader({
     }
   }, [previewUrl])
 
+  // Convert file to base64
+  const fileToBase64 = (file: File): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result as string);
+      reader.onerror = error => reject(error);
+    });
+  };
+
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
@@ -41,17 +55,37 @@ export function ImageUploader({
     setIsLoading(true)
     
     try {
-      // Optimize image before creating preview
+      // First optimize the image locally
       const optimizedImage = await optimizeImage(file)
       
-      // Create a local preview URL with optimized image
-      const objectUrl = URL.createObjectURL(optimizedImage)
-      setPreviewUrl(objectUrl)
+      // Create a temporary local preview URL with the optimized image
+      const tempPreviewUrl = URL.createObjectURL(optimizedImage)
+      setPreviewUrl(tempPreviewUrl)
+
+      // Convert file to base64 for ImageKit upload
+      const base64Data = await fileToBase64(optimizedImage);
+
+      // Upload to ImageKit
+      const imageKitUrl = await uploadToImageKit(
+        base64Data, 
+        file.name, 
+        uploadFolder
+      );
       
-      // Pass both the URL and optimized file to the parent component
-      onImageSelect(objectUrl, optimizedImage)
+      // Pass the ImageKit URL to the parent component
+      onImageSelect(imageKitUrl, optimizedImage)
+      
+      // Clean up temporary preview
+      URL.revokeObjectURL(tempPreviewUrl);
+      
+      // Set the actual ImageKit URL as the preview
+      setPreviewUrl(null);
+      
+      toast.success("Image uploaded successfully");
     } catch (error) {
       console.error("Error processing image:", error)
+      toast.error("Failed to upload image");
+      
       // Fall back to original file if optimization fails
       const objectUrl = URL.createObjectURL(file)
       setPreviewUrl(objectUrl)
@@ -69,7 +103,7 @@ export function ImageUploader({
     }
     
     // Create a canvas for image resizing
-    const img = new Image();
+    const img = document.createElement('img');
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -129,8 +163,11 @@ export function ImageUploader({
     }
   };
 
-  const handleButtonClick = () => {
-    fileInputRef.current?.click()
+  const handleButtonClick = (e: React.MouseEvent) => {
+    // Prevent event propagation to avoid dialog closing
+    e.stopPropagation();
+    e.preventDefault();
+    fileInputRef.current?.click();
   }
 
   const handleClearImage = () => {
@@ -184,7 +221,7 @@ export function ImageUploader({
           <div className="flex gap-2">
             <Button size="sm" onClick={handleButtonClick} className="bg-white text-gray-800 hover:bg-gray-100" disabled={isLoading}>
               <Upload className="w-4 h-4 mr-2" />
-              {buttonText}
+              {isLoading ? 'Uploading...' : buttonText}
             </Button>
             {displayUrl && (
               <Button size="sm" variant="destructive" onClick={handleClearImage} disabled={isLoading}>

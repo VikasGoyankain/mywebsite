@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Button } from '@/components/ui/button'
-import { Search, X } from 'lucide-react'
+import { Search, X, Filter, SlidersHorizontal, Calendar, BookOpen } from 'lucide-react'
 import {
   Select,
   SelectContent,
@@ -12,6 +12,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import { Badge } from "@/components/ui/badge"
+import { Separator } from "@/components/ui/separator"
 import { ResearchDomain } from '@/lib/models/research'
 
 interface ResearchFiltersProps {
@@ -58,27 +60,41 @@ export function ResearchFilters({
   }
 
   return (
-    <div className="space-y-4">
-      <form onSubmit={handleSearch} className="flex w-full max-w-2xl">
+    <div className="space-y-6">
+      <div className="flex items-center gap-2 mb-2">
+        <SlidersHorizontal className="h-5 w-5 text-blue-600" />
+        <h3 className="font-semibold text-lg">Advanced Search</h3>
+      </div>
+      
+      <form onSubmit={handleSearch} className="flex w-full max-w-3xl">
         <div className="relative flex-1">
-          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
-            placeholder="Search research studies..."
-            className="pl-8"
+            placeholder="Search by title, abstract, or keywords..."
+            className="pl-10 h-12 text-base bg-white border-blue-100 focus:border-blue-300 focus:ring-blue-200"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
           />
         </div>
-        <Button type="submit" className="ml-2">
+        <Button 
+          type="submit" 
+          className="ml-2 h-12 px-6 bg-blue-600 hover:bg-blue-700"
+        >
+          <Search className="mr-2 h-4 w-4" />
           Search
         </Button>
       </form>
 
-      <div className="flex flex-wrap items-center gap-4">
-        <div className="space-y-1 min-w-[180px]">
-          <Label htmlFor="domain">Domain</Label>
+      <Separator className="my-4 bg-blue-100" />
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <Label htmlFor="domain" className="flex items-center text-sm font-medium text-gray-700">
+            <BookOpen className="h-4 w-4 mr-2 text-blue-600" />
+            Research Domain
+          </Label>
           <Select value={selectedDomain} onValueChange={handleDomainChange}>
-            <SelectTrigger id="domain">
+            <SelectTrigger id="domain" className="h-11 bg-white border-blue-100 focus:ring-blue-200">
               <SelectValue placeholder="All domains" />
             </SelectTrigger>
             <SelectContent>
@@ -90,12 +106,20 @@ export function ResearchFilters({
               ))}
             </SelectContent>
           </Select>
+          {selectedDomain !== 'all' && (
+            <Badge className="mt-1 bg-blue-100 text-blue-800 hover:bg-blue-200 border-0">
+              {selectedDomain}
+            </Badge>
+          )}
         </div>
 
-        <div className="space-y-1 min-w-[120px]">
-          <Label htmlFor="year">Year</Label>
+        <div className="space-y-2">
+          <Label htmlFor="year" className="flex items-center text-sm font-medium text-gray-700">
+            <Calendar className="h-4 w-4 mr-2 text-blue-600" />
+            Publication Year
+          </Label>
           <Select value={selectedYear} onValueChange={handleYearChange}>
-            <SelectTrigger id="year">
+            <SelectTrigger id="year" className="h-11 bg-white border-blue-100 focus:ring-blue-200">
               <SelectValue placeholder="All years" />
             </SelectTrigger>
             <SelectContent>
@@ -107,19 +131,33 @@ export function ResearchFilters({
               ))}
             </SelectContent>
           </Select>
+          {selectedYear !== 'all' && (
+            <Badge className="mt-1 bg-blue-100 text-blue-800 hover:bg-blue-200 border-0">
+              {selectedYear}
+            </Badge>
+          )}
         </div>
 
-        {isFiltered && (
+        <div className="flex items-end">
           <Button 
-            variant="ghost" 
+            variant="outline" 
             onClick={handleClearFilters} 
-            className="h-9 px-2 lg:px-3 mt-6"
+            className="h-11 border-blue-200 text-blue-700 hover:bg-blue-50 hover:text-blue-800 w-full"
           >
             <X className="mr-2 h-4 w-4" />
-            Clear filters
+            Reset All Filters
           </Button>
-        )}
+        </div>
       </div>
+
+      {isFiltered && (
+        <div className="mt-4 pt-4 border-t border-blue-100">
+          <div className="flex items-center gap-2 text-sm text-blue-700">
+            <Filter className="h-4 w-4" />
+            <span>Filters applied. Showing filtered results.</span>
+          </div>
+        </div>
+      )}
     </div>
   )
 } 

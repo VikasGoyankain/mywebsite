@@ -4,8 +4,7 @@ import {
   getPostById,
   createPost,
   updatePost,
-  deletePost,
-  addComment
+  deletePost
 } from '@/lib/services/posts-service'
 import { Post } from '@/lib/types/Post'
 
@@ -45,7 +44,7 @@ export async function POST(request: Request) {
     const postData = await request.json()
     
     // Validate required fields
-    if (!postData.content || !postData.type) {
+    if (!postData.content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
@@ -55,10 +54,9 @@ export async function POST(request: Request) {
     // Set default values if not provided
     const newPost: Omit<Post, 'id'> = {
       ...postData,
-      author: postData.author || 'You',
       timestamp: postData.timestamp ? new Date(postData.timestamp) : new Date(),
       tags: postData.tags || [],
-      comments: postData.comments || []
+      media: postData.media || []
     }
     
     const createdPost = await createPost(newPost)

@@ -1,5 +1,6 @@
 import { kv } from '@vercel/kv'
-import { Post, Comment } from '../types/Post'
+import { Post } from '../types/Post'
+import { generateId } from '../utils'
 
 const POSTS_KEY = 'posts:all'
 const POSTS_VIEWS_KEY = 'posts:views'
@@ -24,8 +25,6 @@ export async function getPostById(id: string): Promise<Post | null> {
     if (post) {
       // Increment view count
       await incrementViewCount(id)
-      // Get latest view count
-      const views = await getViewCount(id)
       return post
     }
     
@@ -42,10 +41,17 @@ export async function createPost(post: Omit<Post, 'id'>): Promise<Post> {
     const posts = await getAllPosts()
     const newId = generateId()
     
+    // Ensure media array is properly formatted
+    const processedMedia = post.media?.map(media => ({
+      ...media,
+      // Ensure each media item has an ID
+      id: media.id || generateId()
+    })) || []
+    
     const newPost: Post = {
       ...post,
       id: newId,
-      comments: post.comments || []
+      media: processedMedia
     }
     
     await kv.set(POSTS_KEY, [...posts, newPost])
@@ -63,6 +69,15 @@ export async function updatePost(id: string, data: Partial<Post>): Promise<Post 
     const index = posts.findIndex(p => p.id === id)
     
     if (index === -1) return null
+    
+    // Process media if it exists in the update data
+    if (data.media) {
+      data.media = data.media.map(media => ({
+        ...media,
+        // Ensure each media item has an ID
+        id: media.id || generateId()
+      }))
+    }
     
     const updatedPost = { ...posts[index], ...data }
     posts[index] = updatedPost
@@ -95,29 +110,6 @@ export async function deletePost(id: string): Promise<boolean> {
   }
 }
 
-// Add a comment to a post
-export async function addComment(postId: string, comment: Omit<Comment, 'id'>): Promise<Comment | null> {
-  try {
-    const posts = await getAllPosts()
-    const postIndex = posts.findIndex(p => p.id === postId)
-    
-    if (postIndex === -1) return null
-    
-    const newComment: Comment = {
-      ...comment,
-      id: generateId()
-    }
-    
-    posts[postIndex].comments.push(newComment)
-    await kv.set(POSTS_KEY, posts)
-    
-    return newComment
-  } catch (error) {
-    console.error(`Failed to add comment to post ${postId}:`, error)
-    return null
-  }
-}
-
 // View counting functionality
 async function incrementViewCount(postId: string): Promise<number> {
   try {
@@ -136,9 +128,4 @@ async function getViewCount(postId: string): Promise<number> {
     console.error(`Failed to get view count for post ${postId}:`, error)
     return 0
   }
-}
-
-// Helper function to generate a unique ID
-function generateId(): string {
-  return Math.random().toString(36).substring(2, 9)
 }

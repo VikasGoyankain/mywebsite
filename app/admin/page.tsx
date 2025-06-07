@@ -122,32 +122,18 @@ function AdminDashboard() {
           linkText="Edit Profile"
         />
         <DashboardCard
-          title="Skills & Expertise"
-          description="Manage your professional skills and competencies"
+          title="Expertise"
+          description="Manage your skills, certifications and professional competencies"
           icon={<Star className="h-5 w-5" />}
-          linkHref="/admin/skills"
-          linkText="Manage Skills"
+          linkHref="/admin/expertise"
+          linkText="Manage Expertise"
         />
         <DashboardCard
-          title="Case Studies"
-          description="Add and edit your professional case studies"
-          icon={<Briefcase className="h-5 w-5" />}
-          linkHref="/admin/cases"
-          linkText="Manage Cases"
-        />
-        <DashboardCard
-          title="Research Publications"
-          description="Update your academic research and publications"
-          icon={<GraduationCap className="h-5 w-5" />}
-          linkHref="/admin/research"
-          linkText="Manage Research"
-        />
-        <DashboardCard
-          title="Certificates"
-          description="Manage your professional certifications"
+          title="My Works"
+          description="Manage your research publications and legal case studies"
           icon={<Award className="h-5 w-5" />}
-          linkHref="/admin/certificates"
-          linkText="Manage Certificates"
+          linkHref="/admin/works"
+          linkText="Manage Works"
         />
         <DashboardCard
           title="Subscribers"

@@ -223,6 +223,7 @@ export async function POST(request: Request) {
 // Admin route to update an existing case
 export async function PUT(request: Request) {
   try {
+    // Get the ID from the URL query parameters
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
@@ -233,7 +234,17 @@ export async function PUT(request: Request) {
       )
     }
     
-    const updatedCase = await request.json()
+    // Parse the request body
+    let updatedCase
+    try {
+      updatedCase = await request.json()
+    } catch (error) {
+      console.error('Error parsing JSON:', error)
+      return NextResponse.json(
+        { message: 'Invalid JSON in request body', error: String(error) },
+        { status: 400 }
+      )
+    }
     
     // Validate required fields
     if (!updatedCase.title || !updatedCase.court || !updatedCase.category || !updatedCase.outcome) {
@@ -246,6 +257,8 @@ export async function PUT(request: Request) {
     // Ensure ID matches
     updatedCase.id = id
     
+    console.log('Updating case:', id, updatedCase)
+    
     // Get write-optimized storage
     const { client } = await getWriteStorage()
     
@@ -255,14 +268,18 @@ export async function PUT(request: Request) {
       let caseData = await readStorage.client.get(`case:${id}`)
       
       if (!caseData) {
+        console.log('Case not found:', id)
         return NextResponse.json(
-          { message: 'Case not found' },
+          { message: `Case not found with ID: ${id}` },
           { status: 404 }
         )
       }
       
+      console.log('Found existing case:', caseData)
+      
       // Update case with write storage
       await client.set(`case:${id}`, updatedCase)
+      console.log('Case updated successfully')
       
       return NextResponse.json(updatedCase)
     } catch (storageError) {
@@ -284,6 +301,7 @@ export async function PUT(request: Request) {
 // Admin route to delete a case
 export async function DELETE(request: Request) {
   try {
+    // Get the ID from the URL query parameters
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
     
@@ -294,6 +312,8 @@ export async function DELETE(request: Request) {
       )
     }
     
+    console.log('Deleting case:', id)
+    
     // Get write-optimized storage client
     const { client } = await getWriteStorage()
     
@@ -303,11 +323,14 @@ export async function DELETE(request: Request) {
       let caseData = await readStorage.client.get(`case:${id}`)
       
       if (!caseData) {
+        console.log('Case not found:', id)
         return NextResponse.json(
-          { message: 'Case not found' },
+          { message: `Case not found with ID: ${id}` },
           { status: 404 }
         )
       }
+      
+      console.log('Found case to delete:', caseData)
       
       // Delete case with write storage
       await client.del(`case:${id}`)
@@ -317,6 +340,7 @@ export async function DELETE(request: Request) {
       caseIds = Array.isArray(caseIds) ? caseIds.filter(caseId => caseId !== id) : []
       await client.set('cases:index', caseIds)
       
+      console.log('Case deleted successfully')
       return NextResponse.json({ success: true, message: 'Case deleted successfully' })
     } catch (storageError) {
       console.error('Storage error:', storageError)
