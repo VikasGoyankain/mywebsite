@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { kv } from '@vercel/kv'
-import { isRedisConnected, redis, REDIS_KEYS } from '@/lib/redis'
+import redis, { isRedisConnected, REDIS_KEYS } from '@/lib/redis'
 
 // Define Case type
 interface Case {

@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { redis, REDIS_KEYS, isRedisConnected } from '@/lib/redis'
+import redis, { REDIS_KEYS, isRedisConnected } from '@/lib/redis'
 import { kv } from '@vercel/kv'
 import { sendWelcomeEmail, shouldSendWelcomeEmail } from '@/lib/welcome-email'
 

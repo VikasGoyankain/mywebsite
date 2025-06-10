@@ -2,13 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Briefcase, GraduationCap, Plus, Search, Trash2, Edit, Eye, Tag, ChevronLeft } from 'lucide-react'
+import { Briefcase, GraduationCap, Plus, Search, Trash2, Edit, Eye, Tag, ChevronLeft, Scale, Download, Filter, ArrowLeft } from 'lucide-react'
 import { Input } from '@/components/ui/input'
 import { Dialog, DialogContent, DialogTrigger, DialogTitle } from '@/components/ui/dialog'
 import { ResearchForm } from '@/components/admin/research-form'
 import { CaseForm, Case } from '@/components/admin/case-form'
+import { CaseLawForm } from '@/components/admin/case-law-form'
 import { DomainForm } from '@/components/admin/domain-form'
 import { ResearchStudy, ResearchDomainItem } from '@/lib/models/research'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,10 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import Link from 'next/link'
+import { mockCases, Case as CaseItem } from '@/app/casevault/data/mockCases'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import Image from "next/image"
+import { cn } from "@/lib/utils"
 
 export default function WorksManagementPage() {
   // State for research publications
@@ -48,6 +53,32 @@ export default function WorksManagementPage() {
   const [isDomainDialogOpen, setIsDomainDialogOpen] = useState(false)
   const [isLoadingDomains, setIsLoadingDomains] = useState(true)
   const [showDomainForm, setShowDomainForm] = useState(false)
+  
+  // State for legal cases
+  const [legalCaseSearchQuery, setLegalCaseSearchQuery] = useState('')
+  const [filterArea, setFilterArea] = useState('')
+  const [legalCases, setLegalCases] = useState<CaseItem[]>([])
+  const [filteredLegalCases, setFilteredLegalCases] = useState<CaseItem[]>([])
+  const [isLoadingLegalCases, setIsLoadingLegalCases] = useState(true)
+
+  // Function to fetch legal cases
+  const fetchLegalCases = async () => {
+    try {
+      setIsLoadingLegalCases(true)
+      const response = await fetch('/api/casevault')
+      if (!response.ok) {
+        throw new Error('Failed to fetch cases')
+      }
+      const data = await response.json()
+      setLegalCases(data)
+      setFilteredLegalCases(data)
+    } catch (error) {
+      console.error('Error fetching cases:', error)
+      toast.error('Failed to load legal cases')
+    } finally {
+      setIsLoadingLegalCases(false)
+    }
+  }
 
   // Fetch research publications
   useEffect(() => {
@@ -74,25 +105,7 @@ export default function WorksManagementPage() {
 
   // Fetch case studies
   useEffect(() => {
-    const fetchCases = async () => {
-      try {
-        setIsLoadingCases(true)
-        const response = await fetch('/api/cases')
-        if (!response.ok) {
-          throw new Error('Failed to fetch cases')
-        }
-        const data = await response.json()
-        setCases(data)
-        setFilteredCases(data)
-      } catch (error) {
-        console.error('Error fetching cases:', error)
-        toast.error('Failed to load case studies')
-      } finally {
-        setIsLoadingCases(false)
-      }
-    }
-
-    fetchCases()
+    fetchLegalCases()
   }, [])
 
   // Fetch domains
@@ -165,6 +178,21 @@ export default function WorksManagementPage() {
       setFilteredDomains(filtered)
     }
   }, [domains, domainSearchQuery])
+  
+  // Filter legal cases based on search query and area
+  useEffect(() => {
+    const filtered = mockCases.filter((caseItem: CaseItem) => {
+      const matchesSearch = legalCaseSearchQuery === '' || 
+        caseItem.title.toLowerCase().includes(legalCaseSearchQuery.toLowerCase()) ||
+        caseItem.citation.toLowerCase().includes(legalCaseSearchQuery.toLowerCase());
+
+      const matchesFilter = filterArea === '' || filterArea === 'all' || caseItem.legalArea === filterArea;
+
+      return matchesSearch && matchesFilter;
+    });
+    
+    setFilteredLegalCases(filtered);
+  }, [legalCaseSearchQuery, filterArea]);
 
   // Handle research publication save
   const handleResearchSave = async (data: Partial<ResearchStudy>) => {
@@ -198,53 +226,71 @@ export default function WorksManagementPage() {
       toast.success(`Research publication ${isEditing ? 'updated' : 'created'} successfully`)
     } catch (error) {
       console.error('Error saving research:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to save research publication')
+      toast.error('Failed to save research publication')
     }
   }
 
   // Handle case study save
-  const handleCaseSave = async (data: Partial<Case>) => {
+  const handleCaseSave = async (data: Partial<CaseItem>) => {
     try {
-      const isEditing = Boolean(data.id)
-      const method = isEditing ? 'PUT' : 'POST'
-      const url = isEditing ? `/api/cases?id=${data.id}` : '/api/cases'
-      
-      const response = await fetch(url, {
-        method,
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(data)
-      })
-      
-      // Check if the response is JSON
-      const contentType = response.headers.get('content-type')
-      if (!contentType || !contentType.includes('application/json')) {
-        const text = await response.text()
-        console.error('Non-JSON response:', text)
-        throw new Error(`Server returned non-JSON response: ${response.status} ${response.statusText}`)
-      }
-      
-      const responseData = await response.json()
-      
-      if (!response.ok) {
-        throw new Error(responseData.message || `Failed to ${isEditing ? 'update' : 'create'} case study`)
-      }
-      
-      if (isEditing) {
-        setCases(prev => 
-          prev.map(item => item.id === responseData.id ? responseData : item)
-        )
+      // For new cases, ensure required fields have default values
+      if (!data.id) {
+        data = {
+          ...data,
+          id: crypto.randomUUID(),
+          judgmentDate: data.judgmentDate || new Date().toISOString(),
+          year: data.year || new Date().getFullYear(),
+          tags: data.tags || [],
+          legalPrinciples: data.legalPrinciples || [],
+          relatedCases: data.relatedCases || [],
+          hasDocument: data.hasDocument || false
+        };
+        
+        // For new cases, use POST method directly without checking if case exists
+        const response = await fetch('/api/casevault', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to create case');
+        }
+        
+        const savedCase = await response.json();
+        setLegalCases(prev => [savedCase, ...prev]);
+        toast.success('Case created successfully');
       } else {
-        setCases(prev => [...prev, responseData])
+        // For existing cases, use PUT method
+        const response = await fetch(`/api/casevault?id=${data.id}`, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(data),
+        });
+        
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error || 'Failed to update case');
+        }
+        
+        const savedCase = await response.json();
+        setLegalCases(prev => prev.map(c => c.id === savedCase.id ? savedCase : c));
+        toast.success('Case updated successfully');
       }
       
-      setIsCaseDialogOpen(false)
-      setSelectedCase(null)
-      toast.success(`Case study ${isEditing ? 'updated' : 'created'} successfully`)
+      // Refresh the cases list
+      fetchLegalCases();
+      
     } catch (error) {
-      console.error('Error saving case:', error)
-      toast.error(error instanceof Error ? error.message : 'Failed to save case study')
+      console.error('Error saving case:', error);
+      toast.error(error instanceof Error ? error.message : 'Failed to save case');
     }
-  }
+  };
 
   // Handle research publication delete
   const handleResearchDelete = async (id: string) => {
@@ -371,6 +417,33 @@ export default function WorksManagementPage() {
     }
   }
 
+  // Format date helper function
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('en-IN', {
+      day: '2-digit',
+      month: '2-digit',
+      year: 'numeric'
+    });
+  };
+
+  // Get legal area color helper function
+  const getLegalAreaColor = (area: string) => {
+    const colors: { [key: string]: string } = {
+      'Criminal': 'bg-red-100 text-red-800',
+      'Civil': 'bg-blue-100 text-blue-800',
+      'Family': 'bg-purple-100 text-purple-800',
+      'Constitutional': 'bg-green-100 text-green-800',
+      'Commercial': 'bg-orange-100 text-orange-800',
+      'Labor': 'bg-yellow-100 text-yellow-800'
+    };
+    return colors[area] || 'bg-gray-100 text-gray-800';
+  };
+
+  // Handle legal area filter change
+  const handleFilterChange = (value: string) => {
+    setFilterArea(value === 'all' ? '' : value);
+  };
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <div className="flex justify-between items-center mb-6">
@@ -389,9 +462,9 @@ export default function WorksManagementPage() {
             <GraduationCap className="h-4 w-4" />
             Research Publications
           </TabsTrigger>
-          <TabsTrigger value="cases" className="flex items-center gap-2">
-            <Briefcase className="h-4 w-4" />
-            Legal Case Studies
+          <TabsTrigger value="legal" className="flex items-center gap-2">
+            <Scale className="h-4 w-4" />
+            Legal Cases
           </TabsTrigger>
         </TabsList>
         
@@ -635,128 +708,293 @@ export default function WorksManagementPage() {
         </TabsContent>
         
         {/* Legal Case Studies Tab */}
-        <TabsContent value="cases" className="space-y-6">
-          <Card>
+        <TabsContent value="legal" className="space-y-6">
+          {/* Enhanced Stats Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Total Cases</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">{legalCases.length}</div>
+                <p className="text-xs text-muted-foreground">
+                  All case records
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Academic Briefs</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {legalCases.filter((c: CaseItem) => !c.isOwnCase).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Research database
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Litigated Cases</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {legalCases.filter((c: CaseItem) => c.isOwnCase).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Personal practice
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">Success Rate</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-green-600">
+                  {(() => {
+                    const litigated = legalCases.filter((c: CaseItem) => c.isOwnCase);
+                    const won = litigated.filter((c: CaseItem) => c.outcome === 'Won');
+                    return litigated.length > 0 ? Math.round((won.length / litigated.length) * 100) : 0;
+                  })()}%
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Won cases ratio
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                <CardTitle className="text-sm font-medium">This Year</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold">
+                  {legalCases.filter((c: CaseItem) => c.year === new Date().getFullYear()).length}
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Recent additions
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Enhanced Search and Filters */}
+          <Card className="mb-6">
             <CardHeader>
-              <CardTitle className="flex justify-between items-center">
-                <span>Legal Case Studies</span>
-                <Dialog open={isCaseDialogOpen} onOpenChange={setIsCaseDialogOpen}>
-                  <DialogTrigger asChild>
-                    <Button 
-                      onClick={() => setSelectedCase(null)}
-                      className="flex items-center gap-2"
-                    >
-                      <Plus className="h-4 w-4" />
-                      Add Case Study
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-                    <DialogTitle>{selectedCase ? 'Edit Case Study' : 'Add Case Study'}</DialogTitle>
-                    <CaseForm 
-                      caseData={selectedCase || undefined}
-                      onSave={handleCaseSave}
-                      onCancel={() => {
-                        setIsCaseDialogOpen(false)
-                        setSelectedCase(null)
-                      }}
-                    />
-                  </DialogContent>
-                </Dialog>
-              </CardTitle>
+              <CardTitle>Case Management</CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="mb-4">
-                <Input
-                  placeholder="Search case studies..."
-                  value={caseSearchQuery}
-                  onChange={(e) => setCaseSearchQuery(e.target.value)}
-                  className="max-w-sm"
-                />
+              <div className="flex flex-col sm:flex-row gap-4">
+                <div className="flex-1 relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Search cases by title, citation, or client name..."
+                    value={legalCaseSearchQuery}
+                    onChange={(e) => setLegalCaseSearchQuery(e.target.value)}
+                    className="pl-10"
+                  />
+                </div>
+                <Select value={filterArea || 'all'} onValueChange={handleFilterChange}>
+                  <SelectTrigger className="w-48">
+                    <SelectValue placeholder="Filter by area" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Areas</SelectItem>
+                    <SelectItem value="Criminal">Criminal</SelectItem>
+                    <SelectItem value="Civil">Civil</SelectItem>
+                    <SelectItem value="Family">Family</SelectItem>
+                    <SelectItem value="Constitutional">Constitutional</SelectItem>
+                    <SelectItem value="Commercial">Commercial</SelectItem>
+                    <SelectItem value="Labor">Labor</SelectItem>
+                  </SelectContent>
+                </Select>
+                <Dialog>
+                  <DialogTrigger asChild>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Add Case
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-4xl max-h-[90vh] w-[90vw] overflow-hidden p-0">
+                    <DialogTitle className="px-6 pt-6">Add New Legal Case</DialogTitle>
+                    <div className="overflow-y-auto px-6 pb-6 max-h-[calc(90vh-100px)]">
+                      <CaseLawForm 
+                        caseData={null} 
+                        onSave={handleCaseSave}
+                        onCancel={() => {}} 
+                      />
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
-              
-              <div className="rounded-md border">
+            </CardContent>
+          </Card>
+
+          {/* Enhanced Cases Table */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Cases ({filteredLegalCases.length})</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {isLoadingLegalCases ? (
+                <div className="flex justify-center items-center py-8">
+                  <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+                </div>
+              ) : filteredLegalCases.length === 0 ? (
+                <div className="text-center py-8">
+                  <Scale className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <h3 className="text-lg font-medium mb-2">No cases found</h3>
+                  <p className="text-muted-foreground mb-4">
+                    {legalCaseSearchQuery || filterArea ? 
+                      "Try adjusting your search or filters" : 
+                      "Add your first case to get started"}
+                  </p>
+                </div>
+              ) : (
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Title</TableHead>
+                      <TableHead>Case Title</TableHead>
+                      <TableHead>Citation</TableHead>
                       <TableHead>Court</TableHead>
-                      <TableHead>Category</TableHead>
-                      <TableHead>Year</TableHead>
-                      <TableHead>Outcome</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Area</TableHead>
+                      <TableHead>Type</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {isLoadingCases ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          Loading case studies...
+                    {filteredLegalCases.map((caseItem) => (
+                      <TableRow key={caseItem.id}>
+                        <TableCell className="font-medium max-w-xs">
+                          <div className="truncate">
+                            {caseItem.title}
+                          </div>
                         </TableCell>
-                      </TableRow>
-                    ) : filteredCases.length === 0 ? (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center py-8">
-                          No case studies found.
+                        <TableCell className="font-mono text-sm">
+                          {caseItem.citation}
                         </TableCell>
-                      </TableRow>
-                    ) : (
-                      filteredCases.map((caseItem) => (
-                        <TableRow key={caseItem.id}>
-                          <TableCell className="font-medium">{caseItem.title}</TableCell>
-                          <TableCell>{caseItem.court}</TableCell>
-                          <TableCell>{caseItem.category}</TableCell>
-                          <TableCell>{caseItem.year}</TableCell>
-                          <TableCell>
-                            <Badge 
-                              variant={
-                                caseItem.outcome === 'In favour of client' ? 'default' :
-                                caseItem.outcome === 'Lost' ? 'destructive' :
-                                caseItem.outcome === 'Ongoing' ? 'default' :
-                                caseItem.outcome === 'Settlement' ? 'secondary' : 'outline'
-                              }
-                            >
-                              {caseItem.outcome}
-                            </Badge>
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => {
-                                  setSelectedCase(caseItem)
-                                  setIsCaseDialogOpen(true)
-                                }}
-                              >
-                                <Edit className="h-4 w-4" />
-                                <span className="sr-only">Edit</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => handleCaseDelete(caseItem.id || '')}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                                <span className="sr-only">Delete</span>
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                asChild
-                              >
-                                <a href={`/courtroom?preview=${caseItem.id}`} target="_blank" rel="noopener noreferrer">
-                                  <Eye className="h-4 w-4" />
-                                  <span className="sr-only">View</span>
-                                </a>
-                              </Button>
+                        <TableCell>{caseItem.court}</TableCell>
+                        <TableCell>{formatDate(caseItem.judgmentDate)}</TableCell>
+                        <TableCell>
+                          <Badge className={`${getLegalAreaColor(caseItem.legalArea)} text-xs`}>
+                            {caseItem.legalArea}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={caseItem.isOwnCase ? "default" : "secondary"} 
+                            className={`text-xs ${caseItem.isOwnCase ? 'bg-amber-600 text-white' : ''}`}
+                          >
+                            {caseItem.isOwnCase ? 'Litigated' : 'Academic'}
+                          </Badge>
+                          {caseItem.isOwnCase && caseItem.myRole && (
+                            <div className="text-xs text-muted-foreground mt-1 truncate max-w-[120px]">
+                              {caseItem.myRole}
                             </div>
-                          </TableCell>
-                        </TableRow>
-                      ))
-                    )}
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="text-xs">
+                            {caseItem.outcome || caseItem.stage}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link href={`/casevault/${caseItem.id}`}>
+                                <Eye className="h-4 w-4" />
+                              </Link>
+                            </Button>
+                            <Dialog>
+                              <DialogTrigger asChild>
+                                <Button variant="ghost" size="sm">
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </DialogTrigger>
+                              <DialogContent className="max-w-4xl max-h-[90vh] w-[90vw] overflow-hidden p-0">
+                                <DialogTitle className="px-6 pt-6">Edit Legal Case</DialogTitle>
+                                <div className="overflow-y-auto px-6 pb-6 max-h-[calc(90vh-100px)]">
+                                  <CaseLawForm 
+                                    caseData={caseItem}
+                                    onSave={(data) => {
+                                      // Call the API to update the case
+                                      fetch(`/api/casevault?id=${caseItem.id}`, {
+                                        method: 'PUT',
+                                        headers: {
+                                          'Content-Type': 'application/json',
+                                        },
+                                        body: JSON.stringify(data),
+                                      })
+                                      .then(response => {
+                                        if (!response.ok) {
+                                          throw new Error('Failed to update case');
+                                        }
+                                        return response.json();
+                                      })
+                                      .then(updatedCase => {
+                                        // Update the case in the local state
+                                        setLegalCases(prev => 
+                                          prev.map(c => c.id === updatedCase.id ? updatedCase : c)
+                                        );
+                                        toast.success('Case updated successfully');
+                                      })
+                                      .catch(error => {
+                                        console.error('Error updating case:', error);
+                                        toast.error('Failed to update case');
+                                      });
+                                    }}
+                                    onCancel={() => {}}
+                                  />
+                                </div>
+                              </DialogContent>
+                            </Dialog>
+                            <Button 
+                              variant="ghost" 
+                              size="sm" 
+                              className="text-red-500 hover:text-red-700"
+                              onClick={() => {
+                                if (confirm('Are you sure you want to delete this case?')) {
+                                  // Call the API to delete the case
+                                  fetch(`/api/casevault?id=${caseItem.id}`, {
+                                    method: 'DELETE',
+                                  })
+                                  .then(response => {
+                                    if (!response.ok) {
+                                      throw new Error('Failed to delete case');
+                                    }
+                                    return response.json();
+                                  })
+                                  .then(() => {
+                                    // Remove the case from the local state
+                                    setLegalCases(prev => 
+                                      prev.filter(c => c.id !== caseItem.id)
+                                    );
+                                    toast.success('Case deleted successfully');
+                                  })
+                                  .catch(error => {
+                                    console.error('Error deleting case:', error);
+                                    toast.error('Failed to delete case');
+                                  });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
                   </TableBody>
                 </Table>
-              </div>
+              )}
             </CardContent>
           </Card>
         </TabsContent>

@@ -1,13 +1,15 @@
-import { kv } from "@vercel/kv"
+import { Redis } from '@upstash/redis'
 
-// Export the kv instance as redis for backward compatibility
-export const redis = kv
+// Create a Redis client
+const redis = Redis.fromEnv()
+
+export default redis
 
 // Function to check if Redis is connected
 export async function isRedisConnected() {
   try {
     // Simple ping to check if kv is working
-    await kv.ping()
+    await redis.ping()
     return true
   } catch (error) {
     console.error("Redis connection check failed:", error)
@@ -44,7 +46,7 @@ export async function saveProfileToDatabase(data: DatabaseProfile) {
       lastUpdated: new Date().toISOString(),
     }
 
-    await kv.set(PROFILE_KEY, profileWithTimestamp)
+    await redis.set(PROFILE_KEY, profileWithTimestamp)
     return { success: true }
   } catch (error) {
     console.error("Failed to save profile to database:", error)
@@ -54,7 +56,7 @@ export async function saveProfileToDatabase(data: DatabaseProfile) {
 
 export async function loadProfileFromDatabase(): Promise<DatabaseProfile | null> {
   try {
-    const data = await kv.get<DatabaseProfile>(PROFILE_KEY)
+    const data = await redis.get<DatabaseProfile>(PROFILE_KEY)
     if (!data) {
       console.log('No profile data found in database')
       return null
@@ -68,7 +70,7 @@ export async function loadProfileFromDatabase(): Promise<DatabaseProfile | null>
 
 export async function deleteProfileFromDatabase() {
   try {
-    await kv.del(PROFILE_KEY)
+    await redis.del(PROFILE_KEY)
     return { success: true }
   } catch (error) {
     console.error("Failed to delete profile from database:", error)
@@ -80,7 +82,7 @@ export async function deleteProfileFromDatabase() {
 export async function createBackup(backupName: string, data: DatabaseProfile) {
   try {
     const backupKey = `backup:${backupName}:${Date.now()}`
-    await kv.set(backupKey, {
+    await redis.set(backupKey, {
       ...data,
       backupCreated: new Date().toISOString(),
     })
@@ -94,7 +96,7 @@ export async function createBackup(backupName: string, data: DatabaseProfile) {
 export async function listBackups() {
   try {
     // Note: This is a simplified approach. In production, you might want to maintain a separate index
-    const keys = await kv.keys("backup:*")
+    const keys = await redis.keys("backup:*")
     return { success: true, backups: keys }
   } catch (error) {
     console.error("Failed to list backups:", error)
@@ -104,7 +106,7 @@ export async function listBackups() {
 
 export async function setValue(key: string, value: any) {
   try {
-    await kv.set(key, value)
+    await redis.set(key, value)
     return true
   } catch (error) {
     console.error('Error setting value in Redis:', error)
@@ -114,7 +116,7 @@ export async function setValue(key: string, value: any) {
 
 export async function getValue(key: string) {
   try {
-    const value = await kv.get(key)
+    const value = await redis.get(key)
     return value
   } catch (error) {
     console.error('Error getting value from Redis:', error)
@@ -124,7 +126,7 @@ export async function getValue(key: string) {
 
 export async function deleteValue(key: string) {
   try {
-    await kv.del(key)
+    await redis.del(key)
     return true
   } catch (error) {
     console.error('Error deleting value from Redis:', error)
@@ -134,7 +136,7 @@ export async function deleteValue(key: string) {
 
 export async function listKeys(pattern: string = '*') {
   try {
-    const keys = await kv.keys(pattern)
+    const keys = await redis.keys(pattern)
     return keys
   } catch (error) {
     console.error('Error listing keys from Redis:', error)
