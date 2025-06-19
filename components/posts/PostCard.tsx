@@ -1,257 +1,125 @@
 "use client"
 
-import React, { useState, useRef } from 'react';
+import React from 'react';
+import Link from 'next/link';
+import { Post } from '@/lib/types/Post';
 import { Card } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Share, Clock, ChevronLeft, ChevronRight } from 'lucide-react';
-import { Post, Media } from '@/lib/types/Post';
-import { useProfileStore } from '@/lib/profile-store';
+import { Clock } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
 interface PostCardProps {
   post: Post;
 }
 
+// Function to format timestamp
+const formatTimestamp = (date: Date | string) => {
+  const dateObj = typeof date === 'string' ? new Date(date) : date;
+  const now = new Date();
+  const diff = now.getTime() - dateObj.getTime();
+  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+
+  if (days < 1) return 'Today';
+  if (days < 2) return 'Yesterday';
+  if (days < 7) return `${days} days ago`;
+  return dateObj.toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'long',
+    day: 'numeric',
+  });
+};
+
+// Media Grid Component
+const MediaGrid: React.FC<{ media: Post['media'] }> = ({ media }) => {
+    if (!media || media.length === 0) return null;
+
+    const mediaCount = media.length;
+
+    const renderMediaItem = (item: any, index: number, isOverlay: boolean = false) => (
+        <div key={item.id || index} className="relative w-full h-full overflow-hidden">
+            <img
+                src={item.url}
+                alt={item.caption || `Post media ${index + 1}`}
+                className="absolute inset-0 w-full h-full object-cover"
+            />
+            {isOverlay && mediaCount > 4 && (
+                <div className="absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+                    <span className="text-white text-2xl font-bold">+{mediaCount - 3}</span>
+                </div>
+            )}
+        </div>
+    );
+
+    if (mediaCount === 1) {
+        return renderMediaItem(media[0], 0);
+    }
+
+    if (mediaCount === 2) {
+        return (
+            <div className="grid grid-cols-2 grid-rows-1 gap-1 h-full">
+                {media.map((item, index) => renderMediaItem(item, index))}
+            </div>
+        );
+    }
+
+    if (mediaCount === 3) {
+        return (
+            <div className="grid grid-cols-2 grid-rows-2 gap-1 h-full">
+                <div className="col-span-1 row-span-2">{renderMediaItem(media[0], 0)}</div>
+                <div className="col-span-1 row-span-1">{renderMediaItem(media[1], 1)}</div>
+                <div className="col-span-1 row-span-1">{renderMediaItem(media[2], 2)}</div>
+            </div>
+        );
+    }
+
+    // For 4 or more items
+    return (
+        <div className="grid grid-cols-2 grid-rows-2 gap-1 h-full">
+            {media.slice(0, 4).map((item, index) => 
+                renderMediaItem(item, index, index === 3 && mediaCount > 4)
+            )}
+        </div>
+    );
+};
+
 export const PostCard: React.FC<PostCardProps> = ({ post }) => {
-  const { profileData } = useProfileStore();
-  const [currentMediaIndex, setCurrentMediaIndex] = useState(0);
-  const mediaScrollRef = useRef<HTMLDivElement>(null);
-  
-  const handleShare = () => {
-    if (navigator.share) {
-      navigator.share({
-        title: post.title || 'Professional Insight',
-        text: post.content,
-        url: window.location.href + '#post-' + post.id,
-      });
-    } else {
-      navigator.clipboard.writeText(window.location.href + '#post-' + post.id);
-    }
-  };
+  const hasMedia = post.media && post.media.length > 0;
 
-  const formatTimestamp = (date: Date) => {
-    // Convert string to Date object if it's not already a Date
-    const dateObj = date instanceof Date ? date : new Date(date);
-    
-    const now = new Date();
-    const diff = now.getTime() - dateObj.getTime();
-    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-    
-    if (days === 0) return 'Today';
-    if (days === 1) return 'Yesterday';
-    if (days < 7) return `${days} days ago`;
-    return dateObj.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
-    });
-  };
-
-  const scrollToMedia = (index: number) => {
-    if (mediaScrollRef.current) {
-      const scrollContainer = mediaScrollRef.current;
-      const mediaItems = scrollContainer.querySelectorAll('.media-item');
-      
-      if (mediaItems[index]) {
-        scrollContainer.scrollTo({
-          left: mediaItems[index].getBoundingClientRect().left - scrollContainer.getBoundingClientRect().left + scrollContainer.scrollLeft,
-          behavior: 'smooth'
-        });
-        
-        setCurrentMediaIndex(index);
-      }
-    }
-  };
-
-  const handleScroll = () => {
-    if (mediaScrollRef.current) {
-      const scrollContainer = mediaScrollRef.current;
-      const scrollLeft = scrollContainer.scrollLeft;
-      const containerWidth = scrollContainer.clientWidth;
-      
-      // Calculate which media item is most visible
-      const mediaItems = scrollContainer.querySelectorAll('.media-item');
-      let closestIndex = 0;
-      let closestDistance = Infinity;
-      
-      mediaItems.forEach((item, index) => {
-        const rect = item.getBoundingClientRect();
-        const containerRect = scrollContainer.getBoundingClientRect();
-        const distance = Math.abs((rect.left + rect.width / 2) - (containerRect.left + containerRect.width / 2));
-        
-        if (distance < closestDistance) {
-          closestDistance = distance;
-          closestIndex = index;
-        }
-      });
-      
-      setCurrentMediaIndex(closestIndex);
-    }
-  };
-
-  const scrollNext = () => {
-    if (post.media && currentMediaIndex < post.media.length - 1) {
-      scrollToMedia(currentMediaIndex + 1);
-    }
-  };
-
-  const scrollPrev = () => {
-    if (currentMediaIndex > 0) {
-      scrollToMedia(currentMediaIndex - 1);
-    }
-  };
+  // Generate a URL-friendly slug from the title
+  const slug = encodeURIComponent(post.title?.toLowerCase().replace(/\s+/g, '-') || post.id);
 
   return (
-    <Card className="bg-white border border-gray-200 shadow-lg hover:shadow-xl transition-all duration-300 overflow-hidden">
-      <div className="p-6 sm:p-8">
-        {/* Header */}
-        <div className="flex justify-between items-start mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="w-12 h-12 rounded-full overflow-hidden">
-              <img 
-                src={profileData.profileImage || "/placeholder.svg"} 
-                alt={profileData.name}
-                className="w-full h-full object-cover"
-                onError={(e) => {
-                  const target = e.target as HTMLImageElement;
-                  target.src = "/placeholder.svg";
-                }}
-              />
-            </div>
-            <div>
-              <p className="font-semibold text-gray-900 text-lg">{profileData.name}</p>
-              <div className="flex items-center text-gray-500 text-sm">
-                <Clock className="w-4 h-4 mr-1" />
-                {formatTimestamp(post.timestamp)}
-              </div>
-            </div>
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {post.tags.map((tag) => (
-              <span
-                key={tag}
-                className="px-3 py-1 text-sm bg-gray-100 text-gray-700 rounded-full border border-gray-300 font-medium"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
+    <Link href={`/posts/${slug}`} passHref>
+      <Card className="h-[90vh] flex flex-col bg-white border border-gray-200 shadow-md hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer">
+        {/* Title Section */}
+        <div className="p-4 border-b border-gray-200">
+          <h2 className="text-xl font-bold text-gray-900">{post.title}</h2>
         </div>
 
-        {/* Title */}
-        {post.title && (
-          <h2 className="text-2xl font-bold text-gray-900 mb-4 leading-tight">{post.title}</h2>
-        )}
-
-        {/* Content */}
-        <div className="mb-6">
-          <p className="text-gray-700 text-lg leading-relaxed">{post.content}</p>
-        </div>
-          
-        {/* Media Content */}
-        {post.media && post.media.length > 0 && (
-          <div className="mt-6 mb-6 relative">
-            <div 
-              ref={mediaScrollRef} 
-              className="flex overflow-x-auto snap-x snap-mandatory hide-scrollbar"
-              onScroll={handleScroll}
-            >
-              {post.media.map((media, index) => (
-                <div 
-                  key={media.id} 
-                  className="media-item min-w-full w-full flex-shrink-0 snap-center"
-                >
-                  {media.type === 'image' ? (
-                    <div className="rounded-lg overflow-hidden shadow-md border border-gray-200">
-                      <img 
-                        src={media.url} 
-                        alt={media.caption || `Image ${index + 1}`}
-                        className="w-full h-auto object-cover max-h-[500px]"
-                      />
-                      {media.caption && (
-                        <div className="p-3 bg-gray-50 text-sm text-gray-600">
-                          {media.caption}
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <div className="rounded-lg overflow-hidden shadow-md border border-gray-200">
-                      <video 
-                        src={media.url} 
-                        controls
-                        className="w-full h-auto max-h-[500px]"
-                      />
-                      {media.caption && (
-                        <div className="p-3 bg-gray-50 text-sm text-gray-600">
-                          {media.caption}
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-            
-            {/* Navigation Arrows */}
-            {post.media.length > 1 && (
-              <>
-                <button 
-                  onClick={scrollPrev}
-                  disabled={currentMediaIndex === 0}
-                  className={cn(
-                    "absolute left-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md transition-opacity duration-200",
-                    currentMediaIndex === 0 ? "opacity-0" : "opacity-70 hover:opacity-100"
-                  )}
-                >
-                  <ChevronLeft className="w-5 h-5" />
-                </button>
-                <button 
-                  onClick={scrollNext}
-                  disabled={currentMediaIndex === post.media.length - 1}
-                  className={cn(
-                    "absolute right-2 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white rounded-full p-2 shadow-md transition-opacity duration-200",
-                    currentMediaIndex === post.media.length - 1 ? "opacity-0" : "opacity-70 hover:opacity-100"
-                  )}
-                >
-                  <ChevronRight className="w-5 h-5" />
-                </button>
-              </>
-            )}
-            
-            {/* Dots Indicator */}
-            {post.media.length > 1 && (
-              <div className="flex justify-center mt-4 gap-1.5">
-                {post.media.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => scrollToMedia(index)}
-                    className={cn(
-                      "w-2 h-2 rounded-full transition-all duration-300",
-                      currentMediaIndex === index 
-                        ? "bg-gray-800 w-4" 
-                        : "bg-gray-300 hover:bg-gray-400"
-                    )}
-                    aria-label={`Go to slide ${index + 1}`}
-                  />
-                ))}
-              </div>
-            )}
+        {/* Media Section */}
+        {hasMedia && (
+          <div className="h-1/2 bg-gray-100">
+            <MediaGrid media={post.media} />
           </div>
         )}
 
-        {/* Actions */}
-        <div className="flex items-center justify-end pt-4 border-t border-gray-100">
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-gray-600 hover:text-gray-900 hover:bg-gray-100"
-            onClick={handleShare}
-          >
-            <Share className="w-4 h-4 mr-2" />
-            Share
-          </Button>
+        {/* Content Section */}
+        <div className={cn('p-4 flex-grow overflow-hidden', { 'h-full': !hasMedia })}>
+          <p className="text-gray-700 whitespace-pre-wrap break-words h-full overflow-hidden text-ellipsis">
+            {post.content}
+          </p>
         </div>
-      </div>
-    </Card>
+
+        {/* Meta Section */}
+        <div className="p-4 border-t border-gray-200 text-sm text-gray-500 flex items-center justify-between">
+          <div className="flex items-center">
+            <Clock className="w-4 h-4 mr-2" />
+            <span>{formatTimestamp(post.timestamp)}</span>
+          </div>
+          <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); navigator.clipboard.writeText(`${window.location.origin}/posts/${slug}`); alert('Link copied to clipboard!'); }} className="hover:text-gray-800">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-5 h-5"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+          </button>
+        </div>
+      </Card>
+    </Link>
   );
 };

@@ -5,11 +5,18 @@ import { generateId } from '../utils'
 const POSTS_KEY = 'posts:all'
 const POSTS_VIEWS_KEY = 'posts:views'
 
-// Get all posts from the database
+// Get all posts from the database, sorted by most recent
 export async function getAllPosts(): Promise<Post[]> {
   try {
     const posts = await kv.get<Post[]>(POSTS_KEY)
-    return posts || []
+    if (!posts) return []
+
+    // Sort posts by timestamp in descending order (newest first)
+    return posts.sort((a, b) => {
+      const dateA = a.timestamp ? new Date(a.timestamp).getTime() : 0
+      const dateB = b.timestamp ? new Date(b.timestamp).getTime() : 0
+      return dateB - dateA
+    })
   } catch (error) {
     console.error('Failed to fetch posts:', error)
     return []
