@@ -1,5 +1,6 @@
 "use client"
 
+import React, { useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -11,6 +12,9 @@ import {
   Instagram,
   Twitter,
   Linkedin,
+  Facebook,
+  Github,
+  Youtube,
   Heart,
   GraduationCap,
   Award,
@@ -47,127 +51,166 @@ import {
   Speech,
   Flag,
   Crown,
+  Menu,
+  X,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
 import { useProfileStore } from "@/lib/profile-store"
-import { useState } from "react"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import { SubscribeButton } from "@/components/subscribe-button"
 
 // Icon mapping for dynamic icons
 const iconMap = {
-  Award,
-  Star,
-  Heart,
-  BookOpen,
-  Briefcase,
-  GraduationCap,
-  Gavel,
-  Globe,
-  Users,
-  FileText,
-  MessageSquare,
-  Send,
-  Verified,
-  Clock,
-  Mail,
-  Phone,
-  MapPin,
-  Instagram,
-  Twitter,
-  Linkedin,
-  BookMarked,
-  School,
-  Mic,
-  Landmark,
-  Scale,
-  Lightbulb,
-  Users2,
-  Megaphone,
-  Vote,
-  ScrollText,
-  Building2,
-  Sparkles,
-  Brain,
-  Target,
-  Shield,
-  Handshake,
-  Scroll,
-  BookOpenCheck,
-  Presentation,
-  Speech,
-  Flag,
-  Crown,
-  // Keep the fallbacks for social media icons
-  Facebook: Users,
-  Youtube: Users,
-  Github: Users,
+  Award: Award,
+  Star: Star,
+  Heart: Heart,
+  BookOpen: BookOpen,
+  Briefcase: Briefcase,
+  GraduationCap: GraduationCap,
+  Gavel: Gavel,
+  Globe: Globe,
+  Users: Users,
+  FileText: FileText,
+  MessageSquare: MessageSquare,
+  Send: Send,
+  Verified: Verified,
+  Clock: Clock,
+  Mail: Mail,
+  Phone: Phone,
+  MapPin: MapPin,
+  BookMarked: BookMarked,
+  School: School,
+  Mic: Mic,
+  Landmark: Landmark,
+  Scale: Scale,
+  Lightbulb: Lightbulb,
+  Users2: Users2,
+  Megaphone: Megaphone,
+  Vote: Vote,
+  ScrollText: ScrollText,
+  Building2: Building2,
+  Sparkles: Sparkles,
+  Brain: Brain,
+  Target: Target,
+  Shield: Shield,
+  Handshake: Handshake,
+  Scroll: Scroll,
+  BookOpenCheck: BookOpenCheck,
+  Presentation: Presentation,
+  Speech: Speech,
+  Flag: Flag,
+  Crown: Crown,
+  // Social Media Icons with proper casing
+  LinkedIn: Linkedin,
+  Twitter: Twitter,
+  Instagram: Instagram,
+  Facebook: Facebook,
+  Youtube: Youtube,
+  GitHub: Github,
+  // Fallback icon
+  Default: Users,
 } as const;
 
 export default function ModernProfile() {
   useDatabaseInit() // Initialize database connection
 
   const { profileData, experience, education, skills, posts, navigationButtons } = useProfileStore()
-
-
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
         <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
-          <div className="px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <Avatar className="w-10 h-10 ring-2 ring-blue-500/20">
-                <AvatarImage src={profileData.profileImage || "/placeholder.svg"} alt={profileData.name} />
-                <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
-                  {profileData.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")}
-                </AvatarFallback>
-              </Avatar>
-              <div className="hidden sm:block">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-gray-900">{profileData.name}</span>
-                  <Verified className="w-4 h-4 text-blue-500" />
+          <div className="px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <Avatar className="w-10 h-10 ring-2 ring-blue-500/20">
+                  <AvatarImage src={profileData.profileImage || "/placeholder.svg"} alt={profileData.name} />
+                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
+                    {profileData.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex flex-col">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-gray-900">{profileData.name}</span>
+                    <Verified className="w-4 h-4 text-blue-500" />
+                  </div>
+                  <span className="text-sm text-gray-600">{profileData.title}</span>
                 </div>
-                <span className="text-sm text-gray-600">{profileData.title}</span>
               </div>
+
+              {/* Desktop Social Links */}
+              <div className="hidden md:flex items-center gap-2">
+                {profileData.socialLinks.map((social) => (
+                  <Link
+                    key={social.id}
+                    href={social.href}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={`p-2 rounded-full transition-all duration-200 hover:scale-105 relative group`}
+                    aria-label={`Visit ${social.name} profile`}
+                  >
+                    <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+                    <img
+                      src={social.icon}
+                      alt={social.name}
+                      className="w-4 h-4 relative z-10"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </Link>
+                ))}
+              </div>
+
+              {/* Mobile Menu Button - using state to control menu visibility */}
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
+                aria-label="Toggle mobile menu"
+              >
+                {mobileMenuOpen ? (
+                  <X className="w-5 h-5" />
+                ) : (
+                  <Menu className="w-5 h-5" />
+                )}
+              </button>
             </div>
 
-            {/* Desktop Social Links */}
-            <div className="hidden md:flex items-center gap-2">
-              {profileData.socialLinks.map((social) => (
-                <Link
-                  key={social.id}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className={`p-2 rounded-full transition-all duration-200 hover:scale-105 relative group`}
-                  aria-label={`Visit ${social.name} profile`}
-                >
-                  <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                  <img
-                    src={social.icon}
-                    alt={social.name}
-                    className="w-3.5 h-3.5 relative z-10"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
-                    }}
-                  />
-                </Link>
-              ))}
-            </div>
-
-            {/* Mobile Menu Button */}
-            <button className="md:hidden p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors">
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
-              </svg>
-            </button>
+            {/* Mobile Social Links Menu */}
+            {mobileMenuOpen && (
+              <div className="md:hidden mt-3 py-3 border-t border-gray-100">
+                <div className="flex items-center justify-center gap-4">
+                  {profileData.socialLinks.map((social) => (
+                    <Link
+                      key={social.id}
+                      href={social.href}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className={`p-2 rounded-full transition-all duration-200 hover:scale-105 relative group`}
+                      aria-label={`Visit ${social.name} profile`}
+                    >
+                      <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
+                      <img
+                        src={social.icon}
+                        alt={social.name}
+                        className="w-4 h-4 relative z-10"
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.src = '/placeholder.svg';
+                        }}
+                      />
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
@@ -379,8 +422,6 @@ export default function ModernProfile() {
               </Card>
             </div>
           </div>
-
-
 
         </div>
 

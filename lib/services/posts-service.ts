@@ -42,6 +42,31 @@ export async function getPostById(id: string): Promise<Post | null> {
   }
 }
 
+// Get a post by its slug (derived from title)
+export async function getPostBySlug(slug: string): Promise<Post | null> {
+  try {
+    const posts = await getAllPosts()
+    const decodedSlug = decodeURIComponent(slug)
+    
+    const post = posts.find(p => {
+      if (!p.title) return false
+      const postSlug = p.title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      return postSlug === decodedSlug.replace(/\?$/, '') // Remove trailing question mark if present
+    })
+    
+    if (post) {
+      // Increment view count if found
+      await incrementViewCount(post.id)
+      return post
+    }
+    
+    return null
+  } catch (error) {
+    console.error(`Failed to fetch post by slug ${slug}:`, error)
+    return null
+  }
+}
+
 // Create a new post
 export async function createPost(post: Omit<Post, 'id'>): Promise<Post> {
   try {
