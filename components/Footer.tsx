@@ -13,6 +13,7 @@ import {
   Youtube,
   Users
 } from 'lucide-react';
+import { useDatabaseInit } from '@/hooks/use-database-init';
 
 // Icon mapping for social media
 const getIconComponent = (iconName: string) => {
@@ -37,6 +38,7 @@ const getIconComponent = (iconName: string) => {
 };
 
 export function Footer() {
+  useDatabaseInit(); // Initialize database connection
   const { profileData } = useProfileStore();
 
   return (
