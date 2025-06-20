@@ -17,7 +17,7 @@ export async function generateMetadata({ params }: { params: { slug: string } })
   
   // Fetch post data
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/posts/${encodeURIComponent(slug)}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://vikasgoyanka.in'}/api/posts/${encodeURIComponent(slug)}`, {
       next: { revalidate: 3600 } // Revalidate every hour
     });
     
@@ -90,7 +90,7 @@ export default async function PostPage({ params }: { params: { slug: string } })
   
   // This is a server component, so we can fetch the data server-side
   try {
-    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'http://localhost:3000'}/api/posts/${encodeURIComponent(slug)}`, {
+    const response = await fetch(`${process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in'}/api/posts/${encodeURIComponent(slug)}`, {
       next: { revalidate: 3600 } // Revalidate every hour
     });
     
