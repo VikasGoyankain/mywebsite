@@ -5,8 +5,8 @@ import Script from 'next/script';
 
 // This function generates metadata for each post
 export async function generateMetadata({ params }: { params: { slug: string } }): Promise<Metadata> {
-  // Safely destructure params
-  const slug = params?.slug;
+  // In Next.js 15, params needs to be awaited
+  const { slug } = await params;
   
   if (!slug) {
     return {
@@ -81,8 +81,8 @@ export async function generateMetadata({ params }: { params: { slug: string } })
 }
 
 export default async function PostPage({ params }: { params: { slug: string } }) {
-  // Safely destructure params
-  const slug = params?.slug;
+  // In Next.js 15, params needs to be awaited
+  const { slug } = await params;
   
   if (!slug) {
     notFound();
