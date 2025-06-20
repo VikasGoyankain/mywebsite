@@ -1,5 +1,5 @@
 "use client";
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -40,6 +40,7 @@ export const LinkManagement = ({
   const [filterStatus, setFilterStatus] = useState('all');
 
   const filteredAndSortedLinks = useMemo(() => {
+    console.time('filter-sort-links');
     let filtered = links.filter(link => {
       const matchesSearch = searchTerm === '' ||
         link.originalUrl.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -49,7 +50,8 @@ export const LinkManagement = ({
         (filterStatus === 'expired' && (link.isRevoked || isLinkExpired(link)));
       return matchesSearch && matchesFilter;
     });
-    return filtered.sort((a, b) => {
+    
+    const sorted = filtered.sort((a, b) => {
       let aValue: any = a[sortBy as keyof ShortenedLink];
       let bValue: any = b[sortBy as keyof ShortenedLink];
       if (sortBy === 'createdAt' || sortBy === 'expiresAt') {
@@ -62,6 +64,8 @@ export const LinkManagement = ({
         return aValue < bValue ? 1 : -1;
       }
     });
+    console.timeEnd('filter-sort-links');
+    return sorted;
   }, [links, searchTerm, sortBy, sortOrder, filterStatus]);
 
   const copyToClipboard = async (text: string) => {
@@ -164,160 +168,148 @@ export const LinkManagement = ({
 
   return (
     <Card className="shadow-xl border-0 bg-white/95 backdrop-blur">
-      <CardHeader className="pb-4 sm:pb-6">
+      <CardHeader className="pb-4 sm:pb-6 sticky top-0 bg-white/95 backdrop-blur z-10 border-b">
         <CardTitle className="text-xl sm:text-2xl font-bold text-slate-800 flex flex-col sm:flex-row items-start sm:items-center gap-2">
           <div className="flex items-center gap-2">
             <BarChart3 className="h-5 w-5 sm:h-6 sm:w-6 text-blue-600" />
             <span>Link Management</span>
           </div>
           <Badge variant="secondary" className="text-xs sm:ml-auto">
-            {links.length} total
+            {filteredAndSortedLinks.length} of {links.length} total
           </Badge>
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-4 sm:space-y-6">
-        {/* Filters and Search - Stack on mobile */}
-        <div className="flex flex-col gap-3 sm:gap-4">
+      <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6">
+        <div className="flex flex-col gap-3 sm:gap-4 sticky top-[72px] bg-white/95 backdrop-blur z-10 pb-4 border-b">
           <div className="relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-4 w-4" />
             <Input
               placeholder="Search by URL..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 border-slate-200 focus:border-blue-500 h-10 sm:h-auto"
+              className="pl-10 bg-white"
             />
           </div>
-          <div className="flex flex-col sm:flex-row gap-2">
+          <div className="flex flex-col sm:flex-row gap-2 sm:gap-4">
             <Select value={filterStatus} onValueChange={setFilterStatus}>
-              <SelectTrigger className="w-full sm:w-32 h-10 sm:h-auto">
-                <Filter className="h-4 w-4 mr-1" />
-                <SelectValue />
+              <SelectTrigger className="w-full sm:w-[180px] bg-white">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Filter by status" />
               </SelectTrigger>
-              <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
+              <SelectContent>
                 <SelectItem value="all">All Links</SelectItem>
                 <SelectItem value="active">Active</SelectItem>
-                <SelectItem value="expired">Expired</SelectItem>
+                <SelectItem value="expired">Expired/Revoked</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={`${sortBy}-${sortOrder}`} onValueChange={(value) => {
-              const [field, order] = value.split('-');
-              setSortBy(field);
-              setSortOrder(order as 'asc' | 'desc');
-            }}>
-              <SelectTrigger className="w-full sm:w-40 h-10 sm:h-auto">
-                <SelectValue />
+            <Select value={sortBy} onValueChange={setSortBy}>
+              <SelectTrigger className="w-full sm:w-[180px] bg-white">
+                <SelectValue placeholder="Sort by" />
               </SelectTrigger>
-              <SelectContent className="bg-white border border-slate-200 shadow-lg z-50">
-                <SelectItem value="createdAt-desc">Newest First</SelectItem>
-                <SelectItem value="createdAt-asc">Oldest First</SelectItem>
-                <SelectItem value="clickCount-desc">Most Clicks</SelectItem>
-                <SelectItem value="clickCount-asc">Least Clicks</SelectItem>
+              <SelectContent>
+                <SelectItem value="createdAt">Creation Date</SelectItem>
+                <SelectItem value="clickCount">Click Count</SelectItem>
+                <SelectItem value="expiresAt">Expiry Date</SelectItem>
               </SelectContent>
             </Select>
+            <Button
+              variant="outline"
+              onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+              className="w-full sm:w-auto bg-white"
+            >
+              {sortOrder === 'asc' ? '↑ Ascending' : '↓ Descending'}
+            </Button>
           </div>
         </div>
-        {/* Links List - Optimized for mobile */}
-        <div className="space-y-3 max-h-[70vh] sm:max-h-[600px] overflow-y-auto">
+
+        <div className="space-y-4 overflow-y-auto max-h-[calc(100vh-300px)] min-h-[300px] pr-2">
           {filteredAndSortedLinks.length === 0 ? (
-            <div className="text-center py-8 sm:py-12 text-slate-500">
-              <BarChart3 className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-slate-300" />
-              <p className="text-base sm:text-lg font-medium">No links found</p>
-              <p className="text-xs sm:text-sm">Create your first short link to get started</p>
+            <div className="text-center py-8 text-slate-500">
+              No links found. {searchTerm || filterStatus !== 'all' ? 'Try adjusting your filters.' : ''}
             </div>
           ) : (
             filteredAndSortedLinks.map((link) => (
-              <div
-                key={link.id}
-                className="p-3 sm:p-4 border border-slate-200 rounded-lg hover:shadow-md transition-shadow bg-white"
-              >
-                <div className="flex flex-col gap-3 sm:gap-4">
-                  {/* Header with status and dates */}
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                    {getStatusBadge(link)}
-                    <div className="flex flex-wrap items-center gap-2 sm:gap-4 text-xs text-slate-500">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span className="text-xs">{formatDate(link.createdAt)}</span>
+              <div key={link.id} className="bg-white rounded-lg border border-slate-200 p-4 hover:shadow-md transition-shadow">
+                <div className="flex flex-col gap-3">
+                  {/* Original URL */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4">
+                    <div className="flex-grow">
+                      <div className="text-sm font-medium text-slate-500 mb-1">Original URL</div>
+                      <div className="text-sm text-slate-900 break-all">
+                        <a 
+                          href={link.originalUrl} 
+                          target="_blank" 
+                          rel="noopener noreferrer"
+                          className="hover:text-blue-600 flex items-center gap-1"
+                          onClick={(e) => {
+                            e.preventDefault();
+                            handleLinkClick(link);
+                          }}
+                        >
+                          {link.originalUrl}
+                          <ExternalLink className="h-3 w-3 inline-block" />
+                        </a>
                       </div>
-                      {link.expiresAt && (
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span className="text-xs">Expires {formatDate(link.expiresAt)}</span>
+                    </div>
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Badge variant="outline" className="whitespace-nowrap">
+                        {link.clickCount} clicks
+                      </Badge>
+                      {getStatusBadge(link)}
+                    </div>
+                  </div>
+
+                  {/* Short URL and Actions */}
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 pt-2 border-t">
+                    <div className="flex-grow">
+                      <div className="text-sm font-medium text-slate-500 mb-1">Short URL</div>
+                      <div className="text-sm text-slate-900 break-all">
+                        <div className="flex items-center gap-2">
+                          <a 
+                            href={ensureCorrectBaseUrl(link.shortUrl)} 
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="hover:text-blue-600"
+                          >
+                            {ensureCorrectBaseUrl(link.shortUrl)}
+                          </a>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => copyToClipboard(ensureCorrectBaseUrl(link.shortUrl))}
+                            className="h-6 w-6"
+                          >
+                            <Copy className="h-3 w-3" />
+                            <span className="sr-only">Copy URL</span>
+                          </Button>
                         </div>
-                      )}
-                      <div className="flex items-center gap-1">
-                        <BarChart3 className="h-3 w-3" />
-                        <span className="text-xs">{link.clickCount} clicks</span>
                       </div>
                     </div>
-                  </div>
-                  {/* URLs */}
-                  <div className="space-y-2">
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Original URL</p>
-                      <p className="text-xs sm:text-sm text-slate-800 break-all font-mono bg-slate-50 px-2 py-1.5 rounded">
-                        {link.originalUrl}
-                      </p>
+                    <div className="flex items-center justify-end gap-2 sm:gap-3">
+                      <div className="text-xs text-slate-500 whitespace-nowrap">
+                        Created {formatDate(link.createdAt)}
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleRevokeLink(link)}
+                        className="text-slate-700 hover:text-red-600"
+                      >
+                        <Ban className="h-4 w-4 mr-1" />
+                        <span className="sr-only sm:not-sr-only sm:inline">
+                          {link.isRevoked ? 'Reactivate' : 'Revoke'}
+                        </span>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteLink(link.id, link.shortCode)}
+                        className="text-slate-700 hover:text-red-600"
+                      >
+                        <Trash2 className="h-4 w-4 mr-1" />
+                        <span className="sr-only sm:not-sr-only sm:inline">Delete</span>
+                      </Button>
                     </div>
-                    <div>
-                      <p className="text-xs text-slate-500 mb-1">Short URL</p>
-                      <p className="text-xs sm:text-sm text-blue-600 font-mono bg-blue-50 px-2 py-1.5 rounded break-all">
-                        {ensureCorrectBaseUrl(link.shortUrl)}
-                      </p>
-                    </div>
-                  </div>
-                  {/* Action buttons - Stack on mobile */}
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleLinkClick(link)}
-                      disabled={link.isRevoked || isLinkExpired(link)}
-                      className="text-xs h-8 px-3 flex-1 sm:flex-none"
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Visit
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => copyToClipboard(ensureCorrectBaseUrl(link.shortUrl))}
-                      className="text-xs h-8 px-3 flex-1 sm:flex-none"
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      Copy
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleRevokeLink(link)}
-                      className={`text-xs h-8 px-3 flex-1 sm:flex-none ${
-                        link.isRevoked 
-                          ? "text-green-600 hover:text-green-700 hover:bg-green-50" 
-                          : "text-orange-600 hover:text-orange-700 hover:bg-orange-50"
-                      }`}
-                    >
-                      {link.isRevoked ? (
-                        <>
-                          <CheckCircle className="h-3 w-3 mr-1" />
-                          Reactivate
-                        </>
-                      ) : (
-                        <>
-                          <Ban className="h-3 w-3 mr-1" />
-                          Revoke
-                        </>
-                      )}
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDeleteLink(link.id, link.shortCode)}
-                      className="text-xs h-8 px-3 text-red-600 hover:text-red-700 hover:bg-red-50 flex-1 sm:flex-none"
-                    >
-                      <Trash2 className="h-3 w-3 mr-1" />
-                      Delete
-                    </Button>
                   </div>
                 </div>
               </div>

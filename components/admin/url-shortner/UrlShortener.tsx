@@ -8,7 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Copy, Link as LinkIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { ShortenedLink } from './UrlShortnerIndex';
-import { generateShortCode, isValidUrl, addHttpsPrefix } from './urlUtils';
+import { generateShortCode, isValidUrl, addHttpsPrefix, normalizeUrl } from './urlUtils';
 
 interface UrlShortenerProps {
   onLinkCreated: (link: ShortenedLink) => void;
@@ -51,6 +51,10 @@ export const UrlShortener = ({ onLinkCreated, existingLinks }: UrlShortenerProps
         return;
       }
       
+      // Normalize the URL for consistent matching
+      const normalizedUrl = normalizeUrl(processedUrl);
+      console.log('Normalized URL:', normalizedUrl);
+      
       // Get expiration date if set
       const expiresAt = getExpirationDate(expirationTime);
       
@@ -59,7 +63,7 @@ export const UrlShortener = ({ onLinkCreated, existingLinks }: UrlShortenerProps
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ 
-          url: processedUrl,
+          url: normalizedUrl,
           expiresAt: expiresAt ? expiresAt.toISOString() : null
         })
       });
@@ -68,23 +72,35 @@ export const UrlShortener = ({ onLinkCreated, existingLinks }: UrlShortenerProps
         setIsLoading(false);
         return;
       }
-      const { shortCode, shortUrl } = await res.json();
+      const data = await res.json();
+      const { shortCode, shortUrl, exists, clickCount, createdAt, expiresAt: existingExpiresAt, isRevoked } = data;
       
       // Ensure the shortUrl uses the correct base URL
       const correctedShortUrl = ensureCorrectBaseUrl(shortUrl);
       
+      // Default values for backward compatibility
+      const isExistingUrl = exists === true;
+      
       const newLink: ShortenedLink = {
-        id: Date.now().toString(),
+        id: shortCode,
         originalUrl: processedUrl,
         shortCode,
         shortUrl: correctedShortUrl,
-        createdAt: new Date(),
-        expiresAt,
-        clickCount: 0,
-        isRevoked: false,
+        createdAt: isExistingUrl && createdAt ? new Date(createdAt) : new Date(),
+        expiresAt: isExistingUrl && existingExpiresAt ? new Date(existingExpiresAt) : expiresAt,
+        clickCount: isExistingUrl && typeof clickCount === 'number' ? clickCount : 0,
+        isRevoked: isExistingUrl && isRevoked === true,
       };
       
       await navigator.clipboard.writeText(correctedShortUrl);
+      
+      // Display different message based on whether this is a new or existing URL
+      if (isExistingUrl) {
+        toast.success('Existing short link found and copied to clipboard!');
+      } else {
+        toast.success('Short link created and copied to clipboard!');
+      }
+      
       onLinkCreated(newLink);
       setLastCreatedUrl(correctedShortUrl);
       setOriginalUrl('');

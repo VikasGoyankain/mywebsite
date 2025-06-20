@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from 'react';
+import { useState, useEffect, createContext, useContext } from 'react';
 import { toast } from 'sonner';
 import { UrlShortener } from './UrlShortener';
 import { LinkManagement } from './LinkManagement';
@@ -14,6 +14,15 @@ export interface ShortenedLink {
   clickCount: number;
   isRevoked: boolean;
 }
+
+// Create a context for external refresh triggering
+export const RefreshTriggerContext = createContext<() => void>(() => {});
+
+// Custom hook to use the refresh trigger
+export const useRefreshTrigger = () => {
+  const triggerRefresh = useContext(RefreshTriggerContext);
+  return triggerRefresh;
+};
 
 export default function UrlShortnerIndex() {
   const [links, setLinks] = useState<ShortenedLink[]>([]);
@@ -67,9 +76,35 @@ export default function UrlShortnerIndex() {
     localStorage.setItem('shortenedLinks', JSON.stringify(links));
   }, [links]);
 
+  // Create a function that external components can use to trigger a refresh
+  const triggerRefresh = () => {
+    console.log('External refresh triggered');
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   const addLink = (newLink: ShortenedLink) => {
-    setLinks(prev => [newLink, ...prev]);
-    toast.success('Short link created and copied to clipboard!');
+    // Check if this link already exists in our list
+    const existingLinkIndex = links.findIndex(link => 
+      link.shortCode === newLink.shortCode || link.originalUrl === newLink.originalUrl
+    );
+    
+    if (existingLinkIndex !== -1) {
+      // If it exists, update it instead of adding a new one
+      const updatedLinks = [...links];
+      updatedLinks[existingLinkIndex] = {
+        ...updatedLinks[existingLinkIndex],
+        ...newLink,
+        // Preserve the id to avoid UI flickering
+        id: updatedLinks[existingLinkIndex].id
+      };
+      setLinks(updatedLinks);
+      toast.success('Short link updated and copied to clipboard!');
+    } else {
+      // If it's new, add it to the beginning of the array
+      setLinks(prev => [newLink, ...prev]);
+      toast.success('Short link created and copied to clipboard!');
+    }
+    
     // Force refresh from API
     setRefreshTrigger(prev => prev + 1);
   };
@@ -114,14 +149,16 @@ export default function UrlShortnerIndex() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <UrlShortener onLinkCreated={addLink} existingLinks={links} />
-      <LinkManagement
-        links={links}
-        onUpdateLink={updateLink}
-        onDeleteLink={deleteLink}
-        onIncrementClick={incrementClickCount}
-      />
-    </div>
+    <RefreshTriggerContext.Provider value={triggerRefresh}>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <UrlShortener onLinkCreated={addLink} existingLinks={links} />
+        <LinkManagement
+          links={links}
+          onUpdateLink={updateLink}
+          onDeleteLink={deleteLink}
+          onIncrementClick={incrementClickCount}
+        />
+      </div>
+    </RefreshTriggerContext.Provider>
   );
 }

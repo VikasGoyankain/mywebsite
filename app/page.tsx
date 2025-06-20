@@ -347,7 +347,8 @@ export default function ModernProfile() {
                   Professional Experience
                 </h2>
                 <div className="space-y-6">
-                  {experience.map((exp) => (
+                  {/* Sort experience to show newest first */}
+                  {[...experience].reverse().map((exp) => (
                     <div key={exp.id} className="relative">
                       <div className="flex gap-4 p-5 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-purple-50 transition-all duration-300 border border-gray-100">
                         <Avatar className="w-14 h-14 ring-2 ring-white shadow-md">

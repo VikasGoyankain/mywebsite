@@ -929,113 +929,6 @@ export default function AdminSkillsPage() {
             </div>
           </TabsContent>
 
-          {/* Education Tab Content */}
-          <TabsContent value="education" className="space-y-4">
-            <div className="flex justify-end">
-              <Button
-                variant="outline"
-                onClick={() => handleAddNew("education")}
-                className="hover:bg-accent"
-              >
-                <Plus className="w-4 h-4 mr-2" />
-                New Education
-              </Button>
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.isArray(education) && education.map((edu) => (
-                <Card key={edu.id} className="relative">
-                  <CardHeader>
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <CardTitle>
-                          {edu.degree || "Unnamed Degree"}
-                        </CardTitle>
-                        <CardDescription>{edu.institution || "Institution not specified"}</CardDescription>
-                      </div>
-                      <Badge variant="secondary">
-                        {edu.year || "Year not specified"}
-                      </Badge>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <div className="space-y-2">
-                      {edu.specialization && (
-                        <p className="text-sm text-muted-foreground">
-                          Specialization: {edu.specialization}
-                        </p>
-                      )}
-                      {edu.grade && (
-                        <p className="text-sm text-muted-foreground">
-                          Grade: {edu.grade}
-                        </p>
-                      )}
-                      {Array.isArray(edu.achievements) && edu.achievements.length > 0 && (
-                        <div className="space-y-1">
-                          <p className="text-sm font-medium">Achievements:</p>
-                          <div className="flex flex-wrap gap-1">
-                            {edu.achievements.map((achievement, index) => (
-                              <Badge key={index} variant="outline">
-                                {achievement}
-                              </Badge>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="absolute top-4 right-4 flex gap-2">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit("education", edu.id)}
-                        className="hover:bg-accent"
-                      >
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          width="16"
-                          height="16"
-                          viewBox="0 0 24 24"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          className="text-primary"
-                        >
-                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                          <path d="m15 5 4 4" />
-                        </svg>
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDelete("education", edu.id)}
-                        className="hover:bg-destructive/10"
-                      >
-                        <Trash2 className="w-4 h-4 text-destructive" />
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-              {(!Array.isArray(education) || education.length === 0) && (
-                <Card className="col-span-full">
-                  <CardContent className="flex flex-col items-center justify-center py-8">
-                    <p className="text-lg text-muted-foreground mb-4">No education entries yet</p>
-                    <Button
-                      variant="outline"
-                      onClick={() => handleAddNew("education")}
-                      className="hover:bg-accent"
-                    >
-                      <Plus className="w-4 h-4 mr-2" />
-                      Add Your First Education Entry
-                    </Button>
-                  </CardContent>
-                </Card>
-              )}
-            </div>
-          </TabsContent>
-
           {/* Experience Tab Content */}
           <TabsContent value="experience" className="space-y-4">
             <div className="flex justify-end">
@@ -1050,7 +943,8 @@ export default function AdminSkillsPage() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {Array.isArray(experience) && experience.map((exp) => (
+              {/* Sort experience to show newest first */}
+              {Array.isArray(experience) && [...experience].reverse().map((exp) => (
                 <Card key={exp.id} className="relative">
                   <CardHeader>
                     <div className="flex justify-between items-start">

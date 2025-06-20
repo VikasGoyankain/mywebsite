@@ -25,6 +25,38 @@ export const addHttpsPrefix = (url: string): string => {
   return `https://${url}`;
 };
 
+export const normalizeUrl = (url: string): string => {
+  // Add https:// prefix if missing
+  let normalized = url.trim();
+  if (!/^https?:\/\//i.test(normalized)) {
+    normalized = 'https://' + normalized;
+  }
+  
+  try {
+    // Create URL object to parse and normalize components
+    const urlObj = new URL(normalized);
+    
+    // Remove trailing slashes
+    let pathname = urlObj.pathname;
+    while (pathname.endsWith('/') && pathname.length > 1) {
+      pathname = pathname.slice(0, -1);
+    }
+    
+    // Remove default ports
+    const port = (urlObj.protocol === 'https:' && urlObj.port === '443') || 
+                (urlObj.protocol === 'http:' && urlObj.port === '80') 
+                ? '' : urlObj.port;
+    
+    // Reconstruct the URL with normalized components
+    const normalizedUrl = `${urlObj.protocol}//${urlObj.hostname}${port ? ':' + port : ''}${pathname}${urlObj.search}${urlObj.hash}`;
+    return normalizedUrl.toLowerCase();
+  } catch (error) {
+    // If URL parsing fails, return the original with https prefix
+    console.error('URL normalization error:', error);
+    return normalized.toLowerCase();
+  }
+};
+
 export const isLinkExpired = (link: ShortenedLink): boolean => {
   if (!link.expiresAt) return false;
   return new Date() > new Date(link.expiresAt);

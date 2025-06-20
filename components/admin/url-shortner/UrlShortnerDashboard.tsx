@@ -112,6 +112,24 @@ export function UrlShortnerDashboard() {
     return shortUrl;
   };
 
+  const runMigration = async () => {
+    try {
+      const res = await fetch('/api/url-shortner?action=migrate-indexes', {
+        method: 'PATCH',
+      });
+      
+      if (res.ok) {
+        const data = await res.json();
+        toast.success(`Migration completed: ${data.message}`);
+      } else {
+        toast.error('Migration failed');
+      }
+    } catch (error) {
+      console.error('Error running migration:', error);
+      toast.error('Migration failed');
+    }
+  };
+
   return (
     <div className="space-y-6">
       <Card>
@@ -191,6 +209,16 @@ export function UrlShortnerDashboard() {
           </Table>
         </CardContent>
       </Card>
+
+      <div className="mt-4">
+        <div className="mb-2 text-sm text-gray-500">
+          <p>URL optimization: We now prevent duplicate short URLs for the same original URL.</p>
+          <p>If you had existing URLs before this update, click below to optimize them:</p>
+        </div>
+        <Button onClick={runMigration} variant="outline" className="mb-4">
+          Optimize URL Database
+        </Button>
+      </div>
     </div>
   );
 }
