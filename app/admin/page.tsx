@@ -13,7 +13,7 @@ import {
   Award,
   LogOut,
   Settings,
-  FileText } from "lucide-react"
+  FileText,  Link as LinkIcon } from "lucide-react"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import Link from "next/link"
 import { LogoutButton } from "@/components/admin/LogoutButton"
@@ -155,6 +155,13 @@ function AdminDashboard() {
           icon={<FileText className="h-5 w-5" />}
           linkHref="/admin/posts"
           linkText="Manage Posts"
+        />
+        <DashboardCard
+          title="URL Shortener"
+          description="Create and manage shortened URLs for easy sharing"
+          icon={<LinkIcon className="h-5 w-5" />}
+          linkHref="/admin/url-shortner"
+          linkText="Manage URLs"
         />
       </div>
     </div>
