@@ -78,6 +78,10 @@ export const LinkManagement = ({
       const action = 'revoke'; // Always use 'revoke' action, the API will toggle based on current state
       console.log(`Revoking link ${link.shortCode}, current status: ${link.isRevoked}`);
       
+      // Optimistically update UI before API call
+      const newRevokedStatus = !link.isRevoked;
+      onUpdateLink(link.id, { isRevoked: newRevokedStatus });
+      
       // Add cache-busting parameter
       const timestamp = new Date().getTime();
       const response = await fetch(`/api/url-shortner?code=${link.shortCode}&action=${action}&_=${timestamp}`, {
@@ -91,16 +95,18 @@ export const LinkManagement = ({
       });
       
       if (!response.ok) {
+        // Revert the optimistic update if API call fails
+        onUpdateLink(link.id, { isRevoked: link.isRevoked });
         throw new Error('Failed to update link status');
       }
       
       const result = await response.json();
       console.log('API response for revoke:', result);
       
-      // Update the link with the new revoked status from the API
+      // Update the link with the actual status from the API (should match our optimistic update)
       onUpdateLink(link.id, { isRevoked: result.isRevoked });
       
-      toast.success(result.message);
+      toast.success(newRevokedStatus ? 'Link revoked successfully' : 'Link reactivated successfully');
     } catch (error) {
       console.error('Error updating link status:', error);
       toast.error('Failed to update link status');

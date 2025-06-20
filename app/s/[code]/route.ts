@@ -5,18 +5,13 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(
   request: Request,
-  { params }: { params: { code: string } }
+  context: { params: { code: string } }
 ) {
   try {
-    // Get code from params without destructuring or accessing properties directly
-    const code = String(params?.code || '');
+    // Access code directly from context to avoid Next.js error
+    const code = context.params.code;
     
     console.log(`Processing redirect for code: ${code}`);
-    
-    if (!code) {
-      console.log('No code provided');
-      return NextResponse.redirect(new URL('/404', request.url));
-    }
     
     // Get the URL from Redis
     const url = await redis.get<string>(`url:${code}`);
