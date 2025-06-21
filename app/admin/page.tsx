@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, Suspense } from "react"
 import { ErrorBoundary } from 'react-error-boundary'
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   User,
@@ -13,10 +13,18 @@ import {
   Award,
   LogOut,
   Settings,
-  FileText,  Link as LinkIcon } from "lucide-react"
+  FileText,
+  Link as LinkIcon,
+  Mail,
+  MessageSquare,
+  PlusCircle,
+  UserPlus,
+  Home
+} from "lucide-react"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import Link from "next/link"
 import { LogoutButton } from "@/components/admin/LogoutButton"
+import { DashboardCard } from "@/components/admin/DashboardCard"
 
 function ErrorFallback({error}: {error: Error}) {
   return (
@@ -115,6 +123,34 @@ function AdminDashboard() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
         <DashboardCard
+          title="Settings"
+          description="Manage your website settings"
+          icon={<Settings className="h-5 w-5" />}
+          linkHref="/admin/settings"
+          linkText="Manage Settings"
+        />
+        <DashboardCard
+          title="Posts"
+          description="Manage your professional insights and articles"
+          icon={<FileText className="h-5 w-5" />}
+          linkHref="/admin/posts"
+          linkText="Manage Posts"
+        />
+        <DashboardCard
+          title="Family"
+          description="Manage family members and their access"
+          icon={<Users className="h-5 w-5" />}
+          linkHref="/admin/family"
+          linkText="Manage Family"
+        />
+        <DashboardCard
+          title="URL Shortener"
+          description="Create and manage short URLs"
+          icon={<LinkIcon className="h-5 w-5" />}
+          linkHref="/admin/url-shortner"
+          linkText="Manage URLs"
+        />
+        <DashboardCard
           title="Profile"
           description="Update your personal information and contact details"
           icon={<User className="h-5 w-5" />}
@@ -141,27 +177,6 @@ function AdminDashboard() {
           icon={<Users className="h-5 w-5" />}
           linkHref="/admin/subscribers"
           linkText="Manage Subscribers"
-        />
-        <DashboardCard
-          title="Settings"
-          description="Configure your website settings and preferences"
-          icon={<Settings className="h-5 w-5" />}
-          linkHref="/admin/settings"
-          linkText="Manage Settings"
-        />
-        <DashboardCard
-          title="Posts"
-          description="Manage your professional insights and articles"
-          icon={<FileText className="h-5 w-5" />}
-          linkHref="/admin/posts"
-          linkText="Manage Posts"
-        />
-        <DashboardCard
-          title="URL Shortener"
-          description="Create and manage shortened URLs for easy sharing"
-          icon={<LinkIcon className="h-5 w-5" />}
-          linkHref="/admin/url-shortner"
-          linkText="Manage URLs"
         />
       </div>
     </div>
