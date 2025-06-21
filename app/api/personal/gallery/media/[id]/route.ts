@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import redis from '@/lib/redis';
-import ImageKit from 'imagekit';
-
-// Initialize ImageKit
-const imagekit = new ImageKit({
-  publicKey: process.env.IMAGEKIT_PUBLIC_KEY || '',
-  privateKey: process.env.IMAGEKIT_PRIVATE_KEY || '',
-  urlEndpoint: process.env.IMAGEKIT_URL_ENDPOINT || '',
-});
+import { imagekit } from '@/lib/imagekit';
 
 // Redis key for media items
 const MEDIA_KEY = 'gallery:media';
