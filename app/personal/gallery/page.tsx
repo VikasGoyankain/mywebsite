@@ -10,7 +10,7 @@ import FileInfo from '@/components/personal/gallery/FileInfo';
 import MediaViewer from '@/components/personal/gallery/MediaViewer';
 import ImageKitUploader from '@/components/personal/gallery/ImageKitUploader';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { PersonalAuthWrapper } from '@/components/personal/PersonalAuthWrapper';
+import PersonalAuthWrapper from '@/components/personal/PersonalAuthWrapper';
 
 export interface MediaItem {
   id: string;
@@ -674,17 +674,18 @@ export default function GalleryPage() {
               </DropdownMenu>
 
               {/* Upload Button - Using ImageKit */}
-              <ImageKitUploader 
+              <ImageKitUploader
                 onUploadSuccess={handleImageKitUpload}
                 onUploadError={(error) => {
                   console.error('Upload error:', error);
                   toast({
                     title: 'Upload failed',
-                    description: 'Failed to upload file. Please try again.',
+                    description: error.message,
                     variant: 'destructive'
                   });
                 }}
                 folder={selectedFolder?.id || 'gallery'}
+                userId="current-user"
               />
             </div>
           </div>
@@ -887,9 +888,9 @@ export default function GalleryPage() {
 
       {/* File Info Modal */}
       {showFileInfo && (
-        <FileInfo 
-          item={showFileInfo} 
-          onClose={() => setShowFileInfo(null)} 
+        <FileInfo
+          item={showFileInfo}
+          onClose={() => setShowFileInfo(null)}
           isDarkMode={isDarkMode}
         />
       )}
@@ -897,8 +898,10 @@ export default function GalleryPage() {
       {/* Media Viewer Modal */}
       {selectedItem && (
         <MediaViewer
-          item={selectedItem}
+          file={selectedItem}
           onClose={() => setSelectedItem(null)}
+          onDownload={downloadItem}
+          onShare={shareItem}
           onToggleFavorite={toggleFavorite}
           isDarkMode={isDarkMode}
         />

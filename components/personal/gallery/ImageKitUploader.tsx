@@ -8,17 +8,27 @@ import { Upload, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 interface ImageKitUploaderProps {
-  onUploadComplete: (fileUrl: string, fileName: string) => void;
-  onUploadError?: (error: Error) => void;
-  accept?: string;
-  multiple?: boolean;
+  onUploadSuccess: (response: {
+    fileId?: string;
+    fileType?: string;
+    id?: string;
+    url: string;
+    name: string;
+    size?: number;
+    width?: number;
+    height?: number;
+    folder?: string;
+  }) => void;
+  onUploadError: (error: Error) => void;
+  folder?: string;
+  userId?: string;
 }
 
 export default function ImageKitUploader({
-  onUploadComplete,
+  onUploadSuccess,
   onUploadError,
-  accept = "image/*,video/*",
-  multiple = true
+  folder = 'gallery',
+  userId = 'current-user'
 }: ImageKitUploaderProps) {
   const [isUploading, setIsUploading] = useState(false);
   const [files, setFiles] = useState<File[]>([]);
@@ -65,7 +75,7 @@ export default function ImageKitUploader({
       }
 
       const result = await uploadResponse.json();
-      onUploadComplete(result.url, file.name);
+      onUploadSuccess(result);
 
       toast({
         title: "Upload successful",
@@ -74,7 +84,7 @@ export default function ImageKitUploader({
     } catch (error) {
       console.error('Upload error:', error);
       if (error instanceof Error) {
-        onUploadError?.(error);
+        onUploadError(error);
         toast({
           title: "Upload failed",
           description: `Failed to upload ${file.name}. ${error.message}`,
@@ -125,8 +135,8 @@ export default function ImageKitUploader({
       >
         <Input
           type="file"
-          accept={accept}
-          multiple={multiple}
+          accept="image/*,video/*"
+          multiple={true}
           onChange={handleFileSelect}
           className="hidden"
           id="file-upload"

@@ -13,29 +13,21 @@ import { downloadMediaFile, shareMediaFile } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 
 interface MediaViewerProps {
-  item: MediaItem;
+  file: MediaItem;
   onClose: () => void;
-  onPrevious?: () => void;
-  onNext?: () => void;
-  onToggleFavorite: (id: string) => void;
+  onDownload: (file: MediaItem) => void;
+  onShare: (file: MediaItem) => Promise<void>;
+  onToggleFavorite: (id: string) => Promise<void>;
   isDarkMode: boolean;
-  hasPrevious?: boolean;
-  hasNext?: boolean;
-  onDownload: (item: MediaItem) => void;
-  onShare: (item: MediaItem) => void;
 }
 
 const MediaViewer: React.FC<MediaViewerProps> = ({ 
-  item, 
+  file, 
   onClose, 
-  onPrevious, 
-  onNext, 
-  onToggleFavorite,
-  isDarkMode,
-  hasPrevious = false,
-  hasNext = false,
   onDownload,
-  onShare
+  onShare,
+  onToggleFavorite,
+  isDarkMode
 }) => {
   const [isLoading, setIsLoading] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -61,10 +53,10 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
           onClose();
           break;
         case 'ArrowLeft':
-          if (hasPrevious && onPrevious) onPrevious();
+          if (onPrevious) onPrevious();
           break;
         case 'ArrowRight':
-          if (hasNext && onNext) onNext();
+          if (onNext) onNext();
           break;
         case 'Space':
           e.preventDefault();
@@ -86,17 +78,17 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
       document.removeEventListener('keydown', handleKeyPress);
       document.body.style.overflow = 'auto';
     };
-  }, [hasPrevious, hasNext]);
+  }, [onPrevious, onNext]);
 
   const handleDownload = async () => {
     try {
       setIsDownloading(true);
-      await downloadMediaFile(item.url, item.name);
+      await downloadMediaFile(file.url, file.name);
       toast({
         title: "Download started",
-        description: `${item.name} is being downloaded.`,
+        description: `${file.name} is being downloaded.`,
       });
-      onDownload(item);
+      onDownload(file);
     } catch (error) {
       toast({
         title: "Download failed",
@@ -110,12 +102,12 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
 
   const handleShare = async () => {
     try {
-      const shareResult = await shareMediaFile(item.url, item.name, item.type);
+      const shareResult = await shareMediaFile(file.url, file.name, file.type);
       toast({
         title: "Share successful",
-        description: `${item.name} has been shared.`,
+        description: `${file.name} has been shared.`,
       });
-      onShare(item);
+      onShare(file);
     } catch (error) {
       if (error instanceof Error && error.message === 'Web Share API not supported') {
         toast({
@@ -159,10 +151,10 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   };
 
   const handleFavoriteToggle = () => {
-    onToggleFavorite(item.id);
+    onToggleFavorite(file.id);
     toast({
-      title: item.isFavorite ? "Removed from favorites" : "Added to favorites",
-      description: `${item.name} has been ${item.isFavorite ? 'removed from' : 'added to'} favorites.`,
+      title: file.isFavorite ? "Removed from favorites" : "Added to favorites",
+      description: `${file.name} has been ${file.isFavorite ? 'removed from' : 'added to'} favorites.`,
     });
   };
 
@@ -265,14 +257,14 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   };
 
   const renderMediaContent = () => {
-    switch (item.type) {
+    switch (file.type) {
       case 'image':
         return (
           <div className="relative w-full h-full flex items-center justify-center p-4">
             <div className="relative max-w-[90%] max-h-[80vh] overflow-hidden rounded-lg">
               <img 
-                src={item.url} 
-                alt={item.name}
+                src={file.url} 
+                alt={file.name}
                 className="object-contain w-full h-full rounded-lg shadow-2xl"
                 onLoad={handleLoadComplete}
                 onError={handleError}
@@ -290,7 +282,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
             >
               <video 
                 ref={videoRef}
-                src={item.url}
+                src={file.url}
                 className="object-contain w-full h-full rounded-lg shadow-2xl"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
@@ -382,7 +374,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
 
               <audio 
                 ref={audioRef}
-                src={item.url}
+                src={file.url}
                 className="hidden"
                 onTimeUpdate={handleTimeUpdate}
                 onLoadedMetadata={handleLoadedMetadata}
@@ -463,7 +455,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
                 isDarkMode ? 'bg-gray-900/80' : 'bg-white/80'
               }`}>
                 <h3 className="text-sm font-medium truncate flex-1">
-                  {item.name}
+                  {file.name}
                 </h3>
                 <div className="flex items-center gap-2">
                   <Button
@@ -515,7 +507,7 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
                       isDarkMode ? 'text-white hover:bg-gray-800' : 'text-gray-900 hover:bg-gray-200'
                     }`}
                   >
-                    {item.isFavorite ? (
+                    {file.isFavorite ? (
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
                     ) : (
                       <StarOff className="w-4 h-4" />
@@ -541,11 +533,11 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
               {/* PDF Viewer */}
               <div className="w-full h-full pt-16">
                 <iframe
-                  src={`${item.url}#view=FitH`}
+                  src={`${file.url}#view=FitH`}
                   className="w-full h-full rounded-lg"
                   onLoad={handleLoadComplete}
                   onError={handleError}
-                  title={item.name}
+                  title={file.name}
                 >
                   <div className="flex flex-col items-center justify-center p-8 bg-gray-100 dark:bg-gray-800 rounded-lg">
                     <FileText className={`w-24 h-24 mb-4 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
@@ -592,94 +584,63 @@ const MediaViewer: React.FC<MediaViewerProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/90">
-      {/* Close button - Always visible in top-right */}
-      <button
-        onClick={onClose}
-        className="absolute top-4 right-4 z-50 p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all duration-200"
-      >
-        <X className="w-6 h-6" />
-      </button>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80">
+      <div className="relative w-full h-full flex flex-col">
+        {/* Header */}
+        <div className="flex items-center justify-between p-4">
+          <h3 className="text-white font-medium">{file.name}</h3>
+          <Button variant="ghost" size="sm" onClick={onClose}>
+            <X className="w-5 h-5 text-white" />
+          </Button>
+        </div>
 
-      {/* Action buttons - Always visible in top-right */}
-      <div className="absolute top-4 right-16 z-50 flex items-center gap-2">
-        <button
-          onClick={handleDownload}
-          className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all duration-200"
-        >
-          <Download className="w-6 h-6" />
-        </button>
-        <button
-          onClick={handleShare}
-          className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all duration-200"
-        >
-          <Share className="w-6 h-6" />
-        </button>
-        <button
-          onClick={() => onToggleFavorite(item.id)}
-          className="p-2 rounded-full bg-black/50 hover:bg-black/70 text-white transition-all duration-200"
-        >
-          {item.isFavorite ? (
-            <Heart className="w-6 h-6 fill-red-500 text-red-500" />
-          ) : (
-            <Heart className="w-6 h-6" />
-          )}
-        </button>
-      </div>
-
-      {/* Media container with max dimensions */}
-      <div 
-        ref={containerRef}
-        className="relative w-full h-full flex items-center justify-center p-4"
-      >
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center">
-            <Loader2 className="w-8 h-8 animate-spin text-white/50" />
-          </div>
-        )}
-
-        {error && (
-          <div className="text-red-500 bg-black/50 p-4 rounded-lg">
-            {error}
-          </div>
-        )}
-
-        <div className="relative max-w-[90vw] max-h-[90vh] overflow-hidden">
-          {item.type === 'image' ? (
+        {/* Content */}
+        <div className="flex-1 flex items-center justify-center p-4">
+          {file.type === 'image' ? (
             <img
-              src={item.url}
-              alt={item.name}
-              className="max-w-full max-h-[90vh] object-contain rounded-lg"
-              onLoad={handleLoadComplete}
-              onError={handleError}
+              src={file.url}
+              alt={file.name}
+              className="max-h-full max-w-full object-contain"
             />
-          ) : item.type === 'video' ? (
+          ) : file.type === 'video' ? (
             <video
-              src={item.url}
+              src={file.url}
               controls
-              autoPlay
-              className="max-w-full max-h-[90vh] rounded-lg"
-              onLoadedData={handleLoadComplete}
-              onError={handleError}
-            />
-          ) : item.type === 'pdf' ? (
-            <iframe
-              src={item.url}
-              className="w-full h-[90vh] max-w-[90vw] rounded-lg"
-              onLoad={handleLoadComplete}
-              onError={handleError}
+              className="max-h-full max-w-full"
             />
           ) : (
-            <div className="flex items-center justify-center bg-gray-900 p-8 rounded-lg">
-              <FileText className="w-16 h-16 text-gray-400" />
-            </div>
+            <div className="text-white">Unsupported media type</div>
           )}
         </div>
-      </div>
 
-      {/* File name at bottom */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 px-4 py-2 rounded-full bg-black/50 text-white">
-        <p className="text-sm font-medium">{item.name}</p>
+        {/* Footer */}
+        <div className="flex items-center justify-end gap-2 p-4">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onToggleFavorite(file.id)}
+          >
+            <Star
+              className={`w-5 h-5 ${
+                file.isFavorite ? 'text-yellow-500 fill-yellow-500' : 'text-white'
+              }`}
+            />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onDownload(file)}
+          >
+            <Download className="w-5 h-5 text-white" />
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => onShare(file)}
+          >
+            <Share className="w-5 h-5 text-white" />
+          </Button>
+        </div>
       </div>
     </div>
   );

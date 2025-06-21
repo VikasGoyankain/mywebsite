@@ -7,14 +7,14 @@ import { MediaItem } from '@/app/personal/gallery/page';
 import { formatFileSize } from '@/lib/utils';
 
 interface FileInfoProps {
-  file: MediaItem;
+  item: MediaItem;
   onClose: () => void;
   isDarkMode: boolean;
 }
 
-const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
+export default function FileInfo({ item, onClose, isDarkMode }: FileInfoProps) {
   const getFileIcon = () => {
-    switch (file.type) {
+    switch (item.type) {
       case 'image':
         return <Image className="w-6 h-6" />;
       case 'video':
@@ -65,16 +65,16 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
           <div className={`aspect-square rounded-xl overflow-hidden shadow-inner ${
             isDarkMode ? 'bg-gray-700' : 'bg-gray-100'
           }`}>
-            {file.type === 'image' ? (
+            {item.type === 'image' ? (
               <img 
-                src={file.url} 
-                alt={file.name} 
+                src={item.url} 
+                alt={item.name} 
                 className="w-full h-full object-cover" 
               />
-            ) : file.type === 'video' ? (
+            ) : item.type === 'video' ? (
               <div className="relative w-full h-full bg-gray-900">
                 <video 
-                  src={file.url} 
+                  src={item.url} 
                   className="w-full h-full object-cover" 
                   controls
                 />
@@ -83,7 +83,7 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
               <div className="w-full h-full flex flex-col items-center justify-center">
                 <FileText className="w-16 h-16 text-gray-400 mb-4" />
                 <span className={`text-sm font-medium ${isDarkMode ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {file.name.split('.').pop()?.toUpperCase()} Document
+                  {item.name.split('.').pop()?.toUpperCase()} Document
                 </span>
               </div>
             )}
@@ -97,12 +97,12 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
               </div>
               <div className="flex-1 min-w-0">
                 <h4 className={`font-semibold text-base break-words ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                  {file.name}
+                  {item.name}
                 </h4>
                 <p className={`text-sm capitalize ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {file.type} file
+                  {item.type.charAt(0).toUpperCase() + item.type.slice(1)} File
                 </p>
-                {file.isFavorite && (
+                {item.isFavorite && (
                   <div className="flex items-center gap-1 mt-1">
                     <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
                     <span className="text-xs text-yellow-600 dark:text-yellow-400">Favourite</span>
@@ -119,7 +119,7 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
                 </div>
                 <div>
                   <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                    {file.uploadedBy}
+                    {item.uploadedBy}
                   </p>
                   <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                     Uploaded by
@@ -127,14 +127,14 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
                 </div>
               </div>
 
-              {file.size && (
+              {item.size && (
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <HardDrive className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
                   </div>
                   <div>
                     <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {formatFileSize(file.size)}
+                      {formatFileSize(item.size)}
                     </p>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       File size
@@ -143,14 +143,14 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
                 </div>
               )}
 
-              {file.createdAt && (
+              {item.createdAt && (
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <Calendar className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
                     <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {formatDate(file.createdAt)}
+                      {formatDate(item.createdAt)}
                     </p>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       Created
@@ -159,14 +159,14 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
                 </div>
               )}
 
-              {file.modifiedAt && (
+              {item.modifiedAt && (
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <Calendar className="w-5 h-5 text-green-600" />
                   </div>
                   <div>
                     <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {formatDate(file.modifiedAt)}
+                      {formatDate(item.modifiedAt)}
                     </p>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       Modified
@@ -175,14 +175,14 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
                 </div>
               )}
 
-              {file.location && (
+              {item.location && (
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
                     <MapPin className="w-5 h-5 text-red-600" />
                   </div>
                   <div>
                     <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {file.location}
+                      {item.location}
                     </p>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
                       Location
@@ -196,6 +196,4 @@ const FileInfo: React.FC<FileInfoProps> = ({ file, onClose, isDarkMode }) => {
       </div>
     </div>
   );
-};
-
-export default FileInfo;
+}
