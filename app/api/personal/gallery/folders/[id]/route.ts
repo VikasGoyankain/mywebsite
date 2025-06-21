@@ -8,10 +8,10 @@ const MEDIA_KEY = 'gallery:media';
 // Get a specific folder
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Special case for "all-photos"
     if (id === 'all-photos') {
@@ -63,10 +63,10 @@ export async function GET(
 // Update a folder
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Don't allow updating the "all-photos" folder
     if (id === 'all-photos') {
@@ -117,10 +117,10 @@ export async function PATCH(
 // Delete a folder
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Don't allow deleting the "all-photos" folder
     if (id === 'all-photos') {

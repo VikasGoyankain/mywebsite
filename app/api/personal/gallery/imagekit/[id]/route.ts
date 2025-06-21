@@ -4,10 +4,10 @@ import { imagekit } from '@/lib/imagekit';
 // Get file details from ImageKit
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Get file details from ImageKit
     const file = await imagekit.getFileDetails(id);
@@ -25,10 +25,10 @@ export async function GET(
 // Delete a file from ImageKit
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     if (!id) {
       return NextResponse.json(

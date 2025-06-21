@@ -39,6 +39,7 @@ export interface Experience {
   description: string
   type: string
   image: string
+  order: number
 }
 
 export interface Education {
@@ -49,6 +50,7 @@ export interface Education {
   grade: string
   specialization: string
   achievements: string[]
+  order: number
 }
 
 export interface Certificate {
@@ -139,11 +141,17 @@ interface ProfileStore {
   addExperience: (exp: Omit<Experience, "id">) => void
   updateExperience: (id: string, exp: Partial<Experience>) => void
   deleteExperience: (id: string) => void
+  reorderExperience: (fromIndex: number, toIndex: number) => void
+  moveExperienceUp: (id: string) => void
+  moveExperienceDown: (id: string) => void
 
   // Education actions
   addEducation: (edu: Omit<Education, "id">) => void
   updateEducation: (id: string, edu: Partial<Education>) => void
   deleteEducation: (id: string) => void
+  reorderEducation: (fromIndex: number, toIndex: number) => void
+  moveEducationUp: (id: string) => void
+  moveEducationDown: (id: string) => void
 
   // Skills actions
   addSkill: (skill: Omit<Skill, "id">) => void
@@ -317,52 +325,226 @@ export const useProfileStore = create<ProfileStore>()(
 
       // Experience actions
       addExperience: (exp) => {
-        set((state) => {
-          const newId = `exp_${Date.now()}`
-          return {
-            experience: [...state.experience, { ...exp, id: newId }],
-            hasUnsavedChanges: true,
-          }
-        })
+        const newExperience = {
+          ...exp,
+          id: crypto.randomUUID(),
+          order: get().experience.length
+        }
+        set((state) => ({
+          experience: [...state.experience, newExperience].sort((a, b) => a.order - b.order),
+          hasUnsavedChanges: true
+        }))
       },
 
       updateExperience: (id, exp) => {
         set((state) => ({
-          experience: state.experience.map((e) => (e.id === id ? { ...e, ...exp } : e)),
-          hasUnsavedChanges: true,
+          experience: state.experience.map((item) =>
+            item.id === id ? { ...item, ...exp } : item
+          ),
+          hasUnsavedChanges: true
         }))
       },
 
       deleteExperience: (id) => {
-        set((state) => ({
-          experience: state.experience.filter((e) => e.id !== id),
-          hasUnsavedChanges: true,
-        }))
-      },
-
-      // Education actions
-      addEducation: (edu) => {
         set((state) => {
-          const newId = `edu_${Date.now()}`
+          const filteredExperience = state.experience.filter((item) => item.id !== id)
+          const reorderedExperience = filteredExperience.map((item, index) => ({
+            ...item,
+            order: index
+          }))
           return {
-            education: [...state.education, { ...edu, id: newId }],
-            hasUnsavedChanges: true,
+            experience: reorderedExperience,
+            hasUnsavedChanges: true
           }
         })
       },
 
+      reorderExperience: (fromIndex, toIndex) => {
+        set((state) => {
+          const experience = [...state.experience]
+          const [movedItem] = experience.splice(fromIndex, 1)
+          experience.splice(toIndex, 0, movedItem)
+          
+          const reorderedExperience = experience.map((item, index) => ({
+            ...item,
+            order: index
+          }))
+          
+          return {
+            experience: reorderedExperience,
+            hasUnsavedChanges: true
+          }
+        })
+        
+        setTimeout(() => {
+          get().saveToDatabase().catch(console.error)
+        }, 100)
+      },
+
+      moveExperienceUp: (id) => {
+        set((state) => {
+          const experience = [...state.experience]
+          const currentIndex = experience.findIndex(item => item.id === id)
+          if (currentIndex > 0) {
+            const reorderedExperience = experience.map((item, index) => {
+              if (index === currentIndex - 1) {
+                return { ...experience[currentIndex], order: index }
+              } else if (index === currentIndex) {
+                return { ...experience[currentIndex - 1], order: index }
+              } else {
+                return { ...item, order: index }
+              }
+            })
+            return {
+              experience: reorderedExperience,
+              hasUnsavedChanges: true
+            }
+          }
+          return state
+        })
+        
+        setTimeout(() => {
+          get().saveToDatabase().catch(console.error)
+        }, 100)
+      },
+
+      moveExperienceDown: (id) => {
+        set((state) => {
+          const experience = [...state.experience]
+          const currentIndex = experience.findIndex(item => item.id === id)
+          if (currentIndex < experience.length - 1) {
+            const reorderedExperience = experience.map((item, index) => {
+              if (index === currentIndex) {
+                return { ...experience[currentIndex + 1], order: index }
+              } else if (index === currentIndex + 1) {
+                return { ...experience[currentIndex], order: index }
+              } else {
+                return { ...item, order: index }
+              }
+            })
+            return {
+              experience: reorderedExperience,
+              hasUnsavedChanges: true
+            }
+          }
+          return state
+        })
+        
+        setTimeout(() => {
+          get().saveToDatabase().catch(console.error)
+        }, 100)
+      },
+
+      // Education actions
+      addEducation: (edu) => {
+        const newEducation = {
+          ...edu,
+          id: crypto.randomUUID(),
+          order: get().education.length
+        }
+        set((state) => ({
+          education: [...state.education, newEducation].sort((a, b) => a.order - b.order),
+          hasUnsavedChanges: true
+        }))
+      },
+
       updateEducation: (id, edu) => {
         set((state) => ({
-          education: state.education.map((e) => (e.id === id ? { ...e, ...edu } : e)),
-          hasUnsavedChanges: true,
+          education: state.education.map((item) =>
+            item.id === id ? { ...item, ...edu } : item
+          ),
+          hasUnsavedChanges: true
         }))
       },
 
       deleteEducation: (id) => {
-        set((state) => ({
-          education: state.education.filter((e) => e.id !== id),
-          hasUnsavedChanges: true,
-        }))
+        set((state) => {
+          const filteredEducation = state.education.filter((item) => item.id !== id)
+          const reorderedEducation = filteredEducation.map((item, index) => ({
+            ...item,
+            order: index
+          }))
+          return {
+            education: reorderedEducation,
+            hasUnsavedChanges: true
+          }
+        })
+      },
+
+      reorderEducation: (fromIndex, toIndex) => {
+        set((state) => {
+          const education = [...state.education]
+          const [movedItem] = education.splice(fromIndex, 1)
+          education.splice(toIndex, 0, movedItem)
+          
+          const reorderedEducation = education.map((item, index) => ({
+            ...item,
+            order: index
+          }))
+          
+          return {
+            education: reorderedEducation,
+            hasUnsavedChanges: true
+          }
+        })
+        
+        setTimeout(() => {
+          get().saveToDatabase().catch(console.error)
+        }, 100)
+      },
+
+      moveEducationUp: (id) => {
+        set((state) => {
+          const education = [...state.education]
+          const currentIndex = education.findIndex(item => item.id === id)
+          if (currentIndex > 0) {
+            const reorderedEducation = education.map((item, index) => {
+              if (index === currentIndex - 1) {
+                return { ...education[currentIndex], order: index }
+              } else if (index === currentIndex) {
+                return { ...education[currentIndex - 1], order: index }
+              } else {
+                return { ...item, order: index }
+              }
+            })
+            return {
+              education: reorderedEducation,
+              hasUnsavedChanges: true
+            }
+          }
+          return state
+        })
+        
+        setTimeout(() => {
+          get().saveToDatabase().catch(console.error)
+        }, 100)
+      },
+
+      moveEducationDown: (id) => {
+        set((state) => {
+          const education = [...state.education]
+          const currentIndex = education.findIndex(item => item.id === id)
+          if (currentIndex < education.length - 1) {
+            const reorderedEducation = education.map((item, index) => {
+              if (index === currentIndex) {
+                return { ...education[currentIndex + 1], order: index }
+              } else if (index === currentIndex + 1) {
+                return { ...education[currentIndex], order: index }
+              } else {
+                return { ...item, order: index }
+              }
+            })
+            return {
+              education: reorderedEducation,
+              hasUnsavedChanges: true
+            }
+          }
+          return state
+        })
+        
+        setTimeout(() => {
+          get().saveToDatabase().catch(console.error)
+        }, 100)
       },
 
       // Skills actions
@@ -552,7 +734,6 @@ export const useProfileStore = create<ProfileStore>()(
       // Database actions
       loadFromDatabase: async () => {
         try {
-          // Don't reload if we're already syncing
           const currentState = get()
           if (currentState.syncStatus === 'syncing') {
             return
@@ -600,7 +781,6 @@ export const useProfileStore = create<ProfileStore>()(
             return
           }
 
-          // Update all store data with the received data
           set({
             profileData: result.data.profileData || defaultProfileData,
             experience: result.data.experience || defaultExperience,
@@ -658,7 +838,6 @@ export const useProfileStore = create<ProfileStore>()(
             hasUnsavedChanges: false,
           })
 
-          // Reset sync status after 3 seconds
           setTimeout(() => {
             set({ syncStatus: 'idle' })
           }, 3000)
@@ -708,10 +887,8 @@ export const useProfileStore = create<ProfileStore>()(
         set({ hasUnsavedChanges: true })
       },
 
-      // Password management
       updateAdminPassword: async (newPassword) => {
         try {
-          // Hash the password before storing
           const hashedPassword = await hashPassword(newPassword)
           set((state) => ({
             adminPassword: hashedPassword,
@@ -731,12 +908,11 @@ export const useProfileStore = create<ProfileStore>()(
     }),
     {
       name: "profile-storage",
-      version: 4, // Increment version for new password and navigation button features
+      version: 4,
     },
   ),
 )
 
-// Password hashing utilities
 async function hashPassword(password: string): Promise<string> {
   const encoder = new TextEncoder()
   const data = encoder.encode(password)

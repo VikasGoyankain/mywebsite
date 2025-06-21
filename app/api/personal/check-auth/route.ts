@@ -3,7 +3,7 @@ import { cookies } from 'next/headers';
 
 export async function GET() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get('personal-auth-token');
 
     if (!token?.value) {

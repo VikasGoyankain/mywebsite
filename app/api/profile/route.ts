@@ -15,7 +15,11 @@ export interface Experience {
   title: string
   company: string
   duration: string
+  location: string
   description: string
+  type: string
+  image: string
+  order: number
 }
 
 export interface Education {
@@ -23,7 +27,10 @@ export interface Education {
   degree: string
   institution: string
   year: string
-  description: string
+  grade: string
+  specialization: string
+  achievements: string[]
+  order: number
 }
 
 // GET handler to fetch profile data

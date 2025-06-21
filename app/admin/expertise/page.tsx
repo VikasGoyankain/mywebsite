@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Loader2, Plus, Save, Trash2, AlertCircle, CheckCircle2, ArrowLeft, PlusCircle, Edit, Settings, Upload, ExternalLink, Calendar, Image } from "lucide-react"
+import { Loader2, Plus, Save, Trash2, AlertCircle, CheckCircle2, ArrowLeft, PlusCircle, Edit, Settings, Upload, ExternalLink, Calendar, Image, ChevronUp, ChevronDown, GripVertical } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
 import { Certificate } from "@/lib/profile-store"
@@ -48,6 +48,7 @@ interface ExperienceFormData {
   description: string
   type: string
   image: string
+  order: number
 }
 
 interface CertificateFormData extends Omit<Certificate, 'id'> {
@@ -83,7 +84,8 @@ const defaultExperienceForm: ExperienceFormData = {
   location: "",
   description: "",
   type: "",
-  image: ""
+  image: "",
+  order: 0
 }
 
 const defaultCertificateForm: CertificateFormData = {
@@ -149,9 +151,15 @@ export default function AdminSkillsPage() {
     addEducation,
     updateEducation,
     deleteEducation,
+    reorderEducation,
+    moveEducationUp,
+    moveEducationDown,
     addExperience,
     updateExperience,
     deleteExperience,
+    reorderExperience,
+    moveExperienceUp,
+    moveExperienceDown,
     addCertificate,
     updateCertificate,
     deleteCertificate,
@@ -164,6 +172,8 @@ export default function AdminSkillsPage() {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [showCategoryManager, setShowCategoryManager] = useState(false)
+  const [showEducationOrderManager, setShowEducationOrderManager] = useState(false)
+  const [showExperienceOrderManager, setShowExperienceOrderManager] = useState(false)  // Add this line
   
   // Categories state
   const [categories, setCategories] = useState<string[]>(DEFAULT_CATEGORIES)
@@ -181,9 +191,19 @@ export default function AdminSkillsPage() {
   const [bookInput, setBookInput] = useState("")
   const [achievementInput, setAchievementInput] = useState("")
   const [toolInput, setToolInput] = useState("")
+  const [educationAchievementInput, setEducationAchievementInput] = useState("")
 
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Sort education by order
+  const sortedEducation = [...education].sort((a, b) => (a.order || 0) - (b.order || 0))
+  
+  // Sort experience by order
+  const sortedExperience = [...experience].sort((a, b) => (a.order || 0) - (b.order || 0))
+
+  // Add state for reordering feedback
+  const [reorderingId, setReorderingId] = useState<string | null>(null)
 
   const addSubSkill = () => {
     if (!subSkillInput.trim()) return
@@ -204,6 +224,11 @@ export default function AdminSkillsPage() {
     if (!toolInput.trim()) return
     setSkillForm(prev => ({ ...prev, tools: [...prev.tools, toolInput.trim()] }))
     setToolInput("")
+  }
+  const addEducationAchievement = () => {
+    if (!educationAchievementInput.trim()) return
+    setEducationForm(prev => ({ ...prev, achievements: [...prev.achievements, educationAchievementInput.trim()] }))
+    setEducationAchievementInput("")
   }
 
   // Reset form when selected item changes
@@ -244,7 +269,8 @@ export default function AdminSkillsPage() {
             location: exp.location || "",
             description: exp.description || "",
             type: exp.type || "",
-            image: exp.image || ""
+            image: exp.image || "",
+            order: exp.order || 0
           })
           break
       }
@@ -307,7 +333,7 @@ export default function AdminSkillsPage() {
   const handleEducationSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
-
+    
     try {
       if (selectedId === null) {
         addEducation({
@@ -316,7 +342,8 @@ export default function AdminSkillsPage() {
           year: educationForm.year,
           grade: educationForm.grade,
           specialization: educationForm.specialization,
-          achievements: educationForm.achievements
+          achievements: educationForm.achievements,
+          order: education.length  // Add order for new entries
         })
       } else {
         updateEducation(selectedId, {
@@ -328,8 +355,7 @@ export default function AdminSkillsPage() {
           achievements: educationForm.achievements
         })
       }
-
-      await saveToDatabase()
+      
       toast.success(selectedId === null ? "Education entry added successfully" : "Education entry updated successfully")
       setSelectedId(null)
       setFormTab(null)
@@ -355,7 +381,8 @@ export default function AdminSkillsPage() {
           location: experienceForm.location,
           description: experienceForm.description,
           type: experienceForm.type,
-          image: experienceForm.image
+          image: experienceForm.image,
+          order: experience.length  // Add order for new entries
         })
       } else {
         updateExperience(selectedId, {
@@ -633,6 +660,43 @@ export default function AdminSkillsPage() {
   // Save categories to localStorage
   const saveCategoriesToLocalStorage = (cats: string[]) => {
     localStorage.setItem('skillCategories', JSON.stringify(cats))
+  }
+
+  // Update the move functions to show loading state
+  const handleMoveUp = async (id: string, type: "education" | "experience") => {
+    setReorderingId(id)
+    try {
+      if (type === "education") {
+        moveEducationUp(id)
+      } else {
+        moveExperienceUp(id)
+      }
+      await saveToDatabase()
+      toast.success(`${type === "education" ? "Education" : "Experience"} order updated`)
+    } catch (error) {
+      toast.error("Failed to update order")
+      console.error("Error updating order:", error)
+    } finally {
+      setReorderingId(null)
+    }
+  }
+
+  const handleMoveDown = async (id: string, type: "education" | "experience") => {
+    setReorderingId(id)
+    try {
+      if (type === "education") {
+        moveEducationDown(id)
+      } else {
+        moveExperienceDown(id)
+      }
+      await saveToDatabase()
+      toast.success(`${type === "education" ? "Education" : "Experience"} order updated`)
+    } catch (error) {
+      toast.error("Failed to update order")
+      console.error("Error updating order:", error)
+    } finally {
+      setReorderingId(null)
+    }
   }
 
   return (
@@ -929,9 +993,235 @@ export default function AdminSkillsPage() {
             </div>
           </TabsContent>
 
+          {/* Education Tab Content */}
+          <TabsContent value="education" className="space-y-4">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowEducationOrderManager(!showEducationOrderManager)}
+                  className="hover:bg-accent"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  {showEducationOrderManager ? 'Hide' : 'Manage'} Order
+                </Button>
+              </div>
+              
+              <Button
+                variant="outline"
+                onClick={() => handleAddNew("education")}
+                className="hover:bg-accent"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                New Education
+              </Button>
+            </div>
+
+            {/* Education Order Manager Section */}
+            {showEducationOrderManager && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Manage Education Order</CardTitle>
+                  <CardDescription>
+                    Use the arrow buttons to reorder your education qualifications. The order will be reflected on your public profile.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {sortedEducation.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No education entries to reorder</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {sortedEducation.map((edu, index) => (
+                          <div 
+                            key={edu.id} 
+                            className="flex items-center gap-3 p-3 bg-accent/30 rounded-md border"
+                          >
+                            <div className="flex items-center gap-2 flex-1">
+                              <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                              <span className="font-medium text-sm">#{index + 1}</span>
+                              <div className="flex-1">
+                                <p className="font-medium">{edu.degree || "Unnamed Degree"}</p>
+                                <p className="text-sm text-muted-foreground">{edu.institution || "Institution not specified"}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleMoveUp(edu.id, "education")}
+                                disabled={index === 0 || reorderingId === edu.id}
+                                className="hover:bg-accent"
+                              >
+                                {reorderingId === edu.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <ChevronUp className="w-3 h-3" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleMoveDown(edu.id, "education")}
+                                disabled={index === sortedEducation.length - 1 || reorderingId === edu.id}
+                                className="hover:bg-accent"
+                              >
+                                {reorderingId === edu.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <ChevronDown className="w-3 h-3" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {sortedEducation.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          Changes are automatically saved to the database.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleManualSave}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-3 h-3 mr-1" />
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {sortedEducation.map((edu) => (
+                <Card key={edu.id} className="relative">
+                  <CardHeader>
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <CardTitle>
+                          {edu.degree || "Unnamed Degree"}
+                        </CardTitle>
+                        <CardDescription>{edu.institution || "Institution not specified"}</CardDescription>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          #{edu.order !== undefined ? edu.order + 1 : 'N/A'}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {edu.year || "Year not specified"}
+                        </Badge>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-2">
+                      {edu.specialization && (
+                        <p className="text-sm text-muted-foreground">
+                          Specialization: {edu.specialization}
+                        </p>
+                      )}
+                      {edu.grade && (
+                        <p className="text-sm text-muted-foreground">
+                          Grade: {edu.grade}
+                        </p>
+                      )}
+                      {Array.isArray(edu.achievements) && edu.achievements.length > 0 && (
+                        <div className="space-y-1">
+                          <p className="text-sm font-medium">Achievements:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {edu.achievements.map((achievement, index) => (
+                              <Badge key={index} variant="outline">
+                                {achievement}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="absolute top-4 right-4 flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit("education", edu.id)}
+                        className="hover:bg-accent"
+                      >
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          width="16"
+                          height="16"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          stroke="currentColor"
+                          strokeWidth="2"
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          className="text-primary"
+                        >
+                          <path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+                          <path d="m15 5 4 4" />
+                        </svg>
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDelete("education", edu.id)}
+                        className="hover:bg-destructive/10"
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+              {(!Array.isArray(education) || education.length === 0) && (
+                <Card className="col-span-full">
+                  <CardContent className="flex flex-col items-center justify-center py-8">
+                    <p className="text-lg text-muted-foreground mb-4">No education entries yet</p>
+                    <Button
+                      variant="outline"
+                      onClick={() => handleAddNew("education")}
+                      className="hover:bg-accent"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Add Your First Education Entry
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Experience Tab Content */}
           <TabsContent value="experience" className="space-y-4">
-            <div className="flex justify-end">
+            <div className="flex justify-between items-center">
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowExperienceOrderManager(!showExperienceOrderManager)}
+                  className="hover:bg-accent"
+                >
+                  <Settings className="w-4 h-4 mr-2" />
+                  {showExperienceOrderManager ? 'Hide' : 'Manage'} Order
+                </Button>
+              </div>
+              
               <Button
                 variant="outline"
                 onClick={() => handleAddNew("experience")}
@@ -942,9 +1232,101 @@ export default function AdminSkillsPage() {
               </Button>
             </div>
 
+            {/* Experience Order Manager Section */}
+            {showExperienceOrderManager && (
+              <Card className="mb-6">
+                <CardHeader>
+                  <CardTitle>Manage Experience Order</CardTitle>
+                  <CardDescription>
+                    Use the arrow buttons to reorder your work experience. The order will be reflected on your public profile.
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-2">
+                    {sortedExperience.length === 0 ? (
+                      <p className="text-muted-foreground text-sm">No experience entries to reorder</p>
+                    ) : (
+                      <div className="space-y-2">
+                        {sortedExperience.map((exp, index) => (
+                          <div 
+                            key={exp.id} 
+                            className="flex items-center gap-3 p-3 bg-accent/30 rounded-md border"
+                          >
+                            <div className="flex items-center gap-2 flex-1">
+                              <GripVertical className="w-4 h-4 text-muted-foreground cursor-grab" />
+                              <span className="font-medium text-sm">#{index + 1}</span>
+                              <div className="flex-1">
+                                <p className="font-medium">{exp.title || "Unnamed Position"}</p>
+                                <p className="text-sm text-muted-foreground">{exp.company || "Company not specified"}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-1">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleMoveUp(exp.id, "experience")}
+                                disabled={index === 0 || reorderingId === exp.id}
+                                className="hover:bg-accent"
+                              >
+                                {reorderingId === exp.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <ChevronUp className="w-3 h-3" />
+                                )}
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => handleMoveDown(exp.id, "experience")}
+                                disabled={index === sortedExperience.length - 1 || reorderingId === exp.id}
+                                className="hover:bg-accent"
+                              >
+                                {reorderingId === exp.id ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : (
+                                  <ChevronDown className="w-3 h-3" />
+                                )}
+                              </Button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  {sortedExperience.length > 0 && (
+                    <div className="mt-4 pt-4 border-t">
+                      <div className="flex items-center justify-between">
+                        <p className="text-sm text-muted-foreground">
+                          Changes are automatically saved to the database.
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={handleManualSave}
+                          disabled={isSubmitting}
+                        >
+                          {isSubmitting ? (
+                            <>
+                              <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                              Saving...
+                            </>
+                          ) : (
+                            <>
+                              <Save className="w-3 h-3 mr-1" />
+                              Save Changes
+                            </>
+                          )}
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {/* Sort experience to show newest first */}
-              {Array.isArray(experience) && [...experience].reverse().map((exp) => (
+              {[...experience].reverse().map((exp) => (
                 <Card key={exp.id} className="relative">
                   <CardHeader>
                     <div className="flex justify-between items-start">
@@ -954,9 +1336,14 @@ export default function AdminSkillsPage() {
                         </CardTitle>
                         <CardDescription>{exp.company || "Company not specified"}</CardDescription>
                       </div>
-                      <Badge variant="secondary">
-                        {exp.duration || "Duration not specified"}
-                      </Badge>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline" className="text-xs">
+                          #{exp.order !== undefined ? exp.order + 1 : 'N/A'}
+                        </Badge>
+                        <Badge variant="secondary">
+                          {exp.duration || "Duration not specified"}
+                        </Badge>
+                      </div>
                     </div>
                   </CardHeader>
                   <CardContent>
@@ -1355,7 +1742,7 @@ export default function AdminSkillsPage() {
                             <Input
                               value={achievementInput}
                               onChange={(e) => setAchievementInput(e.target.value)}
-                              placeholder="Type an achievement"
+                              placeholder="Type an achievement (e.g., 🏆 Dean's List, Academic Excellence Award)"
                               className="flex-1"
                               onKeyDown={(e) => {
                                 if (e.key === 'Enter') {
@@ -1394,7 +1781,7 @@ export default function AdminSkillsPage() {
                           </div>
                         </div>
                         <p className="text-xs text-muted-foreground">
-                          Type each achievement and click "Add" or press Enter
+                          Type each achievement and click "Add" or press Enter. You can use emojis, symbols, and any special characters.
                         </p>
                       </div>
 
@@ -1535,33 +1922,52 @@ export default function AdminSkillsPage() {
                       </div>
 
                       <div className="space-y-2">
-                        <Label htmlFor="achievements">
-                          Achievements
-                          <span className="text-sm text-muted-foreground ml-2">
-                            (Enter each achievement on a new line or separate with commas)
-                          </span>
-                        </Label>
-                        <Textarea
-                          id="achievements"
-                          value={Array.isArray(educationForm.achievements) ? educationForm.achievements.join("\n") : ""}
-                          onChange={(e) => {
-                            console.log("Raw education input:", e.target.value);
-                            // Direct assignment with simple splitting
-                            const inputValue = e.target.value;
-                            // Try to split by newlines first, then commas if no newlines
-                            const items = inputValue.includes('\n')
-                              ? inputValue.split('\n').map(item => item.trim()).filter(Boolean)
-                              : inputValue.includes(',')
-                                ? inputValue.split(',').map(item => item.trim()).filter(Boolean)
-                                : [inputValue].filter(Boolean);
-                            setEducationForm(prev => ({ ...prev, achievements: items }))
-                          }}
-                          placeholder="Enter achievements (e.g., 🏆 Dean's List, Academic Excellence Award, Research Grant)"
-                          className="min-h-[100px] resize-y text-input-unrestricted"
-                        />
-                        <p className="text-sm text-muted-foreground">
-                          Tip: You can use emojis, symbols, and any special characters in your achievements.
-                          If you can't type commas or newlines, just type one achievement and save it first.
+                        <Label htmlFor="achievements">Achievements</Label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2">
+                            <Input
+                              value={educationAchievementInput}
+                              onChange={(e) => setEducationAchievementInput(e.target.value)}
+                              placeholder="Type an achievement (e.g., 🏆 Dean's List, Academic Excellence Award)"
+                              className="flex-1"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  addEducationAchievement();
+                                }
+                              }}
+                            />
+                            <Button 
+                              type="button" 
+                              onClick={addEducationAchievement}
+                              variant="outline"
+                            >
+                              <PlusCircle className="w-4 h-4 mr-1" />
+                              Add
+                            </Button>
+                          </div>
+                          <div className="flex flex-wrap gap-1 mt-2">
+                            {Array.isArray(educationForm.achievements) && educationForm.achievements.map((item, index) => (
+                              <Badge key={index} variant="secondary" className="px-2 py-1">
+                                {item}
+                                <button 
+                                  type="button"
+                                  className="ml-1 text-gray-500 hover:text-red-500"
+                                  onClick={() => {
+                                    setEducationForm(prev => ({
+                                      ...prev,
+                                      achievements: prev.achievements.filter((_, i) => i !== index)
+                                    }))
+                                  }}
+                                >
+                                  ×
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Type each achievement and click "Add" or press Enter. You can use emojis, symbols, and any special characters.
                         </p>
                       </div>
 

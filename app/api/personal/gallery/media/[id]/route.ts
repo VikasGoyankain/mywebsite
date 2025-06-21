@@ -8,10 +8,10 @@ const MEDIA_KEY = 'gallery:media';
 // Get a specific media item
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Get all media items
     const allMedia = await redis.get<any[]>(MEDIA_KEY) || [];
@@ -39,10 +39,10 @@ export async function GET(
 // Update a media item
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     const updates = await request.json();
     
     // Get all media items
@@ -84,10 +84,10 @@ export async function PATCH(
 // Delete a media item
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
+    const { id } = await params;
     
     // Get all media items
     const allMedia = await redis.get<any[]>(MEDIA_KEY) || [];
