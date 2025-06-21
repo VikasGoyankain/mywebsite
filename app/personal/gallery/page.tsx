@@ -155,40 +155,108 @@ export default function GalleryPage() {
   }, [selectedFolder]);
 
   // This function is now replaced by ImageKitUploader component
-  const handleFiles = (files: FileList) => {
-    // We'll use this only for drag and drop, which will then use ImageKit uploader
+  const handleFiles = async (files: FileList) => {
     if (files.length > 0) {
       toast({
         title: "Processing files",
         description: `Preparing ${files.length} files for upload.`,
       });
       
-      // Convert FileList to File array and trigger upload through ImageKit
+      // Convert FileList to File array and upload each file
       const fileArray = Array.from(files);
-      fileArray.forEach(file => {
-        // Create a FormData object to upload to ImageKit
-        const formData = new FormData();
-        formData.append('file', file);
+      
+      for (let i = 0; i < fileArray.length; i++) {
+        const file = fileArray[i];
         
-        // Upload through the API directly
-        fetch('/api/personal/gallery/imagekit', {
-          method: 'POST',
-          body: formData
-        })
-        .then(response => response.json())
-        .then(result => {
-          handleImageKitUpload(result);
-        })
-        .catch(error => {
+        try {
+          // Get authentication parameters from server
+          const authResponse = await fetch('/api/personal/gallery/imagekit');
+          const authData = await authResponse.json();
+          
+          // Create form data for upload
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('fileName', file.name);
+          formData.append('folder', selectedFolder?.id || 'gallery');
+          formData.append('publicKey', authData.publicKey);
+          formData.append('signature', authData.signature);
+          formData.append('token', authData.token);
+          formData.append('expire', authData.expire);
+          
+          // Upload to ImageKit
+          const uploadResponse = await fetch('/api/personal/gallery/imagekit', {
+            method: 'POST',
+            body: formData
+          });
+          
+          if (!uploadResponse.ok) {
+            throw new Error('Upload failed');
+          }
+          
+          const uploadResult = await uploadResponse.json();
+          
+          // Create media item in Redis
+          const mediaItem = {
+            id: crypto.randomUUID(),
+            fileId: uploadResult.fileId,
+            type: getFileType(file.type),
+            url: uploadResult.url,
+            name: file.name,
+            uploadDate: new Date().toISOString(),
+            folderId: selectedFolder?.id !== 'all-photos' ? selectedFolder?.id : undefined,
+            size: file.size,
+            dimensions: uploadResult.width && uploadResult.height ? {
+              width: uploadResult.width,
+              height: uploadResult.height
+            } : undefined,
+            isFavorite: false,
+            uploadedBy: 'current-user'
+          };
+          
+          // Save to Redis
+          const saveResponse = await fetch('/api/personal/gallery/media', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(mediaItem)
+          });
+          
+          if (!saveResponse.ok) {
+            throw new Error('Failed to save media metadata');
+          }
+          
+          const savedData = await saveResponse.json();
+          
+          // Update local state
+          setMediaItems(prev => [...prev, {
+            ...mediaItem,
+            uploadDate: new Date(mediaItem.uploadDate)
+          }]);
+          
+          updateFolderCounts();
+          
+          toast({
+            title: 'Upload successful',
+            description: `${file.name} has been uploaded successfully.`
+          });
+        } catch (error) {
           console.error('Error uploading file:', error);
-      toast({
+          toast({
             title: 'Upload failed',
             description: `Failed to upload ${file.name}`,
             variant: 'destructive'
-      });
-    });
-      });
+          });
+        }
+      }
     }
+  };
+
+  const getFileType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'document';
   };
 
   const handleFileInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -486,6 +554,50 @@ export default function GalleryPage() {
       toast({
         title: 'Error',
         description: 'Failed to delete item',
+        variant: 'destructive'
+      });
+    }
+  };
+
+  // New bulk delete function for multiple items
+  const deleteMultipleItems = async (ids: string[]) => {
+    try {
+      const itemsToDelete = mediaItems.filter(item => ids.includes(item.id));
+      
+      // Delete each item
+      const deletePromises = itemsToDelete.map(async (item) => {
+        // Delete from Redis
+        const response = await fetch(`/api/personal/gallery/media/${item.id}`, {
+          method: 'DELETE'
+        });
+        
+        if (!response.ok) {
+          throw new Error(`Failed to delete item ${item.id}`);
+        }
+        
+        // If it's an ImageKit file, delete from ImageKit too
+        if (item.fileId) {
+          await fetch(`/api/personal/gallery/imagekit/${item.fileId}`, {
+            method: 'DELETE'
+          });
+        }
+      });
+      
+      await Promise.all(deletePromises);
+      
+      // Update local state
+      setMediaItems(prev => prev.filter(item => !ids.includes(item.id)));
+      updateFolderCounts();
+      
+      toast({
+        title: "Items deleted",
+        description: `${ids.length} items have been deleted successfully.`,
+      });
+    } catch (error) {
+      console.error('Error deleting items:', error);
+      toast({
+        title: 'Error',
+        description: 'Failed to delete some items',
         variant: 'destructive'
       });
     }
@@ -859,6 +971,7 @@ export default function GalleryPage() {
             groupedItems={groupedItems}
             folders={folders}
             onDelete={deleteItem}
+            onBulkDelete={deleteMultipleItems}
             onDownload={downloadItem}
             onShare={shareItem}
             onToggleFavorite={toggleFavorite}

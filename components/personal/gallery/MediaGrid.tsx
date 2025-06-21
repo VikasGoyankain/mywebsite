@@ -16,6 +16,7 @@ interface MediaGridProps {
   groupedItems: Record<string, MediaItem[]>;
   folders: MediaFolder[];
   onDelete: (id: string) => void;
+  onBulkDelete?: (ids: string[]) => void;
   onDownload: (item: MediaItem) => void;
   onShare: (item: MediaItem) => void;
   onToggleFavorite: (id: string) => void;
@@ -35,6 +36,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
   groupedItems,
   folders,
   onDelete,
+  onBulkDelete,
   onDownload,
   onShare,
   onToggleFavorite,
@@ -405,7 +407,11 @@ const MediaGrid: React.FC<MediaGridProps> = ({
           variant="ghost"
           size="sm"
           onClick={() => {
-            selectedItems.forEach(id => onDelete(id));
+            if (onBulkDelete) {
+              onBulkDelete(Array.from(selectedItems));
+            } else {
+              selectedItems.forEach(id => onDelete(id));
+            }
             setSelectedItems(new Set());
             toast({
               title: "Items deleted",
@@ -413,9 +419,9 @@ const MediaGrid: React.FC<MediaGridProps> = ({
             });
           }}
           className="text-red-500"
-                      >
-                        <Trash2 className="w-4 h-4 mr-2" />
-                        Delete
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
         </Button>
 
         <DropdownMenu>
