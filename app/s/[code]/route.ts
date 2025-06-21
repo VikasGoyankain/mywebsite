@@ -2,53 +2,66 @@ import { NextResponse } from 'next/server';
 import redis from '@/lib/redis';
 
 export const dynamic = 'force-dynamic';
+export const fetchCache = 'force-no-store';
+
+// Redis key patterns
+const REDIS_KEYS = {
+  URL_DATA: 'url:{shortcode}',
+  ALL_CODES: 'urls:all_codes',
+  REVOKED: 'urls:revoked'
+} as const;
+
+function getUrlKey(shortCode: string): string {
+  return REDIS_KEYS.URL_DATA.replace('{shortcode}', shortCode);
+}
 
 export async function GET(
   request: Request,
-  context: { params: { code: string } }
+  context: { params: Promise<{ code: string }> }
 ) {
   try {
-    // Access code directly from context to avoid Next.js error
-    const code = context.params.code;
+    // Fix for Next.js 15 - await params
+    const { code } = await context.params;
     
     console.log(`Processing redirect for code: ${code}`);
     
-    // Get the URL from Redis
-    const url = await redis.get<string>(`url:${code}`);
-    console.log(`URL for ${code}: ${url || 'not found'}`);
+    // Get the URL data from Redis hash
+    const urlData = await redis.hgetall(getUrlKey(code));
+    console.log(`URL data for ${code}:`, urlData);
     
     // Check if URL exists
-    if (!url) {
+    if (!urlData || !urlData.originalUrl) {
       console.log(`URL not found for code: ${code}`);
       return NextResponse.redirect(new URL('/404', request.url));
     }
     
     // Check if URL is revoked
-    const revoked = await redis.get(`revoked:${code}`);
-    console.log(`Revoked status for ${code}: ${revoked}`);
-    
-    if (revoked === 'true') {
+    if (urlData.isRevoked === 'true') {
       console.log(`URL ${code} is revoked, redirecting to 404`);
       return NextResponse.redirect(new URL('/404?reason=revoked', request.url));
     }
     
-    // Check if URL has expired (this is a backup check, Redis TTL should handle this)
-    const expiresAt = await redis.get(`expires:${code}`);
-    if (expiresAt) {
-      const expDate = new Date(expiresAt as string);
+    // Check if URL has expired
+    if (urlData.expiresAt) {
+      const expDate = new Date(urlData.expiresAt);
       if (expDate < new Date()) {
         console.log(`URL ${code} has expired, redirecting to 404`);
         return NextResponse.redirect(new URL('/404?reason=expired', request.url));
       }
     }
 
-    // Increment click count
-    await redis.incr(`clicks:${code}`);
-    console.log(`Incremented click count for ${code}`);
+    // Increment click count and update last accessed
+    const newClicks = parseInt(urlData.clicks || '0', 10) + 1;
+    await redis.hset(getUrlKey(code), {
+      clicks: newClicks.toString(),
+      lastAccessed: new Date().toISOString()
+    });
+    
+    console.log(`Incremented click count for ${code} to ${newClicks}`);
 
     // Return a redirect response to the target URL
-    console.log(`Redirecting to ${url}`);
-    return NextResponse.redirect(url as string);
+    console.log(`Redirecting to ${urlData.originalUrl}`);
+    return NextResponse.redirect(urlData.originalUrl);
   } catch (error) {
     console.error('Error redirecting:', error);
     return NextResponse.redirect(new URL('/404', request.url));

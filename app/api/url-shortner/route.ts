@@ -5,119 +5,112 @@ export const dynamic = 'force-dynamic';
 export const fetchCache = 'force-no-store';
 export const revalidate = 0;
 
-// Function to normalize URLs for consistent matching
-const normalizeUrl = (url: string): string => {
-  // Add https:// prefix if missing
-  let normalized = url.trim();
-  if (!/^https?:\/\//i.test(normalized)) {
+// Simplified Redis key patterns - only use hash structure
+const REDIS_KEYS = {
+  URL_DATA: 'url:{shortcode}',
+  ALL_CODES: 'urls:all_codes',
+  REVOKED: 'urls:revoked'
+} as const;
+
+// Helper function to normalize URLs
+function normalizeUrl(url: string): string {
+  let normalized = url.toLowerCase().trim();
+  if (!normalized.startsWith('http://') && !normalized.startsWith('https://')) {
     normalized = 'https://' + normalized;
   }
-  
+  return normalized;
+}
+
+// Helper function to generate short code
+function generateShortCode(): string {
+  return Math.random().toString(36).substring(2, 8);
+}
+
+function getUrlKey(shortCode: string): string {
+  return REDIS_KEYS.URL_DATA.replace('{shortcode}', shortCode);
+}
+
+// Helper function to find URL by original URL (scan through all URLs)
+async function findUrlByOriginal(originalUrl: string): Promise<string | null> {
   try {
-    // Create URL object to parse and normalize components
-    const urlObj = new URL(normalized);
+    const allCodes = await redis.smembers(REDIS_KEYS.ALL_CODES);
     
-    // Remove trailing slashes
-    let pathname = urlObj.pathname;
-    while (pathname.endsWith('/') && pathname.length > 1) {
-      pathname = pathname.slice(0, -1);
+    for (const shortCode of allCodes) {
+      const urlData = await redis.hgetall(getUrlKey(shortCode));
+      if (urlData && urlData.originalUrl === originalUrl) {
+        return shortCode;
+      }
     }
-    
-    // Remove default ports
-    const port = (urlObj.protocol === 'https:' && urlObj.port === '443') || 
-                (urlObj.protocol === 'http:' && urlObj.port === '80') 
-                ? '' : urlObj.port;
-    
-    // Remove www. if present (to avoid duplicate URLs with and without www)
-    const hostname = urlObj.hostname.startsWith('www.') 
-      ? urlObj.hostname.substring(4) 
-      : urlObj.hostname;
-    
-    // Reconstruct the URL with normalized components
-    const normalizedUrl = `${urlObj.protocol}//${hostname}${port ? ':' + port : ''}${pathname}${urlObj.search}${urlObj.hash}`;
-    return normalizedUrl.toLowerCase();
+    return null;
   } catch (error) {
-    // If URL parsing fails, return the original with https prefix
-    console.error('URL normalization error:', error);
-    return normalized.toLowerCase();
+    console.error('Error finding URL by original:', error);
+    return null;
   }
-};
+}
 
 export async function POST(request: Request) {
   try {
     const { url, expiresAt } = await request.json();
-    
-    // Normalize the URL for consistent matching
     const normalizedUrl = normalizeUrl(url);
     
-    console.log('POST request:', { 
-      originalUrl: url, 
-      normalizedUrl, 
-      expiresAt 
-    });
+    console.log('POST request:', { originalUrl: url, normalizedUrl, expiresAt });
     
-    // Get the base URL from the environment variable or fallback to request URL
     let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
-    
-    // If no environment variable is set, extract from request
     if (!baseUrl) {
       const requestUrl = new URL(request.url);
       baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
     }
     
-    // First, check if we have this URL in our index
-    const existingShortCode = await redis.get<string>(`original:${normalizedUrl}`);
+    // Check if URL already exists by scanning through all URLs
+    const existingShortCode = await findUrlByOriginal(normalizedUrl);
     
     if (existingShortCode) {
       console.log(`Found existing short code ${existingShortCode} for URL ${normalizedUrl}`);
       
-      // URL exists, retrieve its data
-      const clicks = await redis.get<string>(`clicks:${existingShortCode}`) || '0';
-      const created = await redis.get<string>(`created:${existingShortCode}`) || new Date().toISOString();
-      const existingExpires = await redis.get<string>(`expires:${existingShortCode}`);
-      const revoked = await redis.get<string>(`revoked:${existingShortCode}`);
+      // Get existing URL data from hash
+      const urlData = await redis.hgetall(getUrlKey(existingShortCode));
       
-      return NextResponse.json({ 
-        shortCode: existingShortCode, 
-        shortUrl: `${baseUrl}/s/${existingShortCode}`,
-        exists: true,
-        clickCount: parseInt(clicks, 10),
-        createdAt: created,
-        expiresAt: existingExpires || null,
-        isRevoked: revoked === 'true'
-      });
+      if (urlData && urlData.originalUrl) {
+        return NextResponse.json({ 
+          shortCode: existingShortCode, 
+          shortUrl: `${baseUrl}/s/${existingShortCode}`,
+          exists: true,
+          clickCount: parseInt(urlData.clicks || '0', 10),
+          createdAt: urlData.createdAt,
+          expiresAt: urlData.expiresAt || null,
+          isRevoked: urlData.isRevoked === 'true'
+        });
+      }
     }
     
     console.log(`Creating new short code for URL ${normalizedUrl}`);
     
-    // URL doesn't exist, create a new short URL
-    const shortCode = Math.random().toString(36).substring(2, 8);
+    // Create new URL
+    const shortCode = generateShortCode();
     const shortUrl = `${baseUrl}/s/${shortCode}`;
+    const now = new Date().toISOString();
 
-    // Store in Redis with TTL if needed
-    await redis.set(`url:${shortCode}`, normalizedUrl); // Store normalized URL
-    await redis.set(`clicks:${shortCode}`, 0);
-    await redis.set(`created:${shortCode}`, new Date().toISOString());
-    
-    // Store the reverse mapping for future lookups
-    await redis.set(`original:${normalizedUrl}`, shortCode);
-    
-    // If expiration is set, store it and set TTL
+    // Store URL data in hash (single key per URL)
+    await redis.hset(getUrlKey(shortCode), {
+      originalUrl: normalizedUrl,
+      clicks: '0',
+      createdAt: now,
+      lastAccessed: now,
+      isRevoked: 'false'
+    });
+
+    // Add to collections (only the set, no ZADD)
+    await redis.sadd(REDIS_KEYS.ALL_CODES, shortCode);
+
+    // Set expiration if provided
     if (expiresAt) {
-      await redis.set(`expires:${shortCode}`, expiresAt);
+      await redis.hset(getUrlKey(shortCode), { expiresAt });
       
-      // Calculate TTL in seconds
-      const now = new Date();
       const expDate = new Date(expiresAt);
-      const ttlSeconds = Math.floor((expDate.getTime() - now.getTime()) / 1000);
+      const ttlSeconds = Math.floor((expDate.getTime() - new Date().getTime()) / 1000);
       
       if (ttlSeconds > 0) {
-        // Set expiration for all related keys
-        await redis.expire(`url:${shortCode}`, ttlSeconds);
-        await redis.expire(`clicks:${shortCode}`, ttlSeconds);
-        await redis.expire(`created:${shortCode}`, ttlSeconds);
-        await redis.expire(`expires:${shortCode}`, ttlSeconds);
-        await redis.expire(`original:${normalizedUrl}`, ttlSeconds);
+        await redis.expire(getUrlKey(shortCode), ttlSeconds);
       }
     }
 
@@ -141,51 +134,40 @@ export async function GET(request: Request) {
     const code = searchParams.get('code');
     const action = searchParams.get('action');
 
-    // If requesting all URLs
+    // Get all URLs
     if (action === 'getAll') {
-      // Get all URL keys from Redis
-      const keys = await redis.keys('url:*');
-      const result = [];
-      
-      // Get base URL for short URLs
       let baseUrl = process.env.NEXT_PUBLIC_APP_URL;
       if (!baseUrl) {
         const requestUrl = new URL(request.url);
         baseUrl = `${requestUrl.protocol}//${requestUrl.host}`;
       }
 
-      // Process each URL
-      for (const key of keys) {
-        const shortCode = key.replace('url:', '');
-        const originalUrl = await redis.get<string>(`url:${shortCode}`);
+      // Get all shortcodes from set
+      const allCodes = await redis.smembers(REDIS_KEYS.ALL_CODES);
+      const result = [];
+
+      // Get data for each shortcode
+      for (const shortCode of allCodes) {
+        const urlData = await redis.hgetall(getUrlKey(shortCode));
         
-        // Skip if URL is missing (could be a corrupted entry)
-        if (!originalUrl) continue;
-        
-        const clicks = await redis.get<string>(`clicks:${shortCode}`) || '0';
-        const created = await redis.get<string>(`created:${shortCode}`) || new Date().toISOString();
-        const expiresAt = await redis.get<string>(`expires:${shortCode}`);
-        
-        // Check if URL is revoked
-        const revoked = await redis.get<string>(`revoked:${shortCode}`);
-        console.log(`URL ${shortCode} revoked status: ${revoked}`);
-        
-        result.push({
-          id: shortCode,
-          shortCode,
-          originalUrl,
-          shortUrl: `${baseUrl}/s/${shortCode}`,
-          clickCount: parseInt(clicks as string, 10) || 0,
-          createdAt: created,
-          expiresAt: expiresAt || null,
-          isRevoked: revoked === 'true',
-        });
+        if (urlData && urlData.originalUrl) {
+          result.push({
+            id: shortCode,
+            shortCode,
+            originalUrl: urlData.originalUrl,
+            shortUrl: `${baseUrl}/s/${shortCode}`,
+            clickCount: parseInt(urlData.clicks || '0', 10),
+            createdAt: urlData.createdAt,
+            expiresAt: urlData.expiresAt || null,
+            isRevoked: urlData.isRevoked === 'true',
+          });
+        }
       }
       
       return NextResponse.json(result);
     }
 
-    // If requesting a specific URL
+    // Get specific URL
     if (!code) {
       return NextResponse.json(
         { error: 'Short code is required' },
@@ -193,13 +175,9 @@ export async function GET(request: Request) {
       );
     }
 
-    const url = await redis.get<string>(`url:${code}`);
-    const clicks = await redis.get<string>(`clicks:${code}`);
-    const created = await redis.get<string>(`created:${code}`);
-    const expiresAt = await redis.get<string>(`expires:${code}`);
-    const revoked = await redis.get<string>(`revoked:${code}`);
+    const urlData = await redis.hgetall(getUrlKey(code));
 
-    if (!url) {
+    if (!urlData || !urlData.originalUrl) {
       return NextResponse.json(
         { error: 'URL not found' },
         { status: 404 }
@@ -207,11 +185,11 @@ export async function GET(request: Request) {
     }
 
     return NextResponse.json({ 
-      url, 
-      clicks, 
-      created,
-      expiresAt,
-      revoked: revoked === 'true',
+      url: urlData.originalUrl, 
+      clicks: urlData.clicks || '0', 
+      created: urlData.createdAt,
+      expiresAt: urlData.expiresAt,
+      revoked: urlData.isRevoked === 'true',
       code
     });
   } catch (error) {
@@ -237,8 +215,8 @@ export async function DELETE(request: Request) {
     }
     
     // Check if URL exists
-    const url = await redis.get<string>(`url:${code}`);
-    if (!url) {
+    const urlData = await redis.hgetall(getUrlKey(code));
+    if (!urlData || !urlData.originalUrl) {
       return NextResponse.json(
         { error: 'URL not found' },
         { status: 404 }
@@ -249,18 +227,12 @@ export async function DELETE(request: Request) {
     
     // Handle revoke action
     if (action === 'revoke') {
-      // Check current revoke status
-      const currentStatus = await redis.get<string>(`revoked:${code}`);
-      console.log(`Current revoke status for ${code}: ${currentStatus}`);
+      const currentStatus = urlData.isRevoked === 'true';
       
-      if (currentStatus === 'true') {
-        // Unrevoke - remove the key
-        await redis.del(`revoked:${code}`);
-        console.log(`Unrevoked URL ${code}`);
-        
-        // Double check the deletion worked
-        const checkStatus = await redis.get<string>(`revoked:${code}`);
-        console.log(`After unrevoke, status is: ${checkStatus}`);
+      if (currentStatus) {
+        // Unrevoke
+        await redis.hset(getUrlKey(code), { isRevoked: 'false' });
+        await redis.srem(REDIS_KEYS.REVOKED, code);
         
         return NextResponse.json({ 
           success: true, 
@@ -268,13 +240,9 @@ export async function DELETE(request: Request) {
           isRevoked: false
         });
       } else {
-        // Revoke - set the key
-        await redis.set(`revoked:${code}`, 'true');
-        console.log(`Revoked URL ${code}`);
-        
-        // Double check the setting worked
-        const checkStatus = await redis.get<string>(`revoked:${code}`);
-        console.log(`After revoke, status is: ${checkStatus}`);
+        // Revoke
+        await redis.hset(getUrlKey(code), { isRevoked: 'true' });
+        await redis.sadd(REDIS_KEYS.REVOKED, code);
         
         return NextResponse.json({ 
           success: true, 
@@ -284,18 +252,13 @@ export async function DELETE(request: Request) {
       }
     }
     
-    // Handle delete action (default)
+    // Handle delete action
+    // Delete main data
+    await redis.del(getUrlKey(code));
     
-    // URL is already normalized at this point
-    // Delete the original URL index
-    await redis.del(`original:${url}`);
-    
-    // Delete all other keys
-    await redis.del(`url:${code}`);
-    await redis.del(`clicks:${code}`);
-    await redis.del(`created:${code}`);
-    await redis.del(`expires:${code}`);
-    await redis.del(`revoked:${code}`);
+    // Remove from collections
+    await redis.srem(REDIS_KEYS.ALL_CODES, code);
+    await redis.srem(REDIS_KEYS.REVOKED, code);
     
     return NextResponse.json({ success: true, message: 'URL deleted successfully' });
   } catch (error) {
@@ -307,29 +270,22 @@ export async function DELETE(request: Request) {
   }
 }
 
-// Add a migration endpoint to create original URL indexes for existing URLs
+// Migration from old system to new hash-based system
 export async function PATCH(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
     const action = searchParams.get('action');
     
-    // Only process the migration action
-    if (action !== 'migrate-indexes') {
-      return NextResponse.json(
-        { error: 'Invalid action' },
-        { status: 400 }
-      );
+    if (action !== 'migrate-to-hash') {
+      return NextResponse.json({ error: 'Invalid action' }, { status: 400 });
     }
     
-    console.log('Starting URL index migration process...');
+    console.log('Starting migration to hash-based system...');
     
-    // Get all URL keys
+    // Get all old URL keys
     const keys = await redis.keys('url:*');
     let migratedCount = 0;
     const errors = [];
-    
-    // For each URL, create a reverse index
-    console.log(`Found ${keys.length} URLs to process`);
     
     for (const key of keys) {
       try {
@@ -337,75 +293,38 @@ export async function PATCH(request: Request) {
         const originalUrl = await redis.get<string>(key);
         
         if (originalUrl) {
-          // Normalize the URL
-          const normalizedUrl = normalizeUrl(originalUrl);
+          // Get all related data from old system
+          const clicks = await redis.get<string>(`clicks:${shortCode}`) || '0';
+          const created = await redis.get<string>(`created:${shortCode}`) || new Date().toISOString();
+          const expires = await redis.get<string>(`expires:${shortCode}`);
+          const revoked = await redis.get<string>(`revoked:${shortCode}`) || 'false';
           
-          console.log(`Processing URL: ${shortCode}`, { 
-            originalUrl, 
-            normalizedUrl, 
-            same: originalUrl === normalizedUrl 
+          const timestamp = Math.floor(new Date(created).getTime() / 1000);
+          
+          // Create new hash structure
+          await redis.hset(getUrlKey(shortCode), {
+            originalUrl,
+            clicks,
+            createdAt: created,
+            lastAccessed: created,
+            isRevoked: revoked
           });
           
-          // Check if the original URL index already exists
-          const existingCode = await redis.get<string>(`original:${normalizedUrl}`);
-          
-          if (!existingCode) {
-            // Create the index with normalized URL
-            await redis.set(`original:${normalizedUrl}`, shortCode);
-            
-            // Update the url:shortCode to use the normalized URL
-            await redis.set(`url:${shortCode}`, normalizedUrl);
-            
-            // Apply the same TTL as the original URL if it has one
-            const ttl = await redis.ttl(key);
-            if (ttl > 0) {
-              await redis.expire(`original:${normalizedUrl}`, ttl);
-            }
-            
-            migratedCount++;
-          } else if (existingCode !== shortCode) {
-            // We have a conflict: two different short codes for the same normalized URL
-            console.log(`Conflict: URL ${normalizedUrl} has multiple short codes: ${existingCode} and ${shortCode}`);
-            
-            // We'll keep the older one and update our records
-            const createdExisting = await redis.get<string>(`created:${existingCode}`);
-            const createdCurrent = await redis.get<string>(`created:${shortCode}`);
-            
-            const dateExisting = createdExisting ? new Date(createdExisting) : new Date();
-            const dateCurrent = createdCurrent ? new Date(createdCurrent) : new Date();
-            
-            // Keep the older shortcode
-            if (dateCurrent < dateExisting) {
-              // Current is older, make it the canonical one
-              await redis.set(`original:${normalizedUrl}`, shortCode);
-              
-              // Merge click counts
-              const clicksExisting = parseInt(await redis.get<string>(`clicks:${existingCode}`) || '0', 10);
-              const clicksCurrent = parseInt(await redis.get<string>(`clicks:${shortCode}`) || '0', 10);
-              await redis.set(`clicks:${shortCode}`, clicksCurrent + clicksExisting);
-              
-              // Clean up the duplicate
-              await redis.del(`url:${existingCode}`);
-              await redis.del(`clicks:${existingCode}`);
-              await redis.del(`created:${existingCode}`);
-              await redis.del(`expires:${existingCode}`);
-              await redis.del(`revoked:${existingCode}`);
-            } else {
-              // Existing is older, keep it but merge click counts
-              const clicksExisting = parseInt(await redis.get<string>(`clicks:${existingCode}`) || '0', 10);
-              const clicksCurrent = parseInt(await redis.get<string>(`clicks:${shortCode}`) || '0', 10);
-              await redis.set(`clicks:${existingCode}`, clicksCurrent + clicksExisting);
-              
-              // Clean up the duplicate
-              await redis.del(`url:${shortCode}`);
-              await redis.del(`clicks:${shortCode}`);
-              await redis.del(`created:${shortCode}`);
-              await redis.del(`expires:${shortCode}`);
-              await redis.del(`revoked:${shortCode}`);
-            }
-            
-            migratedCount++;
+          if (expires) {
+            await redis.hset(getUrlKey(shortCode), { expiresAt: expires });
           }
+          
+          // Create indexes
+          await redis.set(getOriginalKey(originalUrl), shortCode);
+          await redis.sadd(REDIS_KEYS.ALL_CODES, shortCode);
+          await redis.zadd(REDIS_KEYS.BY_CLICKS, [parseInt(clicks, 10), shortCode]);
+          await redis.zadd(REDIS_KEYS.BY_DATE, [timestamp, shortCode]);
+          
+          if (revoked === 'true') {
+            await redis.sadd(REDIS_KEYS.REVOKED, shortCode);
+          }
+          
+          migratedCount++;
         }
       } catch (error) {
         console.error(`Error migrating ${key}:`, error);
@@ -413,18 +332,13 @@ export async function PATCH(request: Request) {
       }
     }
     
-    console.log('Migration complete', { migratedCount, errors });
-    
     return NextResponse.json({
       success: true,
-      message: `Migration completed. Created/updated ${migratedCount} indexes.`,
+      message: `Migration completed. Migrated ${migratedCount} URLs to hash-based system.`,
       errors: errors.length > 0 ? errors : null
     });
   } catch (error) {
     console.error('Error in migration:', error);
-    return NextResponse.json(
-      { error: 'Migration failed' },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: 'Migration failed' }, { status: 500 });
   }
 }
