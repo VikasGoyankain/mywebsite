@@ -143,3 +143,58 @@ export async function listKeys(pattern: string = '*') {
     return []
   }
 }
+
+// Family authentication types and helpers
+export interface FamilyMember {
+  username: string;
+  hashedPassword: string;
+  role?: string;
+  createdAt: string;
+  lastLogin?: string;
+}
+
+export async function hashPassword(password: string): Promise<string> {
+  const encoder = new TextEncoder();
+  const data = encoder.encode(password);
+  const hash = await crypto.subtle.digest('SHA-256', data);
+  return Array.from(new Uint8Array(hash))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+}
+
+export async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
+  const hashedInput = await hashPassword(password);
+  return hashedInput === hashedPassword;
+}
+
+export async function getFamilyMember(username: string): Promise<FamilyMember | null> {
+  const member = await redis.hget('family_members', username);
+  if (!member) return null;
+  
+  try {
+    return typeof member === 'string' ? JSON.parse(member) : member;
+  } catch (error) {
+    console.error('Error parsing family member data:', error);
+    return null;
+  }
+}
+
+export async function saveFamilyMember(member: FamilyMember): Promise<void> {
+  const memberString = typeof member === 'string' ? member : JSON.stringify(member);
+  await redis.hset('family_members', {
+    [member.username]: memberString
+  });
+}
+
+export async function updateFamilyMemberPassword(username: string, newHashedPassword: string): Promise<void> {
+  const member = await getFamilyMember(username);
+  if (!member) throw new Error('Family member not found');
+  
+  member.hashedPassword = newHashedPassword;
+  await saveFamilyMember(member);
+}
+
+export async function getAllFamilyMembers(): Promise<FamilyMember[]> {
+  const members = await redis.hgetall('family_members') as Record<string, string>;
+  return Object.values(members).map(member => JSON.parse(member));
+}
