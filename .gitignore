@@ -28,3 +28,6 @@ next-env.d.ts
 
 # Test files
 test.txt
+
+# Reference projects
+my-media-sanctuary/
