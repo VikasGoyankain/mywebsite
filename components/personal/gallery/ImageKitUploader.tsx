@@ -1,211 +1,168 @@
 "use client";
 
-import { useState, useCallback } from 'react';
+import React, { useState, useRef } from 'react';
+import { Upload } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Upload, X } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import { v4 as uuidv4 } from 'uuid';
 
 interface ImageKitUploaderProps {
-  onUploadSuccess: (response: {
-    fileId?: string;
-    fileType?: string;
-    id?: string;
-    url: string;
-    name: string;
-    size?: number;
-    width?: number;
-    height?: number;
-    folder?: string;
-  }) => void;
-  onUploadError: (error: Error) => void;
+  onUploadSuccess: (response: any) => void;
+  onUploadError: (error: any) => void;
   folder?: string;
   userId?: string;
 }
 
-export default function ImageKitUploader({
+const ImageKitUploader: React.FC<ImageKitUploaderProps> = ({
   onUploadSuccess,
   onUploadError,
   folder = 'gallery',
   userId = 'current-user'
-}: ImageKitUploaderProps) {
+}) => {
   const [isUploading, setIsUploading] = useState(false);
-  const [files, setFiles] = useState<File[]>([]);
-  const [uploadProgress, setUploadProgress] = useState<Record<string, number>>({});
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
-      const selectedFiles = Array.from(e.target.files);
-      setFiles(prev => [...prev, ...selectedFiles]);
+  const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    
+    const files = Array.from(e.target.files);
+    setUploadProgress(0);
+    
+    for (let i = 0; i < files.length; i++) {
+      await uploadFile(files[i]);
+      setUploadProgress(((i + 1) / files.length) * 100);
+    }
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
     }
   };
 
-  const removeFile = (index: number) => {
-    setFiles(prev => prev.filter((_, i) => i !== index));
+  const getFileType = (mimeType: string): 'image' | 'video' | 'document' | 'audio' => {
+    if (mimeType.startsWith('image/')) return 'image';
+    if (mimeType.startsWith('video/')) return 'video';
+    if (mimeType.startsWith('audio/')) return 'audio';
+    return 'document';
   };
 
   const uploadFile = async (file: File) => {
     try {
-      // Get upload URL and token
-      const authResponse = await fetch('/api/personal/gallery/imagekit/auth', {
-        method: 'GET',
-      });
+      setIsUploading(true);
       
-      if (!authResponse.ok) {
-        throw new Error('Failed to get upload credentials');
-      }
-
-      const { uploadUrl, token } = await authResponse.json();
-
-      // Create form data
+      // Get authentication parameters from server
+      const authResponse = await fetch('/api/personal/gallery/imagekit');
+      const authData = await authResponse.json();
+      
+      // Create form data for upload
       const formData = new FormData();
       formData.append('file', file);
       formData.append('fileName', file.name);
-      formData.append('token', token);
-
-      // Upload file
-      const uploadResponse = await fetch(uploadUrl, {
+      formData.append('folder', folder);
+      formData.append('publicKey', authData.publicKey);
+      formData.append('signature', authData.signature);
+      formData.append('token', authData.token);
+      formData.append('expire', authData.expire);
+      
+      // Upload to ImageKit
+      const uploadResponse = await fetch('/api/personal/gallery/imagekit', {
         method: 'POST',
-        body: formData,
+        body: formData
       });
-
+      
       if (!uploadResponse.ok) {
         throw new Error('Upload failed');
       }
-
-      const result = await uploadResponse.json();
-      onUploadSuccess(result);
-
+      
+      const uploadResult = await uploadResponse.json();
+      
+      // Create media item in Redis
+      const mediaItem = {
+        id: uuidv4(),
+        fileId: uploadResult.fileId,
+        type: getFileType(file.type),
+        url: uploadResult.url,
+        name: file.name,
+        uploadDate: new Date().toISOString(),
+        folderId: folder !== 'gallery' ? folder : undefined,
+        size: file.size,
+        dimensions: uploadResult.width && uploadResult.height ? {
+          width: uploadResult.width,
+          height: uploadResult.height
+        } : undefined,
+        isFavorite: false,
+        uploadedBy: userId
+      };
+      
+      // Save to Redis
+      const saveResponse = await fetch('/api/personal/gallery/media', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(mediaItem)
+      });
+      
+      if (!saveResponse.ok) {
+        throw new Error('Failed to save media metadata');
+      }
+      
+      const savedData = await saveResponse.json();
+      
+      // Call success callback with the complete data
+      onUploadSuccess({
+        ...uploadResult,
+        ...mediaItem
+      });
+      
       toast({
-        title: "Upload successful",
-        description: `${file.name} has been uploaded.`,
+        title: 'Upload successful',
+        description: `${file.name} has been uploaded successfully.`
       });
     } catch (error) {
-      console.error('Upload error:', error);
-      if (error instanceof Error) {
-        onUploadError(error);
-        toast({
-          title: "Upload failed",
-          description: `Failed to upload ${file.name}. ${error.message}`,
-          variant: "destructive",
-        });
-      }
-    }
-  };
-
-  const handleUpload = async () => {
-    if (files.length === 0) {
+      console.error('Error uploading file:', error);
+      onUploadError(error);
+      
       toast({
-        title: "No files selected",
-        description: "Please select files to upload.",
-        variant: "destructive",
+        title: 'Upload failed',
+        description: 'Failed to upload file. Please try again.',
+        variant: 'destructive'
       });
-      return;
-    }
-
-    setIsUploading(true);
-    
-    try {
-      await Promise.all(files.map(uploadFile));
-      setFiles([]);
     } finally {
       setIsUploading(false);
     }
   };
 
-  const dropHandler = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-    if (e.dataTransfer.files) {
-      const droppedFiles = Array.from(e.dataTransfer.files);
-      setFiles(prev => [...prev, ...droppedFiles]);
-    }
-  }, []);
-
-  const dragOverHandler = useCallback((e: React.DragEvent) => {
-    e.preventDefault();
-  }, []);
-
   return (
-    <div className="space-y-4">
-      <div
-        className="border-2 border-dashed rounded-lg p-8 text-center hover:border-gray-400 transition-colors"
-        onDrop={dropHandler}
-        onDragOver={dragOverHandler}
+    <div>
+      <Button
+        onClick={() => fileInputRef.current?.click()}
+        disabled={isUploading}
+        className="bg-blue-600 hover:bg-blue-700 text-white"
       >
-        <Input
-          type="file"
-          accept="image/*,video/*"
-          multiple={true}
-          onChange={handleFileSelect}
-          className="hidden"
-          id="file-upload"
-        />
-        <Label
-          htmlFor="file-upload"
-          className="cursor-pointer flex flex-col items-center"
-        >
-          <Upload className="w-12 h-12 mb-4 text-gray-400" />
-          <p className="text-lg font-medium">Drop files here or click to upload</p>
-          <p className="text-sm text-gray-500 mt-1">
-            Support for images and videos
-          </p>
-        </Label>
-      </div>
-
-      {files.length > 0 && (
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <h3 className="font-medium">Selected Files</h3>
-            <Button
-              onClick={handleUpload}
-              disabled={isUploading}
-            >
-              {isUploading ? 'Uploading...' : 'Upload All'}
-            </Button>
-          </div>
-          
-          <div className="space-y-2">
-            {files.map((file, index) => (
-              <div
-                key={`${file.name}-${index}`}
-                className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800 rounded-lg"
-              >
-                <div className="flex items-center space-x-2 min-w-0">
-                  <div className="flex-shrink-0">
-                    {file.type.startsWith('image/') ? (
-                      <img
-                        src={URL.createObjectURL(file)}
-                        alt={file.name}
-                        className="w-10 h-10 object-cover rounded"
-                      />
-                    ) : (
-                      <video
-                        src={URL.createObjectURL(file)}
-                        className="w-10 h-10 object-cover rounded"
-                      />
-                    )}
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-medium truncate">{file.name}</p>
-                    <p className="text-sm text-gray-500">
-                      {(file.size / 1024 / 1024).toFixed(2)} MB
-                    </p>
-                  </div>
-                </div>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => removeFile(index)}
-                  disabled={isUploading}
-                >
-                  <X className="w-4 h-4" />
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
+        {isUploading ? (
+          <>
+            <div className="mr-2 h-4 w-4 animate-spin rounded-full border-2 border-t-transparent"></div>
+            Uploading... {uploadProgress > 0 ? `${Math.round(uploadProgress)}%` : ''}
+          </>
+        ) : (
+          <>
+            <Upload className="w-4 h-4 mr-2" />
+            Upload
+          </>
+        )}
+      </Button>
+      <input
+        type="file"
+        ref={fileInputRef}
+        onChange={handleFileSelect}
+        className="hidden"
+        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+        multiple
+      />
     </div>
   );
-} 
+};
+
+export default ImageKitUploader; 

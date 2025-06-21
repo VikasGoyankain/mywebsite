@@ -122,10 +122,10 @@ const MediaGrid: React.FC<MediaGridProps> = ({
       // Handle tap
       if (touchDuration < 500) {
         if (isSelectionMode) {
-          toggleSelection(item.id);
-        } else {
-          onItemClick(item);
-        }
+        toggleSelection(item.id);
+      } else {
+        onItemClick(item);
+      }
       }
     }
 
@@ -156,11 +156,11 @@ const MediaGrid: React.FC<MediaGridProps> = ({
   const toggleSelection = (id: string) => {
     setSelectedItems(prev => {
       const newSelection = new Set(prev);
-      if (newSelection.has(id)) {
-        newSelection.delete(id);
-      } else {
-        newSelection.add(id);
-      }
+    if (newSelection.has(id)) {
+      newSelection.delete(id);
+    } else {
+      newSelection.add(id);
+    }
       return newSelection;
     });
   };
@@ -198,7 +198,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
               variant: "destructive",
             });
           } else {
-            toast({
+    toast({
               title: "Share failed",
               description: "Failed to share the file. Please try again.",
               variant: "destructive",
@@ -271,41 +271,41 @@ const MediaGrid: React.FC<MediaGridProps> = ({
         }`}
         onClick={(e) => e.stopPropagation()} // Prevent click from reaching parent
       >
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="sm"
               className={`p-1 h-8 w-8 rounded-full bg-black/50 hover:bg-black/70 active:scale-95 touch-manipulation ${
                 isDarkMode ? 'text-white' : 'text-white'
               }`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <MoreVertical className="w-4 h-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent 
-            align="end"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <MoreVertical className="w-4 h-4" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent 
+        align="end" 
             className={`w-48 p-2 backdrop-blur-xl border shadow-xl ${
-              isDarkMode ? 'bg-gray-800/95 border-gray-700' : 'bg-white/95 border-gray-200'
-            }`}
+          isDarkMode ? 'bg-gray-800/95 border-gray-700' : 'bg-white/95 border-gray-200'
+        }`}
             onClick={(e) => e.stopPropagation()} // Prevent click from reaching parent
-          >
-            <DropdownMenuItem 
+      >
+        <DropdownMenuItem 
               onClick={(e) => handleMenuAction(e, 'download', item)}
               className="cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-            >
-              <Download className="w-4 h-4 mr-2" />
-              Download
-            </DropdownMenuItem>
-            <DropdownMenuItem 
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Download
+        </DropdownMenuItem>
+        <DropdownMenuItem 
               onClick={(e) => handleMenuAction(e, 'share', item)}
               className="cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
-            >
-              <Share className="w-4 h-4 mr-2" />
-              Share
-            </DropdownMenuItem>
-            <DropdownMenuItem 
+        >
+          <Share className="w-4 h-4 mr-2" />
+          Share
+        </DropdownMenuItem>
+        <DropdownMenuItem 
               onClick={(e) => handleMenuAction(e, 'favorite', item)}
               className="cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md"
             >
@@ -327,43 +327,43 @@ const MediaGrid: React.FC<MediaGridProps> = ({
             >
               <Info className="w-4 h-4 mr-2" />
               View Details
-            </DropdownMenuItem>
-            <DropdownMenuItem 
+        </DropdownMenuItem>
+        <DropdownMenuItem 
               onClick={(e) => handleMenuAction(e, 'delete', item)}
               className="cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-md text-red-600 dark:text-red-400"
-            >
-              <Trash2 className="w-4 h-4 mr-2" />
-              Delete
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
+        >
+          <Trash2 className="w-4 h-4 mr-2" />
+          Delete
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
       </div>
 
       {/* Media Thumbnail */}
       <div className="relative aspect-square bg-gray-100 dark:bg-gray-800">
-        {item.type === 'image' ? (
-          <img
-            src={item.url}
-            alt={item.name}
-            className="w-full h-full object-cover"
-            loading="lazy"
-          />
-        ) : item.type === 'video' ? (
+                          {item.type === 'image' ? (
+                            <img 
+                              src={item.url} 
+                              alt={item.name}
+                              className="w-full h-full object-cover"
+                              loading="lazy"
+                            />
+                          ) : item.type === 'video' ? (
           <div className="relative w-full h-full">
-            <video
-              src={item.url}
-              className="w-full h-full object-cover"
-              preload="metadata"
-            />
-            <div className="absolute inset-0 flex items-center justify-center">
+                              <video 
+                                src={item.url}
+                                className="w-full h-full object-cover"
+                                preload="metadata"
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
               <Play className="w-12 h-12 text-white opacity-75" />
-            </div>
-          </div>
-        ) : (
+                              </div>
+                            </div>
+                          ) : (
           <div className="w-full h-full flex items-center justify-center">
-            {getFileIcon(item.type)}
-          </div>
-        )}
+                              {getFileIcon(item.type)}
+                            </div>
+                          )}
 
         {/* Selection Overlay */}
         {selectedItems.has(item.id) && (
@@ -373,16 +373,16 @@ const MediaGrid: React.FC<MediaGridProps> = ({
             </div>
           </div>
         )}
-      </div>
+                        </div>
 
       {/* Item Info */}
       <div className={`p-2 ${isDarkMode ? 'bg-gray-800' : 'bg-white'}`}>
         <p className="text-sm font-medium truncate">{item.name}</p>
         <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {item.size && formatFileSize(item.size)}
-        </p>
-      </div>
-    </div>
+                          </p>
+                        </div>
+                      </div>
   );
 
   // Selection mode actions
@@ -413,9 +413,9 @@ const MediaGrid: React.FC<MediaGridProps> = ({
             });
           }}
           className="text-red-500"
-        >
-          <Trash2 className="w-4 h-4 mr-2" />
-          Delete
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Delete
         </Button>
 
         <DropdownMenu>
@@ -471,7 +471,7 @@ const MediaGrid: React.FC<MediaGridProps> = ({
             </div>
           ))}
         </div>
-      </div>
+                                </div>
     );
   }
 
@@ -482,14 +482,14 @@ const MediaGrid: React.FC<MediaGridProps> = ({
           isDarkMode ? 'bg-gray-800' : 'bg-gray-100'
         }`}>
           <FileX className={`w-16 h-16 ${isDarkMode ? 'text-gray-600' : 'text-gray-400'}`} />
-        </div>
+                            </div>
         <h3 className={`text-2xl font-bold mb-3 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
           No items found
         </h3>
         <p className={`text-lg ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
           {selectedFolder ? "This folder is empty" : "Upload some files to get started"}
         </p>
-      </div>
+                            </div>
     );
   }
 
@@ -500,15 +500,14 @@ const MediaGrid: React.FC<MediaGridProps> = ({
           <React.Fragment key={group}>
             {items.map(item => renderGridItem(item))}
           </React.Fragment>
-        ))}
-      </div>
+          ))}
+        </div>
       {renderSelectionActions()}
     </div>
   );
 };
 
 export default MediaGrid;
-
 
 
 

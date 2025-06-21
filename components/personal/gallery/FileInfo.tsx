@@ -4,7 +4,6 @@ import React from 'react';
 import { X, Calendar, HardDrive, Image, Video, MapPin, FileText, Star, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { MediaItem } from '@/app/personal/gallery/page';
-import { formatFileSize } from '@/lib/utils';
 
 interface FileInfoProps {
   item: MediaItem;
@@ -12,28 +11,26 @@ interface FileInfoProps {
   isDarkMode: boolean;
 }
 
-export default function FileInfo({ item, onClose, isDarkMode }: FileInfoProps) {
+const FileInfo: React.FC<FileInfoProps> = ({ item, onClose, isDarkMode }) => {
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return Math.round((bytes / Math.pow(k, i)) * 100) / 100 + ' ' + sizes[i];
+  };
+
   const getFileIcon = () => {
     switch (item.type) {
       case 'image':
-        return <Image className="w-6 h-6" />;
+        return <Image className="w-6 h-6 text-blue-500" />;
       case 'video':
-        return <Video className="w-6 h-6" />;
+        return <Video className="w-6 h-6 text-purple-500" />;
       case 'document':
         return <FileText className="w-6 h-6 text-green-500" />;
       default:
         return <FileText className="w-6 h-6 text-gray-500" />;
     }
-  };
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
   };
 
   return (
@@ -100,7 +97,7 @@ export default function FileInfo({ item, onClose, isDarkMode }: FileInfoProps) {
                   {item.name}
                 </h4>
                 <p className={`text-sm capitalize ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                  {item.type.charAt(0).toUpperCase() + item.type.slice(1)} File
+                  {item.type} file
                 </p>
                 {item.isFavorite && (
                   <div className="flex items-center gap-1 mt-1">
@@ -127,49 +124,54 @@ export default function FileInfo({ item, onClose, isDarkMode }: FileInfoProps) {
                 </div>
               </div>
 
-              {item.size && (
-                <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <HardDrive className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
-                  </div>
-                  <div>
-                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {formatFileSize(item.size)}
-                    </p>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      File size
-                    </p>
-                  </div>
+              <div className="flex items-center gap-4">
+                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <HardDrive className={`w-5 h-5 ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`} />
                 </div>
-              )}
-
-              {item.createdAt && (
-                <div className="flex items-center gap-4">
-                  <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <Calendar className="w-5 h-5 text-green-600" />
-                  </div>
-                  <div>
-                    <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {formatDate(item.createdAt)}
-                    </p>
-                    <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Created
-                    </p>
-                  </div>
+                <div>
+                  <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {formatFileSize(item.size || 0)}
+                  </p>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    File size
+                  </p>
                 </div>
-              )}
+              </div>
 
-              {item.modifiedAt && (
+              <div className="flex items-center gap-4">
+                <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
+                  <Calendar className="w-5 h-5 text-green-600" />
+                </div>
+                <div>
+                  <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
+                    {item.uploadDate.toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </p>
+                  <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
+                    {item.uploadDate.toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit'
+                    })}
+                  </p>
+                </div>
+              </div>
+
+              {item.dimensions && (
                 <div className="flex items-center gap-4">
                   <div className={`p-2 rounded-lg ${isDarkMode ? 'bg-gray-700' : 'bg-gray-100'}`}>
-                    <Calendar className="w-5 h-5 text-green-600" />
+                    <div className="w-5 h-5 bg-orange-100 dark:bg-orange-900 rounded flex items-center justify-center">
+                      <span className="text-xs font-bold text-orange-600 dark:text-orange-400">D</span>
+                    </div>
                   </div>
                   <div>
                     <p className={`font-medium ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>
-                      {formatDate(item.modifiedAt)}
+                      {item.dimensions.width} × {item.dimensions.height}
                     </p>
                     <p className={`text-sm ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>
-                      Modified
+                      Dimensions (pixels)
                     </p>
                   </div>
                 </div>
@@ -196,4 +198,6 @@ export default function FileInfo({ item, onClose, isDarkMode }: FileInfoProps) {
       </div>
     </div>
   );
-}
+};
+
+export default FileInfo;
