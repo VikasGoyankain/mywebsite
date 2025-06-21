@@ -4,18 +4,16 @@ import { useState } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from 'sonner';
 import { AlertCircle, Loader2 } from 'lucide-react';
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export function FamilyRegistrationForm() {
+export function PasswordChangeForm() {
   const [formData, setFormData] = useState({
-    username: '',
-    password: '',
-    confirmPassword: '',
-    role: 'member'
+    currentPassword: '',
+    newPassword: '',
+    confirmPassword: ''
   });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
@@ -25,53 +23,56 @@ export function FamilyRegistrationForm() {
     setError('');
     
     // Validate input
-    if (!formData.username || !formData.password || !formData.confirmPassword) {
+    if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
       setError('All fields are required');
       return;
     }
     
-    if (formData.password !== formData.confirmPassword) {
-      setError('Passwords do not match');
+    if (formData.newPassword !== formData.confirmPassword) {
+      setError('New passwords do not match');
       return;
     }
     
-    if (formData.password.length < 8) {
-      setError('Password must be at least 8 characters long');
+    if (formData.newPassword.length < 8) {
+      setError('New password must be at least 8 characters long');
+      return;
+    }
+    
+    if (formData.currentPassword === formData.newPassword) {
+      setError('New password must be different from current password');
       return;
     }
     
     setIsLoading(true);
     
     try {
-      const response = await fetch('/api/family/register', {
+      const response = await fetch('/api/family/password', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          username: formData.username,
-          password: formData.password,
-          role: formData.role
+          currentPassword: formData.currentPassword,
+          newPassword: formData.newPassword
         }),
       });
       
       const data = await response.json();
       
       if (response.ok) {
-        toast.success('Family member registered successfully');
+        toast.success('Password updated successfully');
         // Reset form
         setFormData({
-          username: '',
-          password: '',
-          confirmPassword: '',
-          role: 'member'
+          currentPassword: '',
+          newPassword: '',
+          confirmPassword: ''
         });
       } else {
-        setError(data.message || 'Registration failed');
-        toast.error(data.message || 'Registration failed');
+        setError(data.message || 'Failed to update password');
+        toast.error(data.message || 'Failed to update password');
       }
     } catch (error) {
-      setError('An error occurred during registration');
+      setError('An error occurred while updating password');
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -82,9 +83,9 @@ export function FamilyRegistrationForm() {
     <div className="container mx-auto py-8 px-4 max-w-2xl">
       <Card>
         <CardHeader>
-          <CardTitle>Register Family Member</CardTitle>
+          <CardTitle>Change Password</CardTitle>
           <CardDescription>
-            Create a new account for a family member
+            Update your family account password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -97,63 +98,48 @@ export function FamilyRegistrationForm() {
             )}
             
             <div className="space-y-2">
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="currentPassword">Current Password</Label>
               <Input
-                id="username"
-                value={formData.username}
-                onChange={(e) => setFormData({ ...formData, username: e.target.value })}
-                placeholder="Enter username"
-                required
-              />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="password">Password</Label>
-              <Input
-                id="password"
+                id="currentPassword"
                 type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="Enter password"
+                value={formData.currentPassword}
+                onChange={(e) => setFormData({ ...formData, currentPassword: e.target.value })}
+                placeholder="Enter current password"
                 required
               />
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword">Confirm Password</Label>
+              <Label htmlFor="newPassword">New Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={formData.newPassword}
+                onChange={(e) => setFormData({ ...formData, newPassword: e.target.value })}
+                placeholder="Enter new password"
+                required
+              />
+            </div>
+            
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm New Password</Label>
               <Input
                 id="confirmPassword"
                 type="password"
                 value={formData.confirmPassword}
                 onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                placeholder="Confirm password"
+                placeholder="Confirm new password"
                 required
               />
-            </div>
-            
-            <div className="space-y-2">
-              <Label htmlFor="role">Role</Label>
-              <Select
-                value={formData.role}
-                onValueChange={(value) => setFormData({ ...formData, role: value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Select role" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
             </div>
             
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Registering...
+                  Updating Password...
                 </>
-              ) : 'Register Family Member'}
+              ) : 'Update Password'}
             </Button>
           </form>
         </CardContent>
