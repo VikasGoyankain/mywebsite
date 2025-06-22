@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -118,6 +118,93 @@ export default function ModernProfile() {
 
   const { profileData, experience, education, skills, posts, navigationButtons } = useProfileStore()
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+
+  // --- SEO & Favicon logic ---
+  useEffect(() => {
+    if (!profileData?.name) return;
+    // Title & Description
+    document.title = `${profileData.name} - ${profileData.title || "Profile"}`;
+    const description = profileData.bio || "Passionate advocate for constitutional rights and social justice.";
+    const image = profileData.profileImage || "/placeholder.svg";
+    // Meta Description
+    let metaDesc = document.querySelector('meta[name="description"]');
+    if (!metaDesc) {
+      metaDesc = document.createElement('meta');
+      metaDesc.setAttribute('name', 'description');
+      document.head.appendChild(metaDesc);
+    }
+    metaDesc.setAttribute('content', description);
+    // Open Graph
+    const setOG = (property: string, content: string) => {
+      let el = document.querySelector(`meta[property='${property}']`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute('property', property);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+    setOG('og:title', document.title);
+    setOG('og:description', description);
+    setOG('og:image', image);
+    setOG('og:type', 'profile');
+    setOG('og:url', window.location.href);
+    // Twitter
+    const setTwitter = (name: string, content: string) => {
+      let el = document.querySelector(`meta[name='${name}']`);
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute('name', name);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
+    };
+    setTwitter('twitter:card', 'summary_large_image');
+    setTwitter('twitter:title', document.title);
+    setTwitter('twitter:description', description);
+    setTwitter('twitter:image', image);
+    // Canonical
+    let canonical = document.querySelector('link[rel="canonical"]');
+    if (!canonical) {
+      canonical = document.createElement('link');
+      canonical.setAttribute('rel', 'canonical');
+      document.head.appendChild(canonical);
+    }
+    canonical.setAttribute('href', window.location.href);
+    // Favicon
+    let favicon = document.querySelector('link[rel="icon"]');
+    if (!favicon) {
+      favicon = document.createElement('link');
+      favicon.setAttribute('rel', 'icon');
+      document.head.appendChild(favicon);
+    }
+    favicon.setAttribute('href', image);
+    // JSON-LD Structured Data
+    const scriptId = 'profile-jsonld';
+    let jsonld = document.getElementById(scriptId) as HTMLScriptElement | null;
+    if (jsonld) jsonld.remove();
+    jsonld = document.createElement('script');
+    (jsonld as HTMLScriptElement).type = 'application/ld+json';
+    jsonld.id = scriptId;
+    jsonld.innerHTML = JSON.stringify({
+      "@context": "https://schema.org",
+      "@type": "Person",
+      name: profileData.name,
+      image,
+      jobTitle: profileData.title,
+      description,
+      url: window.location.href,
+      sameAs: profileData.socialLinks?.map((s: any) => s.href),
+      address: {
+        "@type": "PostalAddress",
+        addressLocality: profileData.contact?.location || '',
+        addressCountry: "India"
+      },
+      email: profileData.contact?.email,
+      alumniOf: education?.map((e: any) => ({ "@type": "EducationalOrganization", name: e.institution }))
+    });
+    document.head.appendChild(jsonld);
+  }, [profileData, education]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
@@ -346,7 +433,7 @@ export default function ModernProfile() {
                   <Briefcase className="w-6 h-6 text-blue-600" />
                   Professional Experience
                 </h2>
-                <div className="space-y-6">
+                <div className="space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
                   {/* Sort experience by order field */}
                   {[...experience].sort((a, b) => (a.order || 0) - (b.order || 0)).map((exp) => (
                     <div key={exp.id} className="relative">
@@ -398,7 +485,7 @@ export default function ModernProfile() {
                   <GraduationCap className="w-6 h-6 text-purple-600" />
                   Education
                 </h2>
-                <div className="space-y-6">
+                <div className="space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
                   {education.map((edu) => (
                     <div key={edu.id} className="relative">
                       <div className="border-l-4 border-purple-500 pl-6 pb-6">
