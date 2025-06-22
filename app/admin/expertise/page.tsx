@@ -699,6 +699,15 @@ export default function AdminSkillsPage() {
     }
   }
 
+  useEffect(() => {
+    if (
+      (skills.length > 0 || education.length > 0 || experience.length > 0 || certificates.length > 0)
+      && error
+    ) {
+      useProfileStore.setState({ error: null });
+    }
+  }, [skills, education, experience, certificates, error]);
+
   return (
     <div className="min-h-screen bg-background">
       {/* Top Navigation Bar */}

@@ -7,6 +7,29 @@ import { toast } from 'sonner';
 import { ArrowLeft } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
+interface UrlEntry {
+  shortCode: string;
+  originalUrl: string;
+  clicks: number;
+  createdAt: string;
+  lastAccessed: string;
+  expiresAt?: string;
+  isRevoked: boolean;
+  title?: string;        // Optional: extracted from target page
+  description?: string;  // Optional: extracted from target page
+}
+
+// Redis key patterns
+const REDIS_KEYS = {
+  URL_DATA: 'url:{shortcode}',           // Hash
+  ORIGINAL_INDEX: 'original:{url_hash}', // String
+  ALL_CODES: 'urls:all_codes',           // Set
+  BY_CLICKS: 'urls:by_clicks',           // Sorted Set
+  BY_DATE: 'urls:by_date',               // Sorted Set
+  REVOKED: 'urls:revoked',               // Set
+  EXPIRED: 'urls:expired'                // Set
+} as const;
+
 export default function UrlShortnerPage() {
   const [isMigrating, setIsMigrating] = useState(false);
   const router = useRouter();
@@ -16,7 +39,7 @@ export default function UrlShortnerPage() {
       setIsMigrating(true);
       toast.info("Starting URL optimization...");
       
-      const response = await fetch('/api/url-shortner?action=migrate-indexes', {
+      const response = await fetch('/api/url-shortner?action=migrate-to-single-key', {
         method: 'PATCH',
       });
       

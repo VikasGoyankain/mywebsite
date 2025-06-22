@@ -191,3 +191,32 @@ input, textarea {
 .legal-gradient {
   background: linear-gradient(135deg, #1e3a8a 0%, #312e81 100%);
 }
+
+/* Styles for custom scrollbar elements */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  @apply bg-slate-100;
+  border-radius: 10px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  @apply bg-slate-400;
+  border-radius: 10px;
+  /* Add a subtle border to make the thumb appear slightly inset */
+  border: 2px solid #f1f5f9; /* Replaced theme('colors.slate.100') with hex value */
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  @apply bg-slate-500;
+}
+
+/* For Firefox */
+.custom-scrollbar {
+  scrollbar-width: thin;
+  scrollbar-color: #94a3b8 #f1f5f9; /* Replaced theme() with hex values */
+  scrollbar-gutter: stable;
+}

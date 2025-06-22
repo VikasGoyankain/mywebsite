@@ -770,28 +770,17 @@ export const useProfileStore = create<ProfileStore>()(
             return
           }
 
-          if (!result.data) {
-            const errorMessage = 'No data received from server'
-            console.error(errorMessage)
-            set({ 
-              syncStatus: 'error',
-              isLoading: false,
-              error: errorMessage
-            })
-            return
-          }
-
           set({
-            profileData: result.data.profileData || defaultProfileData,
-            experience: result.data.experience || defaultExperience,
-            education: result.data.education || defaultEducation,
-            skills: result.data.skills || defaultSkills,
-            certificates: result.data.certificates || defaultCertificates,
-            posts: result.data.posts || defaultPosts,
-            navigationPages: result.data.navigationPages || defaultNavigationPages,
-            navigationButtons: result.data.navigationButtons || [],
-            adminPassword: result.data.adminPassword ?? null,
-            lastUpdated: result.data.lastUpdated || new Date().toISOString(),
+          profileData: result.data?.profileData || defaultProfileData,
+          experience: result.data?.experience || defaultExperience,
+          education: result.data?.education || defaultEducation,
+          skills: result.data?.skills || defaultSkills,
+          certificates: result.data?.certificates || defaultCertificates,
+          posts: result.data?.posts || defaultPosts,
+          navigationPages: result.data?.navigationPages || defaultNavigationPages,
+          navigationButtons: result.data?.navigationButtons || [],
+          adminPassword: result.data?.adminPassword ?? null,
+          lastUpdated: result.data?.lastUpdated || new Date().toISOString(),
             syncStatus: 'success',
             isLoading: false,
             error: null

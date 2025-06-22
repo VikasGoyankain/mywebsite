@@ -19,7 +19,9 @@ import {
   MessageSquare,
   PlusCircle,
   UserPlus,
-  Home
+  Home,
+  Clock,
+  Wrench
 } from "lucide-react"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import Link from "next/link"
@@ -79,6 +81,43 @@ function DashboardCard({ title, description, icon, linkHref, linkText }: Dashboa
   )
 }
 
+// Add usage tracking interface
+interface AdminSection {
+  id: string
+  title: string
+  description: string
+  icon: React.ReactNode
+  linkHref: string
+  linkText: string
+  category: 'frequent' | 'content' | 'management' | 'tools'
+  priority: number
+}
+
+// Add the getIconComponent function
+const getIconComponent = (iconName: string) => {
+  const iconMap: Record<string, React.ComponentType<any>> = {
+    'User': User,
+    'Briefcase': Briefcase,
+    'GraduationCap': GraduationCap,
+    'Star': Star,
+    'Users': Users,
+    'Award': Award,
+    'Settings': Settings,
+    'FileText': FileText,
+    'Link': LinkIcon,
+    'Mail': Mail,
+    'MessageSquare': MessageSquare,
+    'PlusCircle': PlusCircle,
+    'UserPlus': UserPlus,
+    'Home': Home,
+    'Clock': Clock,
+    'Wrench': Wrench,
+    'LogOut': LogOut
+  }
+  
+  return iconMap[iconName] || Settings // Default to Settings if icon not found
+}
+
 function AdminDashboard() {
   try {
     useDatabaseInit() // Initialize database connection
@@ -89,6 +128,13 @@ function AdminDashboard() {
   const [username, setUsername] = useState("Admin")
   const [lastLogin, setLastLogin] = useState<string | null>(null)
 
+  // Usage tracking state
+  const [sectionUsage, setSectionUsage] = useState<Record<string, number>>({})
+  const [recentlyUsed, setRecentlyUsed] = useState<string[]>([])
+
+  const [sections, setSections] = useState<AdminSection[]>([])
+  const [loading, setLoading] = useState(true)
+
   useEffect(() => {
     // Retrieve last login time from localStorage if available
     const storedLastLogin = localStorage.getItem('lastLoginTime')
@@ -98,8 +144,97 @@ function AdminDashboard() {
     
     // Store current login time
     localStorage.setItem('lastLoginTime', new Date().toISOString())
+
+    // Load usage data from localStorage
+    const savedUsage = localStorage.getItem('adminSectionUsage')
+    const savedRecent = localStorage.getItem('adminRecentlyUsed')
+    
+    if (savedUsage) {
+      setSectionUsage(JSON.parse(savedUsage))
+    }
+    if (savedRecent) {
+      setRecentlyUsed(JSON.parse(savedRecent))
+    }
+
+    loadSections()
   }, [])
   
+  const loadSections = async () => {
+    try {
+      const response = await fetch('/api/admin/sections')
+      if (response.ok) {
+        const data = await response.json()
+        setSections(data)
+      }
+    } catch (error) {
+      console.error('Error loading sections:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const trackSectionUsage = async (sectionId: string) => {
+    // Update local state
+    const newUsage = { ...sectionUsage }
+    newUsage[sectionId] = (newUsage[sectionId] || 0) + 1
+    setSectionUsage(newUsage)
+    localStorage.setItem('adminSectionUsage', JSON.stringify(newUsage))
+    
+    // Update recently used
+    const newRecent = [sectionId, ...recentlyUsed.filter(id => id !== sectionId)].slice(0, 5)
+    setRecentlyUsed(newRecent)
+    localStorage.setItem('adminRecentlyUsed', JSON.stringify(newRecent))
+
+    // Record usage in Redis
+    try {
+      await fetch(`/api/admin/sections/${sectionId}/usage`, {
+        method: 'POST'
+      })
+    } catch (error) {
+      console.error('Error recording usage:', error)
+    }
+  }
+
+  // Convert database sections to AdminSection format
+  const allSections: AdminSection[] = sections.map(section => ({
+    id: section.id,
+    title: section.title,
+    description: section.description,
+    icon: React.createElement(getIconComponent(section.icon), { className: "h-5 w-5" }),
+    linkHref: section.linkHref,
+    linkText: section.linkText,
+    category: section.category,
+    priority: section.priority
+  }))
+
+  // Smart ordering function
+  const getOrderedSections = () => {
+    return allSections.sort((a, b) => {
+      // First priority: Recently used (last 5)
+      const aRecent = recentlyUsed.indexOf(a.id)
+      const bRecent = recentlyUsed.indexOf(b.id)
+      
+      if (aRecent !== -1 && bRecent !== -1) {
+        return aRecent - bRecent // Most recent first
+      }
+      if (aRecent !== -1) return -1
+      if (bRecent !== -1) return 1
+      
+      // Second priority: Usage frequency
+      const aUsage = sectionUsage[a.id] || 0
+      const bUsage = sectionUsage[b.id] || 0
+      
+      if (aUsage !== bUsage) {
+        return bUsage - aUsage // Most used first
+      }
+      
+      // Third priority: Category and original priority
+      return a.priority - b.priority
+    })
+  }
+
+  const orderedSections = getOrderedSections()
+
   return (
     <div className="container mx-auto py-8 px-4 max-w-7xl">
       <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -121,63 +256,96 @@ function AdminDashboard() {
         </div>
       </header>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-        <DashboardCard
-          title="Settings"
-          description="Manage your website settings"
-          icon={<Settings className="h-5 w-5" />}
-          linkHref="/admin/settings"
-          linkText="Manage Settings"
-        />
-        <DashboardCard
-          title="Posts"
-          description="Manage your professional insights and articles"
-          icon={<FileText className="h-5 w-5" />}
-          linkHref="/admin/posts"
-          linkText="Manage Posts"
-        />
-        <DashboardCard
-          title="Family"
-          description="Manage family members and their access"
-          icon={<Users className="h-5 w-5" />}
-          linkHref="/admin/family"
-          linkText="Manage Family"
-        />
-        <DashboardCard
-          title="URL Shortener"
-          description="Create and manage short URLs"
-          icon={<LinkIcon className="h-5 w-5" />}
-          linkHref="/admin/url-shortner"
-          linkText="Manage URLs"
-        />
-        <DashboardCard
-          title="Profile"
-          description="Update your personal information and contact details"
-          icon={<User className="h-5 w-5" />}
-          linkHref="/admin/profile"
-          linkText="Edit Profile"
-        />
-        <DashboardCard
-          title="Expertise"
-          description="Manage your skills, certifications and professional competencies"
-          icon={<Star className="h-5 w-5" />}
-          linkHref="/admin/expertise"
-          linkText="Manage Expertise"
-        />
-        <DashboardCard
-          title="My Works"
-          description="Manage your research publications and legal case studies"
-          icon={<Award className="h-5 w-5" />}
-          linkHref="/admin/works"
-          linkText="Manage Works"
-        />
-        <DashboardCard
-          title="Subscribers"
-          description="View and manage newsletter subscribers"
-          icon={<Users className="h-5 w-5" />}
-          linkHref="/admin/subscribers"
-          linkText="Manage Subscribers"
-        />
+      {/* Recently Used Section */}
+      {recentlyUsed.length > 0 && (
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+            <Clock className="h-5 w-5" />
+            Recently Used
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+            {recentlyUsed.slice(0, 3).map(sectionId => {
+              const section = allSections.find(s => s.id === sectionId)
+              if (!section) return null
+              
+              return (
+                <Card key={section.id} className="overflow-hidden transition-all hover:shadow-md border-primary/20">
+                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                    <CardTitle className="text-lg font-medium">{section.title}</CardTitle>
+                    <div className="rounded-full bg-primary/10 p-2 text-primary">
+                      {section.icon}
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
+                    <Button 
+                      asChild 
+                      variant="default" 
+                      className="w-full"
+                      onClick={() => trackSectionUsage(section.id)}
+                    >
+                      <Link href={section.linkHref}>
+                        {section.linkText}
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* All Sections with Categories */}
+      <div className="space-y-8">
+        {['frequent', 'content', 'management', 'tools'].map(category => {
+          const categorySections = orderedSections.filter(s => s.category === category)
+          if (categorySections.length === 0) return null
+          
+          const categoryLabels = {
+            frequent: 'Frequently Used',
+            content: 'Content Management',
+            management: 'User & Settings',
+            tools: 'Tools & Utilities'
+          }
+          
+          return (
+            <div key={category}>
+              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
+                {category === 'frequent' && <Star className="h-5 w-5" />}
+                {category === 'content' && <FileText className="h-5 w-5" />}
+                {category === 'management' && <Settings className="h-5 w-5" />}
+                {category === 'tools' && <Wrench className="h-5 w-5" />}
+                {categoryLabels[category]}
+              </h2>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                {categorySections.map(section => (
+                  <Card key={section.id} className="overflow-hidden transition-all hover:shadow-md">
+                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                      <CardTitle className="text-lg font-medium">{section.title}</CardTitle>
+                      <div className="rounded-full bg-primary/10 p-2 text-primary">
+                        {section.icon}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
+                      <Button 
+                        asChild 
+                        variant="default" 
+                        className="w-full"
+                        onClick={() => trackSectionUsage(section.id)}
+                      >
+                        <Link href={section.linkHref}>
+                          {section.linkText}
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          )
+        })}
       </div>
     </div>
   )

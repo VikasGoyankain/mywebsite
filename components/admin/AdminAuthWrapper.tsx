@@ -9,6 +9,7 @@ interface AdminAuthWrapperProps {
 }
 
 export function AdminAuthWrapper({ children }: AdminAuthWrapperProps) {
+  
   const [isAuthenticated, setIsAuthenticated] = useState<boolean | null>(null)
   const [showLoginModal, setShowLoginModal] = useState(false)
   const router = useRouter()

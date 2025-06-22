@@ -22,6 +22,7 @@ export interface DatabaseProfile {
   experience: any[]
   education: any[]
   skills: any[]
+  certificates: any[]
   posts: any[]
   navigationPages: any[]
   navigationButtons?: any[]

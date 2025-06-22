@@ -63,6 +63,7 @@ import type { NavigationButton } from "@/lib/profile-store"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
+import { AdminSectionManager } from "@/components/admin/AdminSectionManager"
 
 // Define icon options with proper typing
 const iconOptions = [
@@ -318,31 +319,22 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 max-w-7xl">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-3 bg-white/50 backdrop-blur-sm p-4 rounded-lg shadow-sm sticky top-0 z-50">
-        <div>
-          <Button variant="outline" size="sm" asChild className="mb-2 hover:bg-gray-50">
-            <Link href="/admin" className="flex items-center">
-              <ArrowLeft className="h-4 w-4 mr-1" />
-              Back to Dashboard
-            </Link>
-          </Button>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">Settings</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage your account settings and website preferences
-          </p>
-        </div>
-      </div>
+    <div className="container mx-auto py-8 px-4 max-w-7xl">
+      <header className="mb-8">
+        <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+        <p className="text-muted-foreground mt-1">
+          Manage your website settings and configurations
+        </p>
+      </header>
 
-      {/* Main Content */}
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="password">Change Password</TabsTrigger>
-          <TabsTrigger value="navigation">Navigation Buttons</TabsTrigger>
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="password">Password</TabsTrigger>
+          <TabsTrigger value="navigation">Navigation</TabsTrigger>
+          <TabsTrigger value="admin-sections">Admin Sections</TabsTrigger>
+          <TabsTrigger value="backup">Backup</TabsTrigger>
         </TabsList>
 
-        {/* Password Change Tab */}
         <TabsContent value="password">
           <Card>
             <CardHeader>
@@ -410,7 +402,6 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        {/* Navigation Buttons Tab */}
         <TabsContent value="navigation">
           <Card>
             <CardHeader>
@@ -420,7 +411,6 @@ export default function SettingsPage() {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {/* Add/Edit Button Form */}
               <form onSubmit={handleAddButton} className="space-y-4 mb-6">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
@@ -551,7 +541,6 @@ export default function SettingsPage() {
                 </div>
               </form>
 
-              {/* List of Navigation Buttons */}
               <div className="space-y-4">
                 {navigationButtons.map((button) => {
                   const Icon = getIconComponent(button.icon)
@@ -600,6 +589,14 @@ export default function SettingsPage() {
               </div>
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="admin-sections" className="space-y-6">
+          <AdminSectionManager />
+        </TabsContent>
+
+        <TabsContent value="backup">
+          {/* Backup tab content */}
         </TabsContent>
       </Tabs>
     </div>
