@@ -1,4 +1,5 @@
 import ImageKit from 'imagekit';
+import axios from 'axios';
 
 // ImageKit configuration
 export const imagekit = new ImageKit({
@@ -52,4 +53,47 @@ export async function uploadUrlToImageKit(
     console.error("ImageKit URL upload error:", error);
     throw new Error("Failed to upload URL to ImageKit");
   }
-} 
+}
+
+// Function to delete a file from ImageKit by fileId or file URL
+export async function deleteFromImageKit(fileIdOrUrl: string): Promise<void> {
+  try {
+    let fileId = fileIdOrUrl;
+    // If a URL is provided, extract the file name and search by name
+    if (fileIdOrUrl.startsWith('http')) {
+      const urlObj = new URL(fileIdOrUrl);
+      const pathParts = urlObj.pathname.split('/');
+      const fileName = pathParts[pathParts.length - 1];
+      // List files by name (ImageKit supports this)
+      const files = await imagekit.listFiles({ limit: 10, searchQuery: `name = \"${fileName}\"` });
+      if (files && files.length > 0) {
+        // Try to match by file name and url ending
+        const fileObj = files.find(f => 'fileId' in f && 'url' in f && f.url.endsWith(fileName));
+        if (fileObj && 'fileId' in fileObj) {
+          fileId = fileObj.fileId;
+        } else {
+          // Not found, nothing to delete
+          return;
+        }
+      } else {
+        // Not found, nothing to delete
+        return;
+      }
+    }
+    // Use direct REST API call for deletion
+    const apiKey = process.env.IMAGEKIT_PRIVATE_KEY || '';
+    const auth = Buffer.from(apiKey + ':').toString('base64');
+    await axios.delete(`https://api.imagekit.io/v1/files/${fileId}`, {
+      headers: {
+        'Accept': 'application/json',
+        'Authorization': `Basic ${auth}`
+      }
+    });
+  } catch (error) {
+    if (error && typeof error === 'object') {
+      console.error('ImageKit delete error:', JSON.stringify(error, null, 2));
+    } else {
+      console.error('ImageKit delete error:', error);
+    }
+  }
+}

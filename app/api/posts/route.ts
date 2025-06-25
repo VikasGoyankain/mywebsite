@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
-import { 
-  getAllPosts, 
-  getPostById,
-  createPost,
-  updatePost,
-  deletePost
+import {
+  getAllPostsRedisOptimized,
+  createPostRedisOptimized,
+  updatePostRedisOptimized,
+  deletePostRedisOptimized,
+  getAllPosts, getPostById
 } from '@/lib/services/posts-service'
 import { Post } from '@/lib/types/Post'
 
@@ -12,54 +12,44 @@ import { Post } from '@/lib/types/Post'
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
-    
     const id = searchParams.get('id')
-    
-    // Get a specific post by ID
+    // Get a specific post by ID (legacy fallback)
     if (id) {
       const post = await getPostById(id)
-      
       if (!post) {
         return NextResponse.json({ error: 'Post not found' }, { status: 404 })
       }
-      
       return NextResponse.json(post)
     }
-    
-    // Get all posts
-    const posts = await getAllPosts()
+    // Get all posts (Redis-optimized)
+    const posts = await getAllPostsRedisOptimized()
     return NextResponse.json(posts)
   } catch (error) {
     console.error('Error handling posts request:', error)
     return NextResponse.json(
-      { error: 'Failed to fetch posts' }, 
+      { error: 'Failed to fetch posts' },
       { status: 500 }
     )
   }
 }
 
-// POST - Create a new post
+// POST - Create a new post (Redis-optimized)
 export async function POST(request: Request) {
   try {
     const postData = await request.json()
-    
-    // Validate required fields
     if (!postData.content) {
       return NextResponse.json(
         { error: 'Missing required fields' },
         { status: 400 }
       )
     }
-    
-    // Set default values if not provided
     const newPost: Omit<Post, 'id'> = {
       ...postData,
       timestamp: postData.timestamp ? new Date(postData.timestamp) : new Date(),
       tags: postData.tags || [],
       media: postData.media || []
     }
-    
-    const createdPost = await createPost(newPost)
+    const createdPost = await createPostRedisOptimized(newPost)
     return NextResponse.json(createdPost, { status: 201 })
   } catch (error) {
     console.error('Error creating post:', error)
@@ -70,35 +60,28 @@ export async function POST(request: Request) {
   }
 }
 
-// PUT - Update an existing post
+// PUT - Update an existing post (Redis-optimized)
 export async function PUT(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    
     if (!id) {
       return NextResponse.json(
         { error: 'Post ID is required' },
         { status: 400 }
       )
     }
-    
     const postData = await request.json()
-    
-    // Convert timestamp string to Date if provided
     if (postData.timestamp && typeof postData.timestamp === 'string') {
       postData.timestamp = new Date(postData.timestamp)
     }
-    
-    const updatedPost = await updatePost(id, postData)
-    
+    const updatedPost = await updatePostRedisOptimized(id, postData)
     if (!updatedPost) {
       return NextResponse.json(
         { error: 'Post not found' },
         { status: 404 }
       )
     }
-    
     return NextResponse.json(updatedPost)
   } catch (error) {
     console.error('Error updating post:', error)
@@ -109,28 +92,24 @@ export async function PUT(request: Request) {
   }
 }
 
-// DELETE - Delete a post
+// DELETE - Delete a post (Redis-optimized)
 export async function DELETE(request: Request) {
   try {
     const { searchParams } = new URL(request.url)
     const id = searchParams.get('id')
-    
     if (!id) {
       return NextResponse.json(
         { error: 'Post ID is required' },
         { status: 400 }
       )
     }
-    
-    const success = await deletePost(id)
-    
+    const success = await deletePostRedisOptimized(id)
     if (!success) {
       return NextResponse.json(
         { error: 'Post not found' },
         { status: 404 }
       )
     }
-    
     return NextResponse.json({ success: true })
   } catch (error) {
     console.error('Error deleting post:', error)

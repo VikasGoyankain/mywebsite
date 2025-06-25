@@ -38,6 +38,7 @@ import { PostCard } from '@/components/posts/PostCard';
 import { Footer } from '@/components/Footer';
 import Link from 'next/link';
 import { useDatabaseInit } from '@/hooks/use-database-init';
+import { getReadingTime } from '@/lib/utils';
 
 export default function Posts() {
   useDatabaseInit(); // Initialize database connection
@@ -72,24 +73,23 @@ export default function Posts() {
     fetchPosts();
   }, []);
 
-  const filteredAndSortedPosts = useMemo(() => {
-    let filtered = posts.filter(post => {
-      if (!searchQuery.trim()) return true;
-      
-      const query = searchQuery.toLowerCase().trim();
-      return (
-        (post.title?.toLowerCase().includes(query) || false) ||
-        post.content.toLowerCase().includes(query) ||
-        post.tags.some(tag => tag.toLowerCase().includes(query))
-      );
-    });
+  const filteredPosts = posts.filter(post => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase().trim();
+    return (
+      (post.title?.toLowerCase().includes(query) || false) ||
+      post.content.toLowerCase().includes(query) ||
+      post.tags.some(tag => tag.toLowerCase().includes(query))
+    );
+  });
 
-    return filtered.sort((a, b) => {
-      if (sortBy === 'newest') return new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime();
-      if (sortBy === 'oldest') return new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime();
-      return 0;
-    });
-  }, [posts, sortBy, searchQuery]);
+  const sortedPosts = sortBy === 'oldest' ? [...filteredPosts].reverse() : filteredPosts;
+
+  // Add reading time to each post
+  const postsWithReadTime = sortedPosts.map(post => ({
+    ...post,
+    readTime: getReadingTime(post.content)
+  }));
   
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 flex flex-col">
@@ -230,39 +230,56 @@ export default function Posts() {
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.4, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-4 items-center justify-between mb-8"
+            className="flex flex-row items-center gap-2 w-full mb-8"
           >
             {/* Search */}
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <div className="flex-1 min-w-0 relative">
               <input
                 type="text"
                 placeholder="Search posts..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 border border-input rounded-lg bg-background/50 backdrop-blur-sm focus:ring-2 focus:ring-ring focus:border-transparent transition-all"
+                style={{ minWidth: 0 }}
               />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
               {searchQuery && (
                 <button 
                   onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  type="button"
                 >
                   <X className="h-4 w-4" />
                 </button>
               )}
             </div>
-
-            <div className="flex items-center gap-3">
-              {/* Sort */}
-              <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-32 bg-background/50 backdrop-blur-sm">
-                  <SelectValue placeholder="Sort" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="newest">Newest</SelectItem>
-                  <SelectItem value="oldest">Oldest</SelectItem>
-                </SelectContent>
-              </Select>
+            {/* Sort Dropdown */}
+            <div className="relative flex-shrink-0">
+              {/* Mobile: Icon only, expands on click */}
+              <div className="sm:hidden">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-10 h-10 bg-background/50 backdrop-blur-sm flex items-center justify-center p-0">
+                    <span className="sr-only">Sort</span>
+                    {sortBy === 'newest' ? <Grid className="w-5 h-5 text-gray-600" /> : <List className="w-5 h-5 text-gray-600" />}
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="oldest">Oldest</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {/* Desktop: Dropdown always visible */}
+              <div className="hidden sm:block">
+                <Select value={sortBy} onValueChange={setSortBy}>
+                  <SelectTrigger className="w-32 bg-background/50 backdrop-blur-sm">
+                    <SelectValue placeholder="Sort" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="newest">Newest</SelectItem>
+                    <SelectItem value="oldest">Oldest</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </motion.div>
 
@@ -292,13 +309,13 @@ export default function Posts() {
           {/* Posts Grid/List */}
           {!loading && !error && (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-              {filteredAndSortedPosts.map((post) => (
+              {postsWithReadTime.map((post) => (
                   <PostCard key={post.id} post={post} />
               ))}
             </div>
           )}
 
-          {!loading && !error && filteredAndSortedPosts.length === 0 && (
+          {!loading && !error && sortedPosts.length === 0 && (
             <div className="text-center py-16">
               <div className="text-6xl mb-4">🔍</div>
               <h3 className="text-xl font-semibold mb-2">No posts found</h3>

@@ -83,3 +83,11 @@ export const shareMediaFile = async (url: string, filename: string, type: string
     throw error;
   }
 };
+
+// Utility to estimate reading time (200 words per minute)
+export function getReadingTime(text: string): string {
+  if (!text) return '1 min read';
+  const words = text.trim().split(/\s+/).length;
+  const minutes = Math.max(1, Math.round(words / 200));
+  return `${minutes} min read`;
+}

@@ -26,13 +26,19 @@ import {
   Save,
   CalendarIcon,
   LayoutGrid,
-  ImagePlus
+  ImagePlus,
+  Search,
+  SortAsc,
+  SortDesc
 } from 'lucide-react'
 import Link from 'next/link'
 import { v4 as uuidv4 } from 'uuid'
 import { useProfileStore } from '@/lib/profile-store'
 import { useToast } from '@/hooks/use-toast'
 import { uploadToImageKit, uploadUrlToImageKit } from '@/lib/imagekit'
+import { cleanupUnusedMedia } from '@/lib/services/posts-service'
+import axios from 'axios';
+import { useMediaQuery } from 'react-responsive';
 
 // Create a function to convert file to base64
 const fileToBase64 = (file: File): Promise<string> => {
@@ -66,6 +72,16 @@ export default function AdminPosts() {
   const [dropzoneActive, setDropzoneActive] = useState(false)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
+  // Title validation state
+  const [titleError, setTitleError] = useState<string | null>(null);
+
+  // Title validation regex: allow alphanumeric, hyphens, question marks, spaces
+  const titleRegex = /^[a-zA-Z0-9\-\? ]+$/;
+
+  // Helper to format title to slug (spaces to hyphens, lowercase)
+  const formatTitleSlug = (title: string) =>
+    title.trim().replace(/\s+/g, '-').replace(/[^a-zA-Z0-9\-\?]/g, '').toLowerCase();
+
   // Fetch posts on component mount
   useEffect(() => {
     fetchPosts()
@@ -89,6 +105,16 @@ export default function AdminPosts() {
   }
 
   const handleChange = (field: string, value: any) => {
+    if (field === 'title') {
+      // Validate title on change
+      if (!value.trim()) {
+        setTitleError('Title is required');
+      } else if (!titleRegex.test(value)) {
+        setTitleError('Title can only contain letters, numbers, hyphens, question marks, and spaces');
+      } else {
+        setTitleError(null);
+      }
+    }
     setFormData({ ...formData, [field]: value })
   }
 
@@ -188,7 +214,14 @@ export default function AdminPosts() {
     setDropzoneActive(false);
   };
 
+  // Track removed media for cleanup
+  const [removedMedia, setRemovedMedia] = useState<Media[]>([])
+
   const removeMedia = (mediaId: string) => {
+    const mediaToRemove = formData.media?.find(item => item.id === mediaId)
+    if (mediaToRemove) {
+      setRemovedMedia(prev => [...prev, mediaToRemove])
+    }
     const updatedMedia = formData.media?.filter(item => item.id !== mediaId) || []
     handleChange('media', updatedMedia)
   }
@@ -255,99 +288,109 @@ export default function AdminPosts() {
     }
   };
 
+  // On submit, cleanup any removed media (for both create and edit)
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
-    if (!formData.content?.trim()) {
+    // Client-side title validation
+    if (!formData.title?.trim()) {
+      setTitleError('Title is required');
       toast({
-        title: "Content Required",
-        description: "Please add some content to your post",
-        variant: "destructive"
+        title: 'Title Required',
+        description: 'Please enter a title for your post.',
+        variant: 'destructive',
       });
       return;
     }
-    
+    if (!titleRegex.test(formData.title)) {
+      setTitleError('Title can only contain letters, numbers, hyphens, question marks, and spaces');
+      toast({
+        title: 'Invalid Title',
+        description: 'Title can only contain letters, numbers, hyphens, question marks, and spaces.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    setTitleError(null);
     setIsSaving(true);
-    
     try {
       const method = currentPost ? 'PUT' : 'POST';
       const url = currentPost ? `/api/posts?id=${currentPost.id}` : '/api/posts';
-      
       // Ensure author is set to the profile name
       const postData = {
         ...formData,
         author: profileData.name,
-        timestamp: new Date()
+        ...(currentPost ? { timestamp: currentPost.timestamp } : { timestamp: new Date() })
       };
-      
       const response = await fetch(url, {
         method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(postData),
       });
-      
       if (!response.ok) {
         throw new Error(`Failed to ${currentPost ? 'update' : 'create'} post`);
       }
-      
-      // Refresh posts list
+      // No need to manually clean up removed media: backend now handles all media cleanup
+      setRemovedMedia([]);
       await fetchPosts();
-      
       toast({
-        title: currentPost ? "Post Updated" : "Post Created",
-        description: currentPost 
-          ? "Your post has been successfully updated"
-          : "Your post has been successfully created",
-        variant: "default"
+        title: currentPost ? 'Post Updated' : 'Post Created',
+        description: currentPost
+          ? 'Your post has been successfully updated'
+          : 'Your post has been successfully created',
+        variant: 'default',
       });
-      
-      // Reset form and close dialog
       resetForm();
       setIsDialogOpen(false);
     } catch (err: any) {
       console.error('Error saving post:', err);
       toast({
-        title: "Error",
+        title: 'Error',
         description: err.message || `Failed to ${currentPost ? 'update' : 'create'} post`,
-        variant: "destructive"
+        variant: 'destructive',
       });
     } finally {
       setIsSaving(false);
     }
-  }
+  };
 
+  // On cancel/reset, cleanup any uploaded but unused media
+  const resetForm = async () => {
+    setRemovedMedia([]);
+    setCurrentPost(null);
+    setFormData({
+      title: '',
+      content: '',
+      author: profileData.name,
+      tags: [],
+      media: [],
+    });
+    setActiveTab('content');
+  };
+
+  // Delete post (backend handles all cleanup)
   const handleDelete = async () => {
     if (!currentPost) return;
-    
     try {
       const response = await fetch(`/api/posts?id=${currentPost.id}`, {
         method: 'DELETE',
       });
-      
       if (!response.ok) {
         throw new Error('Failed to delete post');
       }
-      
       toast({
-        title: "Post Deleted",
-        description: "Your post has been permanently deleted",
-        variant: "default"
+        title: 'Post Deleted',
+        description: 'Your post has been permanently deleted',
+        variant: 'default',
       });
-      
-      // Refresh posts list
       await fetchPosts();
-      
-      // Close dialog
       setIsDeleteDialogOpen(false);
       setCurrentPost(null);
     } catch (err: any) {
       console.error('Error deleting post:', err);
       toast({
-        title: "Error",
+        title: 'Error',
         description: err.message || 'Failed to delete post',
-        variant: "destructive"
+        variant: 'destructive',
       });
     }
   }
@@ -370,18 +413,6 @@ export default function AdminPosts() {
     setIsDeleteDialogOpen(true);
   }
 
-  const resetForm = () => {
-    setCurrentPost(null);
-    setFormData({
-      title: '',
-      content: '',
-      author: profileData.name,
-      tags: [],
-      media: [],
-    });
-    setActiveTab('content');
-  }
-
   const formatDate = (dateString: Date) => {
     return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
@@ -389,6 +420,21 @@ export default function AdminPosts() {
       day: 'numeric',
     });
   }
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [sortOpen, setSortOpen] = useState(false);
+  const [sortOrder, setSortOrder] = useState<'newest' | 'oldest'>('newest');
+
+  // Filter and sort posts
+  const filteredPosts = posts
+    .filter(post =>
+      post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      post.content.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+  const sortedPosts = sortOrder === 'oldest' ? [...filteredPosts].reverse() : filteredPosts;
 
   return (
     <div className="container mx-auto py-8 px-4">
@@ -413,6 +459,70 @@ export default function AdminPosts() {
         </Button>
       </div>
 
+      {/* Responsive Search & Sort Controls */}
+      <div className="flex flex-row items-center gap-2 mb-6 w-full">
+        {/* Search Bar */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center w-full">
+            <button
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 mr-2 sm:hidden"
+              onClick={() => setSearchOpen(v => !v)}
+              aria-label="Toggle search"
+              type="button"
+            >
+              <Search className="w-5 h-5 text-gray-600" />
+            </button>
+            <Input
+              type="text"
+              placeholder="Search posts..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className={`w-full transition-all duration-200 ${searchOpen || !isMobile ? 'block' : 'hidden sm:block'}`}
+              style={{ minWidth: 0 }}
+            />
+          </div>
+        </div>
+        {/* Sort Dropdown */}
+        <div className="relative flex-shrink-0">
+          {/* Mobile: Icon only, expands on click */}
+          <div className="sm:hidden">
+            <button
+              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200"
+              onClick={() => setSortOpen(v => !v)}
+              aria-label="Sort options"
+              type="button"
+            >
+              {sortOrder === 'newest' ? <SortDesc className="w-5 h-5 text-gray-600" /> : <SortAsc className="w-5 h-5 text-gray-600" />}
+            </button>
+            {sortOpen && (
+              <div className="absolute right-0 mt-2 bg-white border rounded shadow z-10">
+                <button
+                  className={`block w-full px-4 py-2 text-left hover:bg-gray-100 ${sortOrder === 'newest' ? 'font-bold' : ''}`}
+                  onClick={() => { setSortOrder('newest'); setSortOpen(false); }}
+                  type="button"
+                >Newest First</button>
+                <button
+                  className={`block w-full px-4 py-2 text-left hover:bg-gray-100 ${sortOrder === 'oldest' ? 'font-bold' : ''}`}
+                  onClick={() => { setSortOrder('oldest'); setSortOpen(false); }}
+                  type="button"
+                >Oldest First</button>
+              </div>
+            )}
+          </div>
+          {/* Desktop: Dropdown always visible */}
+          <div className="hidden sm:block">
+            <select
+              value={sortOrder}
+              onChange={e => setSortOrder(e.target.value as 'newest' | 'oldest')}
+              className="border rounded px-3 py-2 bg-white text-gray-700"
+            >
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
       {loading ? (
         <div className="text-center py-12">
           <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-gray-300 border-t-gray-900"></div>
@@ -429,7 +539,7 @@ export default function AdminPosts() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {renderPostsList(posts)}
+          {renderPostsList(sortedPosts)}
         </div>
       )}
 
@@ -477,14 +587,19 @@ export default function AdminPosts() {
               <form id="postForm" onSubmit={handleSubmit} className="space-y-6 py-4">
                 <TabsContent value="content" className="space-y-4 mt-0">
                   <div>
-                    <Label htmlFor="title" className="text-base">Title (Optional)</Label>
+                    <Label htmlFor="title" className="text-base">Title <span className="text-red-500">*</span></Label>
                     <Input
                       id="title"
                       value={formData.title || ''}
                       onChange={(e) => handleChange('title', e.target.value)}
                       placeholder="Add a title for your post"
-                      className="mt-1.5"
+                      className={`mt-1.5 ${titleError ? 'border-red-500 focus:ring-red-500' : ''}`}
+                      required
+                      maxLength={100}
                     />
+                    {titleError && (
+                      <p className="text-xs text-red-600 mt-1">{titleError}</p>
+                    )}
                   </div>
 
                   <div>

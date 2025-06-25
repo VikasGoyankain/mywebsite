@@ -199,3 +199,14 @@ export async function getAllFamilyMembers(): Promise<FamilyMember[]> {
   const members = await redis.hgetall('family_members') as Record<string, string>;
   return Object.values(members).map(member => JSON.parse(member));
 }
+
+// Helper for Upstash Redis sorted set: get all members
+export async function zrangeAll(key: string): Promise<string[]> {
+  // Upstash Redis supports zrange with start=0, stop=-1
+  return await redis.zrange(key, 0, -1);
+}
+// Helper for Upstash Redis sorted set: get all members in reverse order
+export async function zrevrangeAll(key: string): Promise<string[]> {
+  // Upstash Redis supports zrange with rev=true
+  return await redis.zrange(key, 0, -1, { rev: true });
+}

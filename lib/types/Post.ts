@@ -10,6 +10,8 @@ export interface Media {
   type: 'image' | 'video';
   url: string;
   caption?: string;
+  fileId?: string; // ImageKit file ID for cleanup
+  post_id?: string; // Associated post ID (optional for drafts)
 }
 
 export interface Post {
@@ -18,9 +20,9 @@ export interface Post {
   description?: string;
   content: string;
   author: string;
-  timestamp: Date; // Assuming this is the creation date, if not, we'll add createdAt
-  createdAt?: string | Date; // Added createdAt to match usage
-  updatedAt?: string | Date;
+  timestamp: Date; // Legacy support
+  created_at?: string | Date;
+  updated_at?: string | Date;
   readTime?: string;
   tags: string[];
   media: Media[];
