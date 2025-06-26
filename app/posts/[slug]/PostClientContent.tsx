@@ -25,8 +25,6 @@ import Link from "next/link";
 import { useProfileStore } from "@/lib/profile-store";
 import { Footer } from "@/components/Footer";
 import { useDatabaseInit } from "@/hooks/use-database-init";
-import { getReadingTime } from '@/lib/utils';
-import PostMediaCarousel from '@/components/posts/PostMediaCarousel';
 
 // Icon mapping for social media
 const getIconComponent = (iconName: string) => {
@@ -62,9 +60,6 @@ const PostClientContent: React.FC<PostClientContentProps> = ({ post }) => {
   useDatabaseInit(); // Initialize database connection
   const { profileData } = useProfileStore();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
-
-  // Compute reading time if not provided
-  const readingTime = post.readTime || getReadingTime(post.content);
 
   const formatContent = (content: string) => {
     return content.split('\n').map((line, index) => {
@@ -253,7 +248,7 @@ const PostClientContent: React.FC<PostClientContentProps> = ({ post }) => {
               <div className="flex items-center text-sm text-gray-600 dark:text-gray-400">
                 <span>{formatDate(post.createdAt || post.timestamp)}</span>
                 <span className="mx-2">•</span>
-                <span>{readingTime}</span>
+                <span>{post.readTime || '5 min read'}</span>
               </div>
               <Button onClick={handleShare} size="sm" variant="ghost" className="text-gray-600 dark:text-gray-400">
                 <Share className="w-4 h-4 mr-1" />
@@ -262,9 +257,15 @@ const PostClientContent: React.FC<PostClientContentProps> = ({ post }) => {
             </div>
           </div>
 
-          {/* Featured Image / Media Carousel */}
+          {/* Featured Image */}
           {post.media && post.media.length > 0 && (
-            <PostMediaCarousel media={post.media} />
+            <div className="relative w-full h-64 sm:h-96">
+              <img 
+                src={post.media[0].url} 
+                alt={post.title || 'Post image'} 
+                className="w-full h-full object-cover"
+              />
+            </div>
           )}
 
           {/* Post Content */}
