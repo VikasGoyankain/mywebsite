@@ -165,26 +165,6 @@ function AdminDashboard() {
       if (response.ok) {
         const data = await response.json()
         setSections(data)
-        
-        // Ensure footer section exists
-        const hasFooter = data.some((s: any) => s.id === 'footer_config')
-        if (!hasFooter) {
-          // Create footer section
-          await fetch('/api/admin/sections', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              title: 'Footer Settings',
-              description: 'Manage unified footer content and configuration',
-              icon: 'Wrench',
-              linkHref: '/admin/footer',
-              linkText: 'Edit Footer',
-              category: 'tools',
-              priority: 4,
-              isActive: true
-            })
-          }).catch(err => console.error('Error creating footer section:', err))
-        }
       }
     } catch (error) {
       console.error('Error loading sections:', error)

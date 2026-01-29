@@ -2,7 +2,6 @@
 
 import { create } from "zustand"
 import { persist } from "zustand/middleware"
-import { FooterConfig } from "./redis"
 
 export interface ProfileData {
   name: string
@@ -120,7 +119,6 @@ interface ProfileStore {
   posts: Post[]
   navigationPages: NavigationPage[]
   navigationButtons: NavigationButton[]
-  footerConfig: FooterConfig | null
   isLoading: boolean
   syncStatus: SyncStatus
   hasUnsavedChanges: boolean
@@ -181,11 +179,6 @@ interface ProfileStore {
   updateNavigationButton: (id: string, button: Partial<NavigationButton>) => void
   deleteNavigationButton: (id: string) => void
 
-  // Footer config actions
-  updateFooterConfig: (config: Partial<FooterConfig>) => void
-  loadFooterConfig: () => Promise<void>
-  saveFooterConfig: () => Promise<void>
-
   // Utility actions
   resetToDefaults: () => void
   exportData: () => string
@@ -225,30 +218,6 @@ const defaultCertificates: Certificate[] = []
 const defaultPosts: Post[] = []
 const defaultNavigationPages: NavigationPage[] = []
 
-const defaultFooterConfig: FooterConfig = {
-  useProfileName: true,
-  useProfileImage: true,
-  useProfileBio: true,
-  customName: '',
-  customImage: '',
-  customBio: '',
-  socialLinks: [],
-  quickLinks: [
-    { label: 'Home', href: '/' },
-    { label: 'Posts', href: '/posts' },
-    { label: 'Research', href: '/research' },
-    { label: 'Case Vault', href: '/casevault' },
-  ],
-  legalLinks: [
-    { label: 'Privacy Policy', href: '/privacy' },
-    { label: 'Terms of Service', href: '/terms' },
-    { label: 'Legal Disclaimer', href: '/disclaimer' },
-    { label: 'Contact', href: '/contact' },
-  ],
-  copyrightMessage: 'Building a just society through law and advocacy.',
-  lastUpdated: new Date().toISOString(),
-}
-
 export const useProfileStore = create<ProfileStore>()(
   persist(
     (set, get) => ({
@@ -260,7 +229,6 @@ export const useProfileStore = create<ProfileStore>()(
       posts: defaultPosts,
       navigationPages: defaultNavigationPages,
       navigationButtons: [],
-      footerConfig: defaultFooterConfig,
       adminPassword: null,
 
       // Database sync state
@@ -755,69 +723,11 @@ export const useProfileStore = create<ProfileStore>()(
             posts: parsed.posts || defaultPosts,
             navigationPages: parsed.navigationPages || defaultNavigationPages,
             navigationButtons: parsed.navigationButtons || [],
-            footerConfig: parsed.footerConfig || defaultFooterConfig,
             adminPassword: null,
             hasUnsavedChanges: true,
           })
         } catch (error) {
           console.error("Failed to import data:", error)
-        }
-      },
-
-      // Footer config actions
-      updateFooterConfig: (config) => {
-        set((state) => ({
-          footerConfig: state.footerConfig ? { ...state.footerConfig, ...config } : { ...defaultFooterConfig, ...config },
-          hasUnsavedChanges: true,
-        }))
-      },
-
-      loadFooterConfig: async () => {
-        try {
-          const response = await fetch('/api/footer')
-          if (!response.ok) {
-            console.error('Failed to load footer config')
-            return
-          }
-          const result = await response.json()
-          if (result.success && result.data) {
-            set({
-              footerConfig: result.data,
-            })
-          }
-        } catch (error) {
-          console.error('Error loading footer config:', error)
-        }
-      },
-
-      saveFooterConfig: async () => {
-        try {
-          const state = get()
-          if (!state.footerConfig) return
-
-          const configToSave = {
-            ...state.footerConfig,
-            lastUpdated: new Date().toISOString(),
-          }
-
-          const response = await fetch('/api/footer', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(configToSave),
-          })
-
-          const result = await response.json()
-          if (!result.success) {
-            throw new Error(result.error || 'Failed to save footer config')
-          }
-
-          set({
-            footerConfig: configToSave,
-            hasUnsavedChanges: false,
-          })
-        } catch (error) {
-          console.error('Error saving footer config:', error)
-          throw error
         }
       },
 
@@ -835,14 +745,9 @@ export const useProfileStore = create<ProfileStore>()(
             error: null 
           })
 
-          // Load profile data and footer config in parallel
-          const [profileResponse, footerResponse] = await Promise.all([
-            fetch('/api/profile'),
-            fetch('/api/footer')
-          ])
-
-          if (!profileResponse.ok) {
-            const errorMessage = `HTTP error! status: ${profileResponse.status}`
+          const response = await fetch('/api/profile')
+          if (!response.ok) {
+            const errorMessage = `HTTP error! status: ${response.status}`
             console.error(errorMessage)
             set({ 
               syncStatus: 'error',
@@ -852,11 +757,10 @@ export const useProfileStore = create<ProfileStore>()(
             return
           }
 
-          const profileResult = await profileResponse.json()
-          const footerResult = footerResponse.ok ? await footerResponse.json() : { success: false }
+          const result = await response.json()
 
-          if (!profileResult.success) {
-            const errorMessage = profileResult.error || 'Failed to load profile data'
+          if (!result.success) {
+            const errorMessage = result.error || 'Failed to load profile data'
             console.error(errorMessage)
             set({ 
               syncStatus: 'error',
@@ -867,17 +771,16 @@ export const useProfileStore = create<ProfileStore>()(
           }
 
           set({
-          profileData: profileResult.data?.profileData || defaultProfileData,
-          experience: profileResult.data?.experience || defaultExperience,
-          education: profileResult.data?.education || defaultEducation,
-          skills: profileResult.data?.skills || defaultSkills,
-          certificates: profileResult.data?.certificates || defaultCertificates,
-          posts: profileResult.data?.posts || defaultPosts,
-          navigationPages: profileResult.data?.navigationPages || defaultNavigationPages,
-          navigationButtons: profileResult.data?.navigationButtons || [],
-          footerConfig: footerResult.success && footerResult.data ? footerResult.data : defaultFooterConfig,
-          adminPassword: profileResult.data?.adminPassword ?? null,
-          lastUpdated: profileResult.data?.lastUpdated || new Date().toISOString(),
+          profileData: result.data?.profileData || defaultProfileData,
+          experience: result.data?.experience || defaultExperience,
+          education: result.data?.education || defaultEducation,
+          skills: result.data?.skills || defaultSkills,
+          certificates: result.data?.certificates || defaultCertificates,
+          posts: result.data?.posts || defaultPosts,
+          navigationPages: result.data?.navigationPages || defaultNavigationPages,
+          navigationButtons: result.data?.navigationButtons || [],
+          adminPassword: result.data?.adminPassword ?? null,
+          lastUpdated: result.data?.lastUpdated || new Date().toISOString(),
             syncStatus: 'success',
             isLoading: false,
             error: null
@@ -908,7 +811,6 @@ export const useProfileStore = create<ProfileStore>()(
               posts: state.posts,
               navigationPages: state.navigationPages,
               navigationButtons: state.navigationButtons,
-              footerConfig: state.footerConfig,
               adminPassword: state.adminPassword,
               lastUpdated: new Date().toISOString(),
             }),

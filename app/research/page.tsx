@@ -12,7 +12,6 @@ import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
-import { Footer } from '@/components/Footer'
 import Link from "next/link"
 import Image from "next/image"
 import { motion } from 'framer-motion'
@@ -298,7 +297,118 @@ export default function ResearchPage() {
       </section>
 
       {/* Footer */}
-      <Footer />
+      <footer className="bg-gray-900 text-white">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
+            <div className="md:col-span-2">
+              <div className="flex items-center gap-3 mb-4">
+                <Avatar className="w-12 h-12">
+                  <AvatarImage src={profileData.profileImage || "/placeholder.svg"} />
+                  <AvatarFallback className="bg-blue-600 text-white font-bold">
+                    {profileData.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div>
+                  <h3 className="text-xl font-bold">{profileData.name}</h3>
+                  <p className="text-gray-300">{profileData.title}</p>
+                </div>
+              </div>
+              <p className="text-gray-300 mb-4 max-w-md">
+                Committed to advancing constitutional rights, social justice, and democratic values through legal
+                advocacy and political engagement.
+              </p>
+              <div className="flex gap-4">
+                {profileData.socialLinks.map((social) => (
+                  <Link
+                    key={social.id}
+                    href={social.href}
+                    className="p-2 bg-white/10 rounded-full hover:bg-white/20 transition-colors"
+                  >
+                    <img
+                      src={social.icon}
+                      alt={social.name}
+                      className="w-5 h-5"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/placeholder.svg';
+                      }}
+                    />
+                  </Link>
+                ))}
+              </div>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Quick Links</h4>
+              <ul className="space-y-2 text-gray-300">
+                <li>
+                  <Link href="/about" className="hover:text-white transition-colors">
+                    About Me
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/skills" className="hover:text-white transition-colors">
+                    Skills & Expertise
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/research" className="hover:text-white transition-colors">
+                    Research
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/blog" className="hover:text-white transition-colors">
+                    Blog
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/speaking" className="hover:text-white transition-colors">
+                    Speaking
+                  </Link>
+                </li>
+              </ul>
+            </div>
+
+            <div>
+              <h4 className="font-semibold mb-4">Legal</h4>
+              <ul className="space-y-2 text-gray-300">
+                <li>
+                  <Link href="/privacy" className="hover:text-white transition-colors">
+                    Privacy Policy
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/terms" className="hover:text-white transition-colors">
+                    Terms of Service
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/disclaimer" className="hover:text-white transition-colors">
+                    Legal Disclaimer
+                  </Link>
+                </li>
+                <li>
+                  <Link href="/contact" className="hover:text-white transition-colors">
+                    Contact
+                  </Link>
+                </li>
+              </ul>
+            </div>
+          </div>
+
+          <Separator className="my-8 bg-gray-800" />
+
+          <div className="text-center text-gray-400">
+            <p>
+              &copy; {new Date().getFullYear()} {profileData.name}. All rights reserved. | Building a just society
+              through law and advocacy.
+            </p>
+          </div>
+        </div>
+      </footer>
     </div>
   )
 } 

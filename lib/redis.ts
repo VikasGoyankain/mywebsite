@@ -31,48 +31,13 @@ export interface DatabaseProfile {
 }
 
 const PROFILE_KEY = "profile:main"
-const FOOTER_CONFIG_KEY = "footer:config"
 
 // Keys for different data collections
 export const REDIS_KEYS = {
   SUBSCRIBERS: 'subscribers',
   RESEARCH: 'research',
   PROFILE: 'profile',
-  CASES_INDEX: 'cases:index',
-  FOOTER_CONFIG: 'footer:config'
-}
-
-// Footer configuration interface
-export interface FooterLink {
-  label: string
-  href: string
-}
-
-export interface FooterConfig {
-  // Profile section toggles
-  useProfileName: boolean
-  useProfileImage: boolean
-  useProfileBio: boolean
-  customName: string
-  customImage: string
-  customBio: string
-  
-  // Social links
-  socialLinks: Array<{
-    name: string
-    href: string
-  }>
-  
-  // Quick links
-  quickLinks: FooterLink[]
-  
-  // Legal links
-  legalLinks: FooterLink[]
-  
-  // Copyright
-  copyrightMessage: string
-  
-  lastUpdated: string
+  CASES_INDEX: 'cases:index'
 }
 
 export async function saveProfileToDatabase(data: DatabaseProfile) {
@@ -177,61 +142,6 @@ export async function listKeys(pattern: string = '*') {
   } catch (error) {
     console.error('Error listing keys from Redis:', error)
     return []
-  }
-}
-
-// Footer configuration functions
-export async function saveFooterConfig(config: FooterConfig) {
-  try {
-    const footerWithTimestamp = {
-      ...config,
-      lastUpdated: new Date().toISOString(),
-    }
-    await redis.set(FOOTER_CONFIG_KEY, footerWithTimestamp)
-    return { success: true }
-  } catch (error) {
-    console.error("Failed to save footer config to database:", error)
-    return { success: false, error: "Failed to save footer config" }
-  }
-}
-
-export async function loadFooterConfig(): Promise<FooterConfig | null> {
-  try {
-    const data = await redis.get<FooterConfig>(FOOTER_CONFIG_KEY)
-    if (!data) {
-      console.log('No footer config found in database, returning null')
-      return null
-    }
-    return data
-  } catch (error) {
-    console.error("Failed to load footer config from database:", error)
-    return null
-  }
-}
-
-export async function getDefaultFooterConfig(): Promise<FooterConfig> {
-  return {
-    useProfileName: true,
-    useProfileImage: true,
-    useProfileBio: true,
-    customName: '',
-    customImage: '',
-    customBio: '',
-    socialLinks: [],
-    quickLinks: [
-      { label: 'Home', href: '/' },
-      { label: 'Posts', href: '/posts' },
-      { label: 'Research', href: '/research' },
-      { label: 'Case Vault', href: '/casevault' },
-    ],
-    legalLinks: [
-      { label: 'Privacy Policy', href: '/privacy' },
-      { label: 'Terms of Service', href: '/terms' },
-      { label: 'Legal Disclaimer', href: '/disclaimer' },
-      { label: 'Contact', href: '/contact' },
-    ],
-    copyrightMessage: 'Building a just society through law and advocacy.',
-    lastUpdated: new Date().toISOString(),
   }
 }
 
