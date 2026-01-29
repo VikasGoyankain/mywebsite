@@ -127,6 +127,29 @@ img {
   }
 }
 
+/* Prose-like typography for blog articles */
+.prose-custom {
+  line-height: 1.75;
+  letter-spacing: -0.01em;
+}
+
+.prose-custom p {
+  margin-bottom: 1.5rem;
+}
+
+.prose-custom p:last-child {
+  margin-bottom: 0;
+}
+
+.prose-custom a {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.prose-custom a:hover {
+  opacity: 0.8;
+}
+
 /* Unrestricted text input style */
 .text-input-unrestricted {
   font-family: inherit;
