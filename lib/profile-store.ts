@@ -107,6 +107,7 @@ export interface NavigationButton {
   description: string
   color: string
   order: number
+  isVisible?: boolean
 }
 
 type SyncStatus = "idle" | "syncing" | "success" | "error"
@@ -180,6 +181,7 @@ interface ProfileStore {
   addNavigationButton: (button: Omit<NavigationButton, "id">) => void
   updateNavigationButton: (id: string, button: Partial<NavigationButton>) => void
   deleteNavigationButton: (id: string) => void
+  toggleNavigationButtonVisibility: (id: string) => void
 
   // Footer config actions
   updateFooterConfig: (config: Partial<FooterConfig>) => void
@@ -724,6 +726,15 @@ export const useProfileStore = create<ProfileStore>()(
         }))
       },
 
+      toggleNavigationButtonVisibility: (id) => {
+        set((state) => ({
+          navigationButtons: state.navigationButtons.map((b) =>
+            b.id === id ? { ...b, isVisible: !b.isVisible } : b
+          ),
+          hasUnsavedChanges: true,
+        }))
+      },
+
       // Utility actions
       resetToDefaults: () =>
         set({
@@ -902,6 +913,12 @@ export const useProfileStore = create<ProfileStore>()(
             }
           }
 
+          // Migrate navigation buttons to include isVisible field if missing
+          const migratedNavigationButtons = (profileResult.data?.navigationButtons || []).map((button: any) => ({
+            ...button,
+            isVisible: button.isVisible !== undefined ? button.isVisible : true
+          }))
+
           set({
           profileData: profileResult.data?.profileData || defaultProfileData,
           experience: profileResult.data?.experience || defaultExperience,
@@ -910,7 +927,7 @@ export const useProfileStore = create<ProfileStore>()(
           certificates: profileResult.data?.certificates || defaultCertificates,
           posts: profileResult.data?.posts || defaultPosts,
           navigationPages: profileResult.data?.navigationPages || defaultNavigationPages,
-          navigationButtons: profileResult.data?.navigationButtons || [],
+          navigationButtons: migratedNavigationButtons,
           footerConfig: footerConfig,
           adminPassword: profileResult.data?.adminPassword ?? null,
           lastUpdated: profileResult.data?.lastUpdated || new Date().toISOString(),
@@ -1031,7 +1048,17 @@ export const useProfileStore = create<ProfileStore>()(
     }),
     {
       name: "profile-storage",
-      version: 4,
+      version: 5, // Bumped for isVisible field in NavigationButton
+      migrate: (persistedState: any, version: number) => {
+        // Migrate navigation buttons to include isVisible field
+        if (version < 5 && persistedState.navigationButtons) {
+          persistedState.navigationButtons = persistedState.navigationButtons.map((button: any) => ({
+            ...button,
+            isVisible: button.isVisible !== undefined ? button.isVisible : true
+          }))
+        }
+        return persistedState
+      },
     },
   ),
 )

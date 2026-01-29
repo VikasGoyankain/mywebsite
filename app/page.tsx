@@ -399,7 +399,7 @@ export default function ModernProfile() {
 
             {/* Navigation Buttons */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
-              {navigationButtons.map((button) => {
+              {navigationButtons.filter(button => button.isVisible !== false).map((button) => {
                 const IconComponent = iconMap[button.icon as keyof typeof iconMap]
                 return (
                   <Link key={button.id} href={button.href} className="group">

@@ -15,6 +15,8 @@ import {
   Trash2,
   Edit,
   Loader2,
+  Eye,
+  EyeOff,
   Award,
   Star,
   Heart,
@@ -144,6 +146,7 @@ export default function SettingsPage() {
     addNavigationButton,
     updateNavigationButton,
     deleteNavigationButton,
+    toggleNavigationButtonVisibility,
     saveToDatabase,
   } = useProfileStore()
 
@@ -163,6 +166,7 @@ export default function SettingsPage() {
     description: "",
     color: "bg-blue-500",
     order: 0,
+    isVisible: true,
   })
 
   // Handle password change
@@ -278,6 +282,7 @@ export default function SettingsPage() {
         description: "",
         color: "bg-blue-500",
         order: navigationButtons.length,
+        isVisible: true,
       })
       setEditingButton(null)
       
@@ -315,6 +320,24 @@ export default function SettingsPage() {
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const handleToggleVisibility = async (buttonId: string) => {
+    try {
+      toggleNavigationButtonVisibility(buttonId)
+      await saveToDatabase()
+      
+      toast({
+        title: "Success",
+        description: "Button visibility updated successfully",
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update button visibility. Please try again.",
+        variant: "destructive",
+      })
     }
   }
 
@@ -544,17 +567,26 @@ export default function SettingsPage() {
               <div className="space-y-4">
                 {navigationButtons.map((button) => {
                   const Icon = getIconComponent(button.icon)
+                  const isVisible = button.isVisible !== false
                   return (
                     <div
                       key={button.id}
-                      className="flex items-start justify-between p-4 bg-gray-50 rounded-lg"
+                      className={cn(
+                        "flex items-start justify-between p-4 rounded-lg",
+                        isVisible ? "bg-gray-50" : "bg-gray-100 opacity-60"
+                      )}
                     >
                       <div className="flex items-start gap-4">
                         <div className={cn("w-12 h-12 rounded-full flex items-center justify-center", button.color)}>
                           {Icon && <Icon className="w-6 h-6 text-white" />}
                         </div>
                         <div>
-                          <p className="font-medium">{button.text}</p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{button.text}</p>
+                            {!isVisible && (
+                              <span className="text-xs bg-gray-200 text-gray-600 px-2 py-0.5 rounded">Hidden</span>
+                            )}
+                          </div>
                           <p className="text-sm text-gray-500">{button.href}</p>
                           {button.description && (
                             <p className="text-sm text-gray-600 mt-1">{button.description}</p>
@@ -562,6 +594,18 @@ export default function SettingsPage() {
                         </div>
                       </div>
                       <div className="flex gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleToggleVisibility(button.id)}
+                          title={isVisible ? "Hide button" : "Show button"}
+                        >
+                          {isVisible ? (
+                            <Eye className="w-4 h-4" />
+                          ) : (
+                            <EyeOff className="w-4 h-4" />
+                          )}
+                        </Button>
                         <Button
                           variant="outline"
                           size="sm"
