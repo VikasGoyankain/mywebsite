@@ -12,27 +12,32 @@ import { Switch } from "@/components/ui/switch"
 import { useProfileStore } from "@/lib/profile-store"
 import { useToast } from "@/hooks/use-toast"
 import { useDatabaseInit } from "@/hooks/use-database-init"
-import { ArrowLeft, Plus, Trash2, Save, Copy } from "lucide-react"
+import { ArrowLeft, Plus, Trash2, Save, Edit2, X } from "lucide-react"
 import Link from "next/link"
-import { FooterConfig, FooterLink } from "@/lib/redis"
+import { FooterConfig, FooterLink, FooterSection } from "@/lib/redis"
 
 export default function AdminFooter() {
   useDatabaseInit()
   const { footerConfig, updateFooterConfig, saveFooterConfig: storeFooterConfig } = useProfileStore()
   const { profileData } = useProfileStore()
   const { toast } = useToast()
+  
   const [isSaving, setIsSaving] = useState(false)
-  const [showSocialDialog, setShowSocialDialog] = useState(false)
-  const [showQuickLinkDialog, setShowQuickLinkDialog] = useState(false)
-  const [showLegalLinkDialog, setShowLegalLinkDialog] = useState(false)
-  const [editingIndex, setEditingIndex] = useState<number | null>(null)
-  const [linkForm, setLinkForm] = useState({ name: "", href: "" })
+  const [showSectionDialog, setShowSectionDialog] = useState(false)
+  const [showLinkDialog, setShowLinkDialog] = useState(false)
+  const [editingSectionId, setEditingSectionId] = useState<string | null>(null)
+  const [editingLinkIndex, setEditingLinkIndex] = useState<number | null>(null)
+  const [currentSectionId, setCurrentSectionId] = useState<string | null>(null)
+  const [sectionForm, setSectionForm] = useState({ title: "" })
+  const [linkForm, setLinkForm] = useState({ label: "", href: "" })
 
   if (!footerConfig) {
     return <div className="p-6">Loading footer configuration...</div>
   }
 
-  const handleToggle = (field: "useProfileName" | "useProfileImage" | "useProfileBio", value: boolean) => {
+  const sections: FooterSection[] = Array.isArray(footerConfig.sections) ? footerConfig.sections : []
+
+  const handleToggle = (field: "useProfileName" | "useProfileImage" | "useProfileBio" | "useProfileSocialLinks", value: boolean) => {
     updateFooterConfig({ [field]: value })
   }
 
@@ -40,103 +45,107 @@ export default function AdminFooter() {
     updateFooterConfig({ [field]: value })
   }
 
-  const handleAddSocialLink = () => {
-    if (!linkForm.name || !linkForm.href) {
-      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" })
+  // Section Management
+  const handleAddSection = () => {
+    if (!sectionForm.title.trim()) {
+      toast({ title: "Error", description: "Section title is required", variant: "destructive" })
       return
     }
 
-    const updatedLinks = editingIndex !== null
-      ? footerConfig.socialLinks.map((link, i) =>
-          i === editingIndex ? { name: linkForm.name, href: linkForm.href } : link
-        )
-      : [...footerConfig.socialLinks, { name: linkForm.name, href: linkForm.href }]
+    const newSection: FooterSection = {
+      id: `section_${Date.now()}`,
+      title: sectionForm.title,
+      links: []
+    }
 
-    updateFooterConfig({ socialLinks: updatedLinks })
-    setLinkForm({ name: "", href: "" })
-    setEditingIndex(null)
-    setShowSocialDialog(false)
-    toast({ title: "Success", description: editingIndex !== null ? "Social link updated" : "Social link added" })
+    updateFooterConfig({
+      sections: [...sections, newSection]
+    })
+    setSectionForm({ title: "" })
+    setEditingSectionId(null)
+    setShowSectionDialog(false)
+    toast({ title: "Success", description: "Section added successfully" })
   }
 
-  const handleAddQuickLink = () => {
-    if (!linkForm.name || !linkForm.href) {
-      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" })
+  const handleEditSection = (sectionId: string) => {
+    const section = sections.find(s => s.id === sectionId)
+    if (section) {
+      setSectionForm({ title: section.title })
+      setEditingSectionId(sectionId)
+      setShowSectionDialog(true)
+    }
+  }
+
+  const handleUpdateSection = () => {
+    if (!sectionForm.title.trim()) {
+      toast({ title: "Error", description: "Section title is required", variant: "destructive" })
       return
     }
 
-    const updatedLinks: FooterLink[] = editingIndex !== null
-      ? footerConfig.quickLinks.map((link, i) =>
-          i === editingIndex ? { label: linkForm.name, href: linkForm.href } : link
-        )
-      : [...footerConfig.quickLinks, { label: linkForm.name, href: linkForm.href }]
-
-    updateFooterConfig({ quickLinks: updatedLinks })
-    setLinkForm({ name: "", href: "" })
-    setEditingIndex(null)
-    setShowQuickLinkDialog(false)
-    toast({ title: "Success", description: editingIndex !== null ? "Quick link updated" : "Quick link added" })
+    updateFooterConfig({
+      sections: sections.map(s =>
+        s.id === editingSectionId ? { ...s, title: sectionForm.title } : s
+      )
+    })
+    setSectionForm({ title: "" })
+    setEditingSectionId(null)
+    setShowSectionDialog(false)
+    toast({ title: "Success", description: "Section updated successfully" })
   }
 
-  const handleAddLegalLink = () => {
-    if (!linkForm.name || !linkForm.href) {
-      toast({ title: "Error", description: "Please fill in all fields", variant: "destructive" })
+  const handleDeleteSection = (sectionId: string) => {
+    updateFooterConfig({
+      sections: sections.filter(s => s.id !== sectionId)
+    })
+    toast({ title: "Success", description: "Section deleted successfully" })
+  }
+
+  // Link Management
+  const handleAddLink = (sectionId: string) => {
+    if (!linkForm.label.trim() || !linkForm.href.trim()) {
+      toast({ title: "Error", description: "Both label and URL are required", variant: "destructive" })
       return
     }
 
-    const updatedLinks: FooterLink[] = editingIndex !== null
-      ? footerConfig.legalLinks.map((link, i) =>
-          i === editingIndex ? { label: linkForm.name, href: linkForm.href } : link
-        )
-      : [...footerConfig.legalLinks, { label: linkForm.name, href: linkForm.href }]
-
-    updateFooterConfig({ legalLinks: updatedLinks })
-    setLinkForm({ name: "", href: "" })
-    setEditingIndex(null)
-    setShowLegalLinkDialog(false)
-    toast({ title: "Success", description: editingIndex !== null ? "Legal link updated" : "Legal link added" })
-  }
-
-  const handleDeleteSocialLink = (index: number) => {
     updateFooterConfig({
-      socialLinks: footerConfig.socialLinks.filter((_, i) => i !== index),
+      sections: sections.map(s =>
+        s.id === sectionId
+          ? {
+              ...s,
+              links: editingLinkIndex !== null
+                ? s.links.map((link, i) =>
+                    i === editingLinkIndex ? { label: linkForm.label, href: linkForm.href } : link
+                  )
+                : [...s.links, { label: linkForm.label, href: linkForm.href }]
+            }
+          : s
+      )
     })
-    toast({ title: "Success", description: "Social link deleted" })
+    setLinkForm({ label: "", href: "" })
+    setEditingLinkIndex(null)
+    setShowLinkDialog(false)
+    toast({ title: "Success", description: editingLinkIndex !== null ? "Link updated" : "Link added" })
   }
 
-  const handleDeleteQuickLink = (index: number) => {
+  const handleEditLink = (sectionId: string, index: number) => {
+    const section = sections.find(s => s.id === sectionId)
+    if (section && section.links[index]) {
+      setLinkForm({ label: section.links[index].label, href: section.links[index].href })
+      setEditingLinkIndex(index)
+      setCurrentSectionId(sectionId)
+      setShowLinkDialog(true)
+    }
+  }
+
+  const handleDeleteLink = (sectionId: string, index: number) => {
     updateFooterConfig({
-      quickLinks: footerConfig.quickLinks.filter((_, i) => i !== index),
+      sections: sections.map(s =>
+        s.id === sectionId
+          ? { ...s, links: s.links.filter((_, i) => i !== index) }
+          : s
+      )
     })
-    toast({ title: "Success", description: "Quick link deleted" })
-  }
-
-  const handleDeleteLegalLink = (index: number) => {
-    updateFooterConfig({
-      legalLinks: footerConfig.legalLinks.filter((_, i) => i !== index),
-    })
-    toast({ title: "Success", description: "Legal link deleted" })
-  }
-
-  const handleEditSocialLink = (index: number) => {
-    const link = footerConfig.socialLinks[index]
-    setLinkForm({ name: link.name, href: link.href })
-    setEditingIndex(index)
-    setShowSocialDialog(true)
-  }
-
-  const handleEditQuickLink = (index: number) => {
-    const link = footerConfig.quickLinks[index]
-    setLinkForm({ name: link.label, href: link.href })
-    setEditingIndex(index)
-    setShowQuickLinkDialog(true)
-  }
-
-  const handleEditLegalLink = (index: number) => {
-    const link = footerConfig.legalLinks[index]
-    setLinkForm({ name: link.label, href: link.href })
-    setEditingIndex(index)
-    setShowLegalLinkDialog(true)
+    toast({ title: "Success", description: "Link deleted" })
   }
 
   const handleSave = async () => {
@@ -144,11 +153,6 @@ export default function AdminFooter() {
     try {
       await storeFooterConfig()
       toast({ title: "Success", description: "Footer configuration saved successfully" })
-      // Optional: Show a message that users need to refresh public pages to see changes
-      toast({ 
-        title: "Info", 
-        description: "Public pages will show updates after refresh or when they reload naturally"
-      })
     } catch (error) {
       console.error("Error saving footer config:", error)
       toast({
@@ -161,9 +165,15 @@ export default function AdminFooter() {
     }
   }
 
-  const resetDialog = () => {
-    setLinkForm({ name: "", href: "" })
-    setEditingIndex(null)
+  const resetSectionDialog = () => {
+    setSectionForm({ title: "" })
+    setEditingSectionId(null)
+  }
+
+  const resetLinkDialog = () => {
+    setLinkForm({ label: "", href: "" })
+    setEditingLinkIndex(null)
+    setCurrentSectionId(null)
   }
 
   return (
@@ -276,248 +286,197 @@ export default function AdminFooter() {
             </CardContent>
           </Card>
 
-          {/* Social Links */}
+          {/* Social Links Toggle */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader>
               <CardTitle>Social Links</CardTitle>
-              <Dialog open={showSocialDialog} onOpenChange={setShowSocialDialog}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      resetDialog()
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Social Link
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editingIndex !== null ? "Edit Social Link" : "Add Social Link"}</DialogTitle>
-                    <DialogDescription>Enter the social platform name and profile URL</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Platform Name (e.g., LinkedIn, Twitter)</Label>
-                      <Input
-                        value={linkForm.name}
-                        onChange={(e) => setLinkForm({ ...linkForm, name: e.target.value })}
-                        placeholder="e.g., LinkedIn"
-                      />
-                    </div>
-                    <div>
-                      <Label>Profile URL</Label>
-                      <Input
-                        value={linkForm.href}
-                        onChange={(e) => setLinkForm({ ...linkForm, href: e.target.value })}
-                        placeholder="https://..."
-                      />
-                    </div>
-                    <Button onClick={handleAddSocialLink} className="w-full">
-                      {editingIndex !== null ? "Update" : "Add"} Social Link
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
             </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[300px]">
-                <div className="space-y-2 pr-4">
-                  {footerConfig.socialLinks.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-4">No social links added yet</p>
-                  ) : (
-                    footerConfig.socialLinks.map((link, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                        <div>
-                          <p className="font-medium">{link.name}</p>
-                          <p className="text-sm text-gray-500 truncate">{link.href}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditSocialLink(index)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteSocialLink(index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
+            <CardContent className="space-y-4">
+              <div className="flex items-center justify-between p-4 bg-blue-50 rounded border border-blue-200">
+                <div>
+                  <Label htmlFor="use-social" className="text-base font-medium">Show Social Links from Profile</Label>
+                  <p className="text-sm text-gray-600 mt-1">Display social media links that are configured in your profile</p>
                 </div>
-              </ScrollArea>
+                <Switch
+                  id="use-social"
+                  checked={footerConfig.useProfileSocialLinks}
+                  onCheckedChange={(value) => handleToggle("useProfileSocialLinks", value)}
+                />
+              </div>
             </CardContent>
           </Card>
 
-          {/* Quick Links */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Quick Links</CardTitle>
-              <Dialog open={showQuickLinkDialog} onOpenChange={setShowQuickLinkDialog}>
+          {/* Footer Sections */}
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <h2 className="text-2xl font-bold">Footer Sections</h2>
+              <Dialog open={showSectionDialog} onOpenChange={setShowSectionDialog}>
                 <DialogTrigger asChild>
                   <Button
-                    size="sm"
-                    onClick={() => {
-                      resetDialog()
-                    }}
+                    onClick={() => resetSectionDialog()}
                   >
                     <Plus className="w-4 h-4 mr-2" />
-                    Add Quick Link
+                    Add Section
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>{editingIndex !== null ? "Edit Quick Link" : "Add Quick Link"}</DialogTitle>
-                    <DialogDescription>Enter the link label and URL</DialogDescription>
+                    <DialogTitle>{editingSectionId ? "Edit Section" : "Add New Section"}</DialogTitle>
+                    <DialogDescription>
+                      {editingSectionId ? "Rename your footer section" : "Create a new footer section"}
+                    </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4">
                     <div>
-                      <Label>Link Label</Label>
+                      <Label htmlFor="section-title">Section Title</Label>
                       <Input
-                        value={linkForm.name}
-                        onChange={(e) => setLinkForm({ ...linkForm, name: e.target.value })}
-                        placeholder="e.g., Home"
+                        id="section-title"
+                        value={sectionForm.title}
+                        onChange={(e) => setSectionForm({ title: e.target.value })}
+                        placeholder="e.g., Resources, Support, Company"
                       />
                     </div>
-                    <div>
-                      <Label>URL</Label>
-                      <Input
-                        value={linkForm.href}
-                        onChange={(e) => setLinkForm({ ...linkForm, href: e.target.value })}
-                        placeholder="e.g., /"
-                      />
-                    </div>
-                    <Button onClick={handleAddQuickLink} className="w-full">
-                      {editingIndex !== null ? "Update" : "Add"} Quick Link
+                    <Button
+                      onClick={editingSectionId ? handleUpdateSection : handleAddSection}
+                      className="w-full"
+                    >
+                      {editingSectionId ? "Update Section" : "Add Section"}
                     </Button>
                   </div>
                 </DialogContent>
               </Dialog>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[300px]">
-                <div className="space-y-2 pr-4">
-                  {footerConfig.quickLinks.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-4">No quick links added yet</p>
-                  ) : (
-                    footerConfig.quickLinks.map((link, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                        <div>
-                          <p className="font-medium">{link.label}</p>
-                          <p className="text-sm text-gray-500">{link.href}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditQuickLink(index)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteQuickLink(index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+            </div>
 
-          {/* Legal Links */}
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Legal Links</CardTitle>
-              <Dialog open={showLegalLinkDialog} onOpenChange={setShowLegalLinkDialog}>
-                <DialogTrigger asChild>
-                  <Button
-                    size="sm"
-                    onClick={() => {
-                      resetDialog()
-                    }}
-                  >
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Legal Link
-                  </Button>
-                </DialogTrigger>
-                <DialogContent>
-                  <DialogHeader>
-                    <DialogTitle>{editingIndex !== null ? "Edit Legal Link" : "Add Legal Link"}</DialogTitle>
-                    <DialogDescription>Enter the link label and URL</DialogDescription>
-                  </DialogHeader>
-                  <div className="space-y-4">
-                    <div>
-                      <Label>Link Label</Label>
-                      <Input
-                        value={linkForm.name}
-                        onChange={(e) => setLinkForm({ ...linkForm, name: e.target.value })}
-                        placeholder="e.g., Privacy Policy"
-                      />
+            {sections.length === 0 ? (
+              <Card className="p-6 text-center text-gray-500">
+                No sections yet. Add one to get started!
+              </Card>
+            ) : (
+              sections.map((section) => (
+                <Card key={section.id}>
+                  <CardHeader className="flex flex-row items-center justify-between">
+                    <CardTitle>{section.title}</CardTitle>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleEditSection(section.id)}
+                      >
+                        <Edit2 className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleDeleteSection(section.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
-                    <div>
-                      <Label>URL</Label>
-                      <Input
-                        value={linkForm.href}
-                        onChange={(e) => setLinkForm({ ...linkForm, href: e.target.value })}
-                        placeholder="e.g., /privacy"
-                      />
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <Dialog
+                        open={showLinkDialog && currentSectionId === section.id}
+                        onOpenChange={(open) => {
+                          if (!open) resetLinkDialog()
+                          setShowLinkDialog(open)
+                        }}
+                      >
+                        <DialogTrigger asChild>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => {
+                              resetLinkDialog()
+                              setCurrentSectionId(section.id)
+                            }}
+                          >
+                            <Plus className="w-4 h-4 mr-2" />
+                            Add Link
+                          </Button>
+                        </DialogTrigger>
+                        <DialogContent>
+                          <DialogHeader>
+                            <DialogTitle>
+                              {editingLinkIndex !== null ? "Edit Link" : "Add Link"}
+                            </DialogTitle>
+                            <DialogDescription>
+                              Add a new link to "{section.title}" section
+                            </DialogDescription>
+                          </DialogHeader>
+                          <div className="space-y-4">
+                            <div>
+                              <Label htmlFor="link-label">Link Label</Label>
+                              <Input
+                                id="link-label"
+                                value={linkForm.label}
+                                onChange={(e) => setLinkForm({ ...linkForm, label: e.target.value })}
+                                placeholder="e.g., About Us"
+                              />
+                            </div>
+                            <div>
+                              <Label htmlFor="link-href">URL</Label>
+                              <Input
+                                id="link-href"
+                                value={linkForm.href}
+                                onChange={(e) => setLinkForm({ ...linkForm, href: e.target.value })}
+                                placeholder="e.g., /about"
+                              />
+                            </div>
+                            <Button
+                              onClick={() => handleAddLink(section.id)}
+                              className="w-full"
+                            >
+                              {editingLinkIndex !== null ? "Update Link" : "Add Link"}
+                            </Button>
+                          </div>
+                        </DialogContent>
+                      </Dialog>
+
+                      {section.links.length === 0 ? (
+                        <p className="text-sm text-gray-500 py-4">No links yet</p>
+                      ) : (
+                        <ScrollArea className="h-auto">
+                          <div className="space-y-2">
+                            {section.links.map((link, index) => (
+                              <div
+                                key={index}
+                                className="flex items-center justify-between p-3 bg-gray-50 rounded"
+                              >
+                                <div className="flex-1">
+                                  <p className="font-medium text-sm">{link.label}</p>
+                                  <p className="text-xs text-gray-500">{link.href}</p>
+                                </div>
+                                <div className="flex gap-2">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      handleEditLink(section.id, index)
+                                      setShowLinkDialog(true)
+                                    }}
+                                  >
+                                    <Edit2 className="w-4 h-4" />
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDeleteLink(section.id, index)}
+                                  >
+                                    <Trash2 className="w-4 h-4" />
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </ScrollArea>
+                      )}
                     </div>
-                    <Button onClick={handleAddLegalLink} className="w-full">
-                      {editingIndex !== null ? "Update" : "Add"} Legal Link
-                    </Button>
-                  </div>
-                </DialogContent>
-              </Dialog>
-            </CardHeader>
-            <CardContent>
-              <ScrollArea className="h-[300px]">
-                <div className="space-y-2 pr-4">
-                  {footerConfig.legalLinks.length === 0 ? (
-                    <p className="text-sm text-gray-500 py-4">No legal links added yet</p>
-                  ) : (
-                    footerConfig.legalLinks.map((link, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-gray-50 rounded">
-                        <div>
-                          <p className="font-medium">{link.label}</p>
-                          <p className="text-sm text-gray-500">{link.href}</p>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleEditLegalLink(index)}
-                          >
-                            <Copy className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleDeleteLegalLink(index)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              </ScrollArea>
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+              ))
+            )}
+          </div>
 
           {/* Copyright Message */}
           <Card>

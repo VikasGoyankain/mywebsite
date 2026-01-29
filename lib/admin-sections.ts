@@ -220,7 +220,6 @@ export async function getSectionAnalytics(): Promise<AdminSectionAnalytics[]> {
 export async function initializeDefaultSections(): Promise<void> {
   try {
     const existingSections = await getAllAdminSections()
-    if (existingSections.length > 0) return // Already initialized
     
     const defaultSections = [
       {
@@ -312,11 +311,69 @@ export async function initializeDefaultSections(): Promise<void> {
         category: 'management' as const,
         priority: 9,
         isActive: true
+      },
+      {
+        title: 'Footer',
+        description: 'Customize footer content and settings',
+        icon: 'FileText',
+        linkHref: '/admin/footer',
+        linkText: 'Manage Footer',
+        category: 'management' as const,
+        priority: 10,
+        isActive: true
       }
     ]
     
-    for (const sectionData of defaultSections) {
-      await createAdminSection(sectionData)
+    // If no sections existed, create all defaults
+    if (existingSections.length === 0) {
+      for (const sectionData of defaultSections) {
+        await createAdminSection(sectionData)
+      }
+      return
+    }
+    
+    // For existing sections, add missing ones and update existing ones to match defaults
+    const existingByHref = new Map(existingSections.map(s => [s.linkHref, s]))
+    
+    for (const defaultSection of defaultSections) {
+      const existing = existingByHref.get(defaultSection.linkHref)
+      
+      if (!existing) {
+        // Add missing section
+        await createAdminSection(defaultSection)
+      } else if (existing.category !== defaultSection.category || existing.priority !== defaultSection.priority) {
+        // Update existing section to match defaults
+        await updateAdminSection(existing.id, {
+          title: defaultSection.title,
+          description: defaultSection.description,
+          icon: defaultSection.icon,
+          category: defaultSection.category,
+          priority: defaultSection.priority
+        })
+      }
+    }
+    
+    // Remove duplicate sections with the same linkHref (keep only the first one)
+    const allSections = await redis.hgetall(REDIS_KEYS.ADMIN_SECTIONS) as Record<string, string>
+    if (allSections) {
+      const sectionsByHref = new Map<string, string>()
+      const toDelete: string[] = []
+      
+      for (const [id, sectionStr] of Object.entries(allSections)) {
+        const section = typeof sectionStr === 'string' ? JSON.parse(sectionStr) : sectionStr
+        
+        if (!sectionsByHref.has(section.linkHref)) {
+          sectionsByHref.set(section.linkHref, id)
+        } else {
+          // This is a duplicate, mark for deletion
+          toDelete.push(id)
+        }
+      }
+      
+      // Delete all duplicates
+      for (const id of toDelete) {
+        await redis.hdel(REDIS_KEYS.ADMIN_SECTIONS, id)
+      }
     }
     
     console.log('Default admin sections initialized')

@@ -16,7 +16,7 @@ import StatsOverview from './components/StatsOverview';
 import MobileFilters from './components/MobileFilters';
 import { Case } from './data/mockCases';
 import { Skeleton } from '@/components/ui/skeleton';
-import { Footer } from '@/app/components/Footer';
+import { Footer } from '@/components/Footer';
 import Head from 'next/head';
 import Script from 'next/script';
 
