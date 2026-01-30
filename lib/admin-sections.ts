@@ -223,13 +223,23 @@ export async function initializeDefaultSections(): Promise<void> {
     
     const defaultSections = [
       {
+        title: 'Blog',
+        description: 'Manage blog posts with the new content schema',
+        icon: 'FileText',
+        linkHref: '/admin/blogs',
+        linkText: 'Manage Blog',
+        category: 'content' as const,
+        priority: 1,
+        isActive: true
+      },
+      {
         title: 'Posts',
         description: 'Manage your professional insights and articles',
         icon: 'FileText',
         linkHref: '/admin/posts',
         linkText: 'Manage Posts',
         category: 'content' as const,
-        priority: 1,
+        priority: 2,
         isActive: true
       },
       {

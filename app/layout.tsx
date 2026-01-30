@@ -2,6 +2,8 @@ import type React from "react"
 import type { Metadata, Viewport } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
+import { ServiceWorkerRegistration } from "@/components/blog/ServiceWorkerRegistration"
+
 export const viewport: Viewport = {
   width: "device-width",
   initialScale: 1,
@@ -107,6 +109,7 @@ export default function RootLayout({
         />
       </head>
       <body className="antialiased" suppressHydrationWarning>
+        <ServiceWorkerRegistration />
         {children}
         <Toaster />
       </body>
