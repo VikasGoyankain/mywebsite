@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState } from 'react';
+import React from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { format } from 'date-fns';
-import { Share2, Clock, ChevronRight, ExternalLink, Video, FolderOpen, Verified, Menu, X, ArrowLeft } from 'lucide-react';
+import { Share2, Clock, ChevronRight, ExternalLink, Video, FolderOpen, ArrowLeft } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from '@/hooks/use-toast';
 import { Post } from '@/lib/types/Post';
 import { Footer } from '@/components/Footer';
@@ -31,7 +30,6 @@ export default function BlogPostContent({ post }: BlogPostContentProps) {
   const router = useRouter();
   useDatabaseInit();
   const { profileData } = useProfileStore();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   // Calculate reading time
   const readTime = post.readTime || calculateReadingTime(post.content);
@@ -126,156 +124,34 @@ export default function BlogPostContent({ post }: BlogPostContentProps) {
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
-      {/* Header - matching homepage navbar */}
-      <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/60 shadow-sm">
-        <div className="max-w-6xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between">
-            <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-              <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                <AvatarImage src={profileData?.profileImage || "/placeholder.svg"} alt={profileData?.name || 'Profile'} />
-                <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-white font-bold">
-                  {profileData?.name
-                    ?.split(" ")
-                    .map((n) => n[0])
-                    .join("") || 'VG'}
-                </AvatarFallback>
-              </Avatar>
-              <div className="flex flex-col">
-                <div className="flex items-center gap-2">
-                  <span className="font-bold text-foreground">{profileData?.name || 'Blog'}</span>
-                  <Verified className="w-4 h-4 text-primary" />
-                </div>
-                <span className="text-sm text-muted-foreground">{profileData?.title || ''}</span>
-              </div>
-            </Link>
-
-            {/* Desktop: Back to Blog + Social Links + Share */}
-            <div className="hidden md:flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/blog')}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Blog
-              </Button>
-              
-              <div className="h-5 w-px bg-border/60" />
-              
-              {profileData?.socialLinks?.slice(0, 4).map((social) => (
-                <Link
-                  key={social.id}
-                  href={social.href}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-2 rounded-full transition-all duration-200 hover:scale-105 relative group"
-                  aria-label={`Visit ${social.name} profile`}
-                >
-                  <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                  <img
-                    src={social.icon}
-                    alt={social.name}
-                    className="w-4 h-4 relative z-10"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = '/placeholder.svg';
-                    }}
-                  />
-                </Link>
-              ))}
-              
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleShare}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-            </div>
-
-            {/* Mobile: Menu Button + Share */}
-            <div className="flex md:hidden items-center gap-2">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={handleShare}
-                className="text-muted-foreground hover:text-foreground"
-              >
-                <Share2 className="w-4 h-4" />
-              </Button>
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                aria-label="Toggle mobile menu"
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-          </div>
-
-          {/* Mobile Menu */}
-          {mobileMenuOpen && (
-            <div className="md:hidden mt-3 py-3 border-t border-border/60 space-y-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => router.push('/blog')}
-                className="w-full justify-start text-muted-foreground hover:text-foreground"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Back to Blog
-              </Button>
-              <div className="flex items-center justify-center gap-4 pt-2">
-                {profileData?.socialLinks?.map((social) => (
-                  <Link
-                    key={social.id}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-full transition-all duration-200 hover:scale-105 relative group"
-                    aria-label={`Visit ${social.name} profile`}
-                  >
-                    <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                    <img
-                      src={social.icon}
-                      alt={social.name}
-                      className="w-4 h-4 relative z-10"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </Link>
-                ))}
-              </div>
-            </div>
-          )}
-        </div>
-      </header>
-
       {/* Main Content */}
-      <main className="flex-1 py-16 sm:py-20">
+      <main className="flex-1 py-8 sm:py-12 md:py-16">
         <article className="blog-container">
-          {/* Breadcrumb */}
-          <nav className="flex items-center gap-1.5 text-sm text-muted-foreground/60 mb-10 animate-fade-in">
-            <Link href="/" className="hover:text-foreground transition-colors">
-              Home
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <Link href="/blog" className="hover:text-foreground transition-colors">
-              Blog
-            </Link>
-            <ChevronRight className="w-3.5 h-3.5" />
-            <span className="text-muted-foreground truncate max-w-[200px]">
-              {post.title}
-            </span>
-          </nav>
+          {/* Breadcrumb with Share */}
+          <div className="flex items-center justify-between mb-10 animate-fade-in">
+            <nav className="flex items-center gap-1.5 text-sm text-muted-foreground/60">
+              <Link href="/" className="hover:text-foreground transition-colors">
+                Home
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <Link href="/blog" className="hover:text-foreground transition-colors">
+                Blog
+              </Link>
+              <ChevronRight className="w-3.5 h-3.5" />
+              <span className="text-muted-foreground truncate max-w-[200px]">
+                {post.title}
+              </span>
+            </nav>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleShare}
+              className="text-muted-foreground hover:text-foreground -mr-2"
+            >
+              <Share2 className="w-4 h-4 mr-1.5" />
+              <span className="hidden sm:inline">Share</span>
+            </Button>
+          </div>
 
           {/* Article Header */}
           <header className="mb-12 animate-slide-up">
@@ -375,28 +251,6 @@ export default function BlogPostContent({ post }: BlogPostContentProps) {
             {formatContent(post.content)}
           </div>
 
-          {/* Article Footer */}
-          <footer className="mt-20 pt-10 border-t border-border/40">
-            <div className="flex items-center justify-between">
-              <Button
-                variant="ghost"
-                onClick={() => router.push('/blog')}
-                className="text-muted-foreground hover:text-foreground -ml-4"
-              >
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                All posts
-              </Button>
-
-              <Button
-                variant="ghost"
-                onClick={handleShare}
-                className="text-muted-foreground hover:text-foreground -mr-4"
-              >
-                <Share2 className="w-4 h-4 mr-2" />
-                Share
-              </Button>
-            </div>
-          </footer>
         </article>
       </main>
 

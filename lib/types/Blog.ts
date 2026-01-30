@@ -98,6 +98,19 @@ export interface Blog {
   content: string;
   
   // ============================================
+  // PINNING & FEATURED FIELDS
+  // ============================================
+  
+  /** Whether this blog is pinned at the top */
+  isPinned?: boolean;
+  
+  /** When the pin expires - ISO date string, null for forever */
+  pinDeadline?: string | null;
+  
+  /** Pin priority for ordering multiple pinned posts (higher = more prominent) */
+  pinPriority?: number;
+  
+  // ============================================
   // SYSTEM FIELDS (AUTO-GENERATED)
   // ============================================
   
@@ -136,6 +149,9 @@ export interface CreateBlogInput {
   canonical?: boolean;
   visibility?: BlogVisibility;
   audience?: BlogAudience;
+  isPinned?: boolean;
+  pinDeadline?: string | null;
+  pinPriority?: number;
 }
 
 /**
@@ -156,6 +172,9 @@ export interface UpdateBlogInput {
   canonical?: boolean;
   visibility?: BlogVisibility;
   audience?: BlogAudience;
+  isPinned?: boolean;
+  pinDeadline?: string | null;
+  pinPriority?: number;
 }
 
 /**
@@ -172,6 +191,9 @@ export interface BlogListItem {
   linked_project: string | null;
   linked_video: string | null;
   reading_time?: string;
+  isPinned?: boolean;
+  pinDeadline?: string | null;
+  pinPriority?: number;
 }
 
 /**

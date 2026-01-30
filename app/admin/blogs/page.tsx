@@ -23,10 +23,14 @@ import {
   BarChart3,
   Bell,
   BellRing,
+  Pin,
+  PinOff,
+  Calendar,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Label } from '@/components/ui/label';
 import {
   Card,
   CardContent,
@@ -79,6 +83,13 @@ export default function AdminBlogsPage() {
     open: false,
     blog: null,
   });
+  const [pinDialog, setPinDialog] = useState<{ open: boolean; blog: Blog | null }>({
+    open: false,
+    blog: null,
+  });
+  const [pinDeadline, setPinDeadline] = useState<string>('');
+  const [pinPriority, setPinPriority] = useState<string>('1');
+  const [pinning, setPinning] = useState(false);
 
   // Fetch blogs
   useEffect(() => {
@@ -205,6 +216,77 @@ export default function AdminBlogsPage() {
     }
   };
 
+  // Check if pin is valid (not expired)
+  const isPinValid = (blog: Blog): boolean => {
+    if (!blog.isPinned) return false;
+    if (!blog.pinDeadline) return true;
+    return new Date(blog.pinDeadline) > new Date();
+  };
+
+  // Pin blog
+  const handlePin = async () => {
+    if (!pinDialog.blog) return;
+
+    setPinning(true);
+    try {
+      const response = await fetch(`/api/blogs/${pinDialog.blog.slug}/pin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          deadline: pinDeadline || null,
+          priority: parseInt(pinPriority) || 1,
+        }),
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to pin blog');
+      }
+
+      toast({
+        title: 'Blog pinned',
+        description: `"${pinDialog.blog.title}" is now pinned${pinDeadline ? ` until ${format(new Date(pinDeadline), 'MMM d, yyyy')}` : ''}`,
+      });
+
+      setPinDialog({ open: false, blog: null });
+      setPinDeadline('');
+      setPinPriority('1');
+      fetchBlogs();
+    } catch (error: any) {
+      toast({
+        title: 'Error',
+        description: error.message || 'Failed to pin blog',
+        variant: 'destructive',
+      });
+    } finally {
+      setPinning(false);
+    }
+  };
+
+  // Unpin blog
+  const handleUnpin = async (blog: Blog) => {
+    try {
+      const response = await fetch(`/api/blogs/${blog.slug}/pin`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) throw new Error('Failed to unpin blog');
+
+      toast({
+        title: 'Blog unpinned',
+        description: `"${blog.title}" is no longer pinned`,
+      });
+
+      fetchBlogs();
+    } catch (error) {
+      toast({
+        title: 'Error',
+        description: 'Failed to unpin blog',
+        variant: 'destructive',
+      });
+    }
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -316,21 +398,42 @@ export default function AdminBlogsPage() {
         ) : filteredBlogs.length > 0 ? (
           <div className="space-y-3">
             {filteredBlogs.map((blog) => (
-              <Card key={blog.id} className="hover:shadow-sm transition-shadow">
+              <Card key={blog.id} className={cn(
+                "hover:shadow-sm transition-shadow",
+                isPinValid(blog) && "ring-1 ring-amber-400/50 bg-gradient-to-r from-amber-50/30 to-transparent dark:from-amber-950/20"
+              )}>
                 <CardContent className="p-4">
                   <div className="flex items-start gap-4">
                     {/* Icon */}
-                    <div className="hidden sm:flex w-10 h-10 rounded-lg bg-muted items-center justify-center flex-shrink-0">
-                      <FileText className="w-5 h-5 text-muted-foreground" />
+                    <div className={cn(
+                      "hidden sm:flex w-10 h-10 rounded-lg items-center justify-center flex-shrink-0",
+                      isPinValid(blog) ? "bg-amber-100 dark:bg-amber-950/50" : "bg-muted"
+                    )}>
+                      {isPinValid(blog) ? (
+                        <Pin className="w-5 h-5 text-amber-600" />
+                      ) : (
+                        <FileText className="w-5 h-5 text-muted-foreground" />
+                      )}
                     </div>
 
                     {/* Content */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-4">
                         <div className="min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
+                          <div className="flex items-center gap-2 mb-1 flex-wrap">
                             <h3 className="font-medium truncate">{blog.title}</h3>
                             {getStatusBadge(blog.status)}
+                            {isPinValid(blog) && (
+                              <Badge className="bg-amber-100 text-amber-700 hover:bg-amber-100 border-0">
+                                <Pin className="w-3 h-3 mr-1" />
+                                Pinned
+                                {blog.pinDeadline && (
+                                  <span className="ml-1 opacity-70">
+                                    until {format(new Date(blog.pinDeadline), 'MMM d')}
+                                  </span>
+                                )}
+                              </Badge>
+                            )}
                           </div>
                           <p className="text-sm text-muted-foreground line-clamp-1 mb-2">
                             {blog.summary}
@@ -377,6 +480,29 @@ export default function AdminBlogsPage() {
                               <Eye className="w-4 h-4 mr-2" />
                               Preview
                             </DropdownMenuItem>
+                            <DropdownMenuSeparator />
+                            {/* Pin/Unpin options */}
+                            {isPinValid(blog) ? (
+                              <DropdownMenuItem
+                                onClick={() => handleUnpin(blog)}
+                                className="text-amber-600 focus:text-amber-600"
+                              >
+                                <PinOff className="w-4 h-4 mr-2" />
+                                Unpin
+                              </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setPinDialog({ open: true, blog });
+                                  setPinDeadline('');
+                                  setPinPriority('1');
+                                }}
+                                className="text-amber-600 focus:text-amber-600"
+                              >
+                                <Pin className="w-4 h-4 mr-2" />
+                                Pin to Top
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             {blog.status === 'published' && (
                               <DropdownMenuItem
@@ -480,6 +606,156 @@ export default function AdminBlogsPage() {
         onClose={() => setNotificationDialog({ open: false, blog: null })}
         blog={notificationDialog.blog}
       />
+
+      {/* Pin Dialog */}
+      <Dialog
+        open={pinDialog.open}
+        onOpenChange={(open) => {
+          setPinDialog({ open, blog: open ? pinDialog.blog : null });
+          if (!open) {
+            setPinDeadline('');
+            setPinPriority('1');
+          }
+        }}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <div className="p-2 rounded-lg bg-amber-100 dark:bg-amber-950">
+                <Pin className="w-5 h-5 text-amber-600" />
+              </div>
+              Pin Blog Post
+            </DialogTitle>
+            <DialogDescription>
+              Pin "{pinDialog.blog?.title}" to the top of your blog. Pinned posts appear first and stand out to visitors.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4 py-4">
+            {/* Pin Duration */}
+            <div className="space-y-2">
+              <Label htmlFor="pin-deadline">Pin Until (Optional)</Label>
+              <div className="relative">
+                <Calendar className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  id="pin-deadline"
+                  type="date"
+                  value={pinDeadline}
+                  onChange={(e) => setPinDeadline(e.target.value)}
+                  min={format(new Date(Date.now() + 86400000), 'yyyy-MM-dd')}
+                  className="pl-10"
+                  placeholder="Leave empty to pin forever"
+                />
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Leave empty to pin indefinitely, or select a date when the pin should expire.
+              </p>
+            </div>
+
+            {/* Quick Duration Options */}
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + 7);
+                  setPinDeadline(format(date, 'yyyy-MM-dd'));
+                }}
+                className={cn(
+                  "text-xs",
+                  pinDeadline === format(new Date(Date.now() + 7 * 86400000), 'yyyy-MM-dd') && "border-primary bg-primary/5"
+                )}
+              >
+                1 Week
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setDate(date.getDate() + 14);
+                  setPinDeadline(format(date, 'yyyy-MM-dd'));
+                }}
+                className="text-xs"
+              >
+                2 Weeks
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  const date = new Date();
+                  date.setMonth(date.getMonth() + 1);
+                  setPinDeadline(format(date, 'yyyy-MM-dd'));
+                }}
+                className="text-xs"
+              >
+                1 Month
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                onClick={() => setPinDeadline('')}
+                className={cn(
+                  "text-xs",
+                  !pinDeadline && "border-primary bg-primary/5"
+                )}
+              >
+                Forever
+              </Button>
+            </div>
+
+            {/* Priority */}
+            <div className="space-y-2">
+              <Label htmlFor="pin-priority">Priority</Label>
+              <Select value={pinPriority} onValueChange={setPinPriority}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select priority" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Normal (1)</SelectItem>
+                  <SelectItem value="5">Medium (5)</SelectItem>
+                  <SelectItem value="10">High (10)</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Higher priority pins appear first when multiple posts are pinned.
+              </p>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setPinDialog({ open: false, blog: null })}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handlePin}
+              disabled={pinning}
+              className="bg-amber-500 hover:bg-amber-600 text-white"
+            >
+              {pinning ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin mr-2" />
+                  Pinning...
+                </>
+              ) : (
+                <>
+                  <Pin className="w-4 h-4 mr-2" />
+                  Pin Post
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

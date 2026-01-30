@@ -36,12 +36,84 @@ export async function getAllBlogs(): Promise<Blog[]> {
   }
 }
 
-// Get published blogs only
+// Check if a pin is still valid (not expired)
+function isPinValid(blog: Blog): boolean {
+  if (!blog.isPinned) return false;
+  if (!blog.pinDeadline) return true; // No deadline = pinned forever
+  return new Date(blog.pinDeadline) > new Date();
+}
+
+// Get published blogs only (with pinned blogs sorted first)
 export async function getPublishedBlogs(): Promise<Blog[]> {
   const blogs = await getAllBlogs();
-  return blogs.filter(
+  const published = blogs.filter(
     (blog) => blog.status === 'published' && blog.visibility === 'public'
   );
+
+  // Separate pinned and non-pinned blogs
+  const pinned = published
+    .filter((blog) => isPinValid(blog))
+    .sort((a, b) => (b.pinPriority || 0) - (a.pinPriority || 0));
+  
+  const notPinned = published
+    .filter((blog) => !isPinValid(blog))
+    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  return [...pinned, ...notPinned];
+}
+
+// Pin a blog
+export async function pinBlog(
+  id: string,
+  deadline?: string | null,
+  priority?: number
+): Promise<Blog | null> {
+  try {
+    const blog = await getBlogById(id);
+    if (!blog) return null;
+
+    const updatedBlog: Blog = {
+      ...blog,
+      isPinned: true,
+      pinDeadline: deadline || null,
+      pinPriority: priority || 1,
+      updated_at: new Date().toISOString(),
+    };
+
+    await redis.hset(REDIS_KEYS.BLOGS, {
+      [id]: JSON.stringify(updatedBlog),
+    });
+
+    return updatedBlog;
+  } catch (error) {
+    console.error('Error pinning blog:', error);
+    return null;
+  }
+}
+
+// Unpin a blog
+export async function unpinBlog(id: string): Promise<Blog | null> {
+  try {
+    const blog = await getBlogById(id);
+    if (!blog) return null;
+
+    const updatedBlog: Blog = {
+      ...blog,
+      isPinned: false,
+      pinDeadline: null,
+      pinPriority: undefined,
+      updated_at: new Date().toISOString(),
+    };
+
+    await redis.hset(REDIS_KEYS.BLOGS, {
+      [id]: JSON.stringify(updatedBlog),
+    });
+
+    return updatedBlog;
+  } catch (error) {
+    console.error('Error unpinning blog:', error);
+    return null;
+  }
 }
 
 // Get single blog by ID

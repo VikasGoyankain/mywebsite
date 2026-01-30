@@ -241,7 +241,7 @@ const defaultFooterConfig: FooterConfig = {
       title: 'Quick Links',
       links: [
         { label: 'Home', href: '/' },
-        { label: 'Posts', href: '/posts' },
+        { label: 'Blog', href: '/blog' },
         { label: 'Research', href: '/research' },
         { label: 'Case Vault', href: '/casevault' },
       ]

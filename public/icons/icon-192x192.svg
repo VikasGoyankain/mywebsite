@@ -1,0 +1,18 @@
+<svg width="192" height="192" viewBox="0 0 192 192" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGradient192" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E40AF"/>
+      <stop offset="50%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="192" height="192" rx="36" fill="url(#iconGradient192)"/>
+  
+  <!-- Inner circle -->
+  <circle cx="96" cy="96" r="68" fill="white" fill-opacity="0.95"/>
+  
+  <!-- VG Text -->
+  <text x="96" y="113" font-family="Arial, sans-serif" font-size="68" font-weight="bold" fill="#3B82F6" text-anchor="middle">VG</text>
+</svg>

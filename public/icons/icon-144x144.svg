@@ -1,0 +1,12 @@
+<svg width="144" height="144" viewBox="0 0 144 144" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="iconGradient144" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#1E40AF"/>
+      <stop offset="50%" style="stop-color:#3B82F6"/>
+      <stop offset="100%" style="stop-color:#7C3AED"/>
+    </linearGradient>
+  </defs>
+  <rect width="144" height="144" rx="28" fill="url(#iconGradient144)"/>
+  <circle cx="72" cy="72" r="52" fill="white" fill-opacity="0.95"/>
+  <text x="72" y="85" font-family="Arial, sans-serif" font-size="52" font-weight="bold" fill="#3B82F6" text-anchor="middle">VG</text>
+</svg>

@@ -4,17 +4,17 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { format } from 'date-fns';
-import { Search, X, Video, FolderOpen, Verified, Menu } from 'lucide-react';
+import { Search, Video, FolderOpen, Pin, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Blog, BlogStatus, calculateReadingTime } from '@/lib/types/Blog';
-import { Post } from '@/lib/types/Post';
 import { useProfileStore } from '@/lib/profile-store';
 import { useDatabaseInit } from '@/hooks/use-database-init';
 import { Footer } from '@/components/Footer';
 import { PushNotificationPrompt } from '@/components/blog/PushNotificationPrompt';
+import { SmartSearch, SortOption } from '@/components/blog/SmartSearch';
 import { cn } from '@/lib/utils';
+import { motion, AnimatePresence } from 'framer-motion';
 
 export default function BlogPage() {
   useDatabaseInit();
@@ -26,51 +26,16 @@ export default function BlogPage() {
   const [error, setError] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTag, setSelectedTag] = useState<string | null>(null);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [sortBy, setSortBy] = useState<SortOption>('newest');
 
   // Fetch blogs - with fallback to posts API
   useEffect(() => {
     async function fetchBlogs() {
       try {
-        // Try blogs API first
-        let data: Blog[] = [];
-        try {
-          const response = await fetch('/api/blogs');
-          if (response.ok) {
-            data = await response.json();
-          }
-        } catch {}
-
-        // Fallback to posts API if no blogs
-        if (data.length === 0) {
-          const response = await fetch('/api/posts');
-          if (!response.ok) throw new Error('Failed to fetch posts');
-          const posts: Post[] = await response.json();
-
-          // Transform posts to blog format
-          data = posts.map((post) => ({
-            id: post.id,
-            title: post.title || 'Untitled',
-            slug: post.id,
-            date: post.created_at?.toString() || new Date(post.timestamp).toISOString(),
-            type: 'blog' as const,
-            status: 'published' as BlogStatus,
-            summary: post.description || post.content?.substring(0, 160).replace(/<[^>]*>/g, '') || '',
-            tags: post.tags || [],
-            linked_project: null,
-            linked_publication: null,
-            linked_video: post.media?.some((m) => m.type === 'video') ? 'video' : null,
-            content: post.content,
-            version: 'v1.0',
-            canonical: true,
-            visibility: 'public' as const,
-            audience: 'general' as const,
-            last_updated: post.updated_at?.toString() || null,
-            created_at: post.created_at?.toString() || new Date(post.timestamp).toISOString(),
-            updated_at: post.updated_at?.toString() || new Date(post.timestamp).toISOString(),
-            reading_time: calculateReadingTime(post.content || ''),
-          }));
-        }
+        // Fetch blogs from API
+        const response = await fetch('/api/blogs');
+        if (!response.ok) throw new Error('Failed to fetch blogs');
+        const data: Blog[] = await response.json();
 
         // Filter only published blogs for public view
         setBlogs(data.filter((b) => b.status === 'published'));
@@ -91,10 +56,18 @@ export default function BlogPage() {
     return Array.from(tagSet).sort();
   }, [blogs]);
 
-  // Filter blogs
+  // Check if pin is valid (not expired)
+  const isPinValid = (blog: Blog): boolean => {
+    if (!blog.isPinned) return false;
+    if (!blog.pinDeadline) return true;
+    return new Date(blog.pinDeadline) > new Date();
+  };
+
+  // Filter and sort blogs
   const filteredBlogs = useMemo(() => {
     let result = blogs;
 
+    // Apply search filter
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
@@ -105,35 +78,127 @@ export default function BlogPage() {
       );
     }
 
+    // Apply tag filter
     if (selectedTag) {
       result = result.filter((blog) =>
         blog.tags.some((tag) => tag.toLowerCase() === selectedTag.toLowerCase())
       );
     }
 
-    // Sort by date descending
-    return result.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [blogs, searchQuery, selectedTag]);
+    // Separate pinned and non-pinned
+    const pinned = result.filter((blog) => isPinValid(blog))
+      .sort((a, b) => (b.pinPriority || 0) - (a.pinPriority || 0));
+    
+    const notPinned = result.filter((blog) => !isPinValid(blog));
 
-  // JSON-LD structured data
+    // Apply sorting to non-pinned blogs
+    switch (sortBy) {
+      case 'oldest':
+        notPinned.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+        break;
+      case 'popular':
+        notPinned.sort((a, b) => (b.views || 0) - (a.views || 0));
+        break;
+      case 'trending':
+        // Trending = recent + popular (last 30 days with high views)
+        const thirtyDaysAgo = new Date();
+        thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+        notPinned.sort((a, b) => {
+          const aRecent = new Date(a.date) > thirtyDaysAgo;
+          const bRecent = new Date(b.date) > thirtyDaysAgo;
+          if (aRecent && !bRecent) return -1;
+          if (!aRecent && bRecent) return 1;
+          return (b.views || 0) - (a.views || 0);
+        });
+        break;
+      case 'newest':
+      default:
+        notPinned.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+    }
+
+    return [...pinned, ...notPinned];
+  }, [blogs, searchQuery, selectedTag, sortBy]);
+
+  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in';
+
+  // JSON-LD structured data for Blog
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Blog',
-    name: 'Blog',
-    description: 'Reflections on law, technology, and systems thinking.',
-    url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in'}/blog`,
+    '@id': `${baseUrl}/blog#blog`,
+    name: 'Blog — Vikas Goyanka',
+    description: 'Explore articles on law, technology, systems thinking, and personal reflections by Vikas Goyanka.',
+    url: `${baseUrl}/blog`,
+    inLanguage: 'en-IN',
     author: {
       '@type': 'Person',
+      '@id': `${baseUrl}#person`,
       name: profileData?.name || 'Vikas Goyanka',
-      url: process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in',
+      url: baseUrl,
+    },
+    publisher: {
+      '@type': 'Person',
+      '@id': `${baseUrl}#person`,
+      name: profileData?.name || 'Vikas Goyanka',
     },
     blogPost: filteredBlogs.slice(0, 10).map((blog) => ({
       '@type': 'BlogPosting',
+      '@id': `${baseUrl}/blog/${blog.slug}`,
       headline: blog.title,
       description: blog.summary,
       datePublished: blog.date,
-      url: `${process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in'}/blog/${blog.slug}`,
+      dateModified: blog.updated_at || blog.date,
+      url: `${baseUrl}/blog/${blog.slug}`,
+      keywords: blog.tags?.join(', '),
+      author: {
+        '@type': 'Person',
+        name: profileData?.name || 'Vikas Goyanka',
+      },
     })),
+  };
+
+  // Breadcrumb structured data
+  const breadcrumbData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: baseUrl,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Blog',
+        item: `${baseUrl}/blog`,
+      },
+    ],
+  };
+
+  // WebPage structured data
+  const webPageData = {
+    '@context': 'https://schema.org',
+    '@type': 'CollectionPage',
+    '@id': `${baseUrl}/blog#webpage`,
+    name: 'Blog — Thoughts & Reflections',
+    description: 'Explore articles on law, technology, systems thinking, and personal reflections.',
+    url: `${baseUrl}/blog`,
+    isPartOf: {
+      '@type': 'WebSite',
+      '@id': `${baseUrl}#website`,
+      name: 'Vikas Goyanka',
+      url: baseUrl,
+    },
+    about: {
+      '@type': 'Blog',
+      '@id': `${baseUrl}/blog#blog`,
+    },
+    mainEntity: {
+      '@type': 'Blog',
+      '@id': `${baseUrl}/blog#blog`,
+    },
   };
 
   return (
@@ -142,157 +207,41 @@ export default function BlogPage() {
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(webPageData) }}
+      />
 
       <div className="min-h-screen flex flex-col bg-background">
-        {/* Header - matching homepage navbar */}
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-lg border-b border-border/60 shadow-sm">
-          <div className="max-w-6xl mx-auto px-4 py-3">
-            <div className="flex items-center justify-between">
-              <Link href="/" className="flex items-center gap-3 hover:opacity-80 transition-opacity">
-                <Avatar className="w-10 h-10 ring-2 ring-primary/20">
-                  <AvatarImage src={profileData?.profileImage || "/placeholder.svg"} alt={profileData?.name || 'Profile'} />
-                  <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-white font-bold">
-                    {profileData?.name
-                      ?.split(" ")
-                      .map((n) => n[0])
-                      .join("") || 'VG'}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-foreground">{profileData?.name || 'Blog'}</span>
-                    <Verified className="w-4 h-4 text-primary" />
-                  </div>
-                  <span className="text-sm text-muted-foreground">{profileData?.title || ''}</span>
-                </div>
-              </Link>
-
-              {/* Desktop Social Links */}
-              <div className="hidden md:flex items-center gap-2">
-                {profileData?.socialLinks?.map((social) => (
-                  <Link
-                    key={social.id}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="p-2 rounded-full transition-all duration-200 hover:scale-105 relative group"
-                    aria-label={`Visit ${social.name} profile`}
-                  >
-                    <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                    <img
-                      src={social.icon}
-                      alt={social.name}
-                      className="w-4 h-4 relative z-10"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </Link>
-                ))}
-              </div>
-
-              {/* Mobile Menu Button */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-lg bg-muted hover:bg-muted/80 transition-colors"
-                aria-label="Toggle mobile menu"
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-
-            {/* Mobile Social Links Menu */}
-            {mobileMenuOpen && (
-              <div className="md:hidden mt-3 py-3 border-t border-border/60">
-                <div className="flex items-center justify-center gap-4">
-                  {profileData?.socialLinks?.map((social) => (
-                    <Link
-                      key={social.id}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-full transition-all duration-200 hover:scale-105 relative group"
-                      aria-label={`Visit ${social.name} profile`}
-                    >
-                      <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                      <img
-                        src={social.icon}
-                        alt={social.name}
-                        className="w-4 h-4 relative z-10"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder.svg';
-                        }}
-                      />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </header>
-
         {/* Main content */}
-        <main className="flex-1 py-16 sm:py-20">
+        <main className="flex-1 py-6 sm:py-8 md:py-10">
           <div className="blog-container">
             {/* Page header */}
-            <header className="mb-16 animate-fade-in">
-              <h1 className="blog-title mb-4">Blog</h1>
+            <header className="mb-6 sm:mb-8 md:mb-10 animate-fade-in">
+              <h1 className="blog-title mb-3 sm:mb-4">Blog</h1>
               <p className="blog-subtitle max-w-md">
                 Reflections, documented thinking, and notes on projects and systems.
               </p>
             </header>
 
-            {/* Search */}
-            <div className="mb-10 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'backwards' }}>
-              <div className="relative max-w-sm">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  type="text"
-                  placeholder="Search posts..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 h-11 bg-card border-border/60 focus:border-primary/40 focus:ring-0"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
+            {/* Smart Search */}
+            <div className="mb-6 sm:mb-8 animate-slide-up" style={{ animationDelay: '0.1s', animationFillMode: 'backwards' }}>
+              <SmartSearch
+                searchQuery={searchQuery}
+                onSearchChange={setSearchQuery}
+                selectedTag={selectedTag}
+                onTagSelect={setSelectedTag}
+                availableTags={availableTags}
+                sortBy={sortBy}
+                onSortChange={setSortBy}
+                totalResults={filteredBlogs.length}
+                className="max-w-2xl"
+              />
             </div>
-
-            {/* Tags filter */}
-            {availableTags.length > 0 && (
-              <div
-                className="flex flex-wrap gap-2 mb-12 animate-slide-up"
-                style={{ animationDelay: '0.15s', animationFillMode: 'backwards' }}
-              >
-                <button
-                  onClick={() => setSelectedTag(null)}
-                  className={cn('blog-tag', !selectedTag && 'blog-tag-active')}
-                >
-                  All
-                </button>
-                {availableTags.slice(0, 6).map((tag) => (
-                  <button
-                    key={tag}
-                    onClick={() => setSelectedTag(selectedTag === tag ? null : tag)}
-                    className={cn('blog-tag', selectedTag === tag && 'blog-tag-active')}
-                  >
-                    {tag}
-                  </button>
-                ))}
-              </div>
-            )}
 
             {/* Loading */}
             {loading && (
@@ -312,52 +261,103 @@ export default function BlogPage() {
             {!loading && !error && (
               <div className="animate-slide-up" style={{ animationDelay: '0.2s', animationFillMode: 'backwards' }}>
                 {filteredBlogs.length > 0 ? (
-                  <div>
-                    {filteredBlogs.map((blog) => (
-                      <Link
-                        key={blog.id}
-                        href={`/blog/${blog.slug}`}
-                        className="blog-card block group"
-                      >
-                        {/* Date */}
-                        <time className="blog-meta block mb-2">
-                          {format(new Date(blog.date), 'MMMM d, yyyy')}
-                        </time>
+                  <div className="space-y-0 sm:space-y-2">
+                    <AnimatePresence mode="popLayout">
+                      {filteredBlogs.map((blog, index) => (
+                        <motion.div
+                          key={blog.id}
+                          layout
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, scale: 0.95 }}
+                          transition={{ 
+                            duration: 0.3, 
+                            delay: index * 0.04,
+                            ease: [0.22, 1, 0.36, 1]
+                          }}
+                        >
+                          <Link
+                            href={`/blog/${blog.slug}`}
+                            className={cn(
+                              'blog-card block group relative overflow-hidden',
+                              isPinValid(blog) && 'ring-1 ring-amber-500/30 bg-gradient-to-r from-amber-50/50 to-transparent'
+                            )}
+                          >
+                            {/* Hover gradient overlay - desktop only */}
+                            <div className="hidden sm:block absolute inset-0 bg-gradient-to-r from-primary/5 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-xl" />
+                            
+                            {/* Pinned Badge */}
+                            {isPinValid(blog) && (
+                              <div className="absolute -top-1 -right-1 z-10">
+                                <span className="inline-flex items-center gap-1 px-2 py-0.5 sm:px-2.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-gradient-to-r from-amber-500 to-orange-500 text-white shadow-lg shadow-amber-500/25">
+                                  <Pin className="w-2.5 h-2.5 sm:w-3 sm:h-3" />
+                                  Pinned
+                                </span>
+                              </div>
+                            )}
 
-                        {/* Title */}
-                        <h2 className="text-xl font-medium mb-2 text-foreground group-hover:text-primary transition-colors duration-200">
-                          {blog.title}
-                        </h2>
+                            {/* Content wrapper */}
+                            <div className="relative z-10">
+                              {/* Date and Reading Time */}
+                              <div className="flex items-center gap-2 sm:gap-3 mb-1.5 sm:mb-2 text-xs sm:text-sm text-muted-foreground">
+                                <time className="blog-meta">
+                                  {format(new Date(blog.date), 'MMM d, yyyy')}
+                                </time>
+                                {blog.reading_time && (
+                                  <>
+                                    <span className="w-1 h-1 rounded-full bg-muted-foreground/40" />
+                                    <span className="flex items-center gap-1">
+                                      <Clock className="w-3 h-3" />
+                                      {blog.reading_time}
+                                    </span>
+                                  </>
+                                )}
+                              </div>
 
-                        {/* Summary */}
-                        <p className="text-muted-foreground leading-relaxed mb-3 line-clamp-2">
-                          {blog.summary}
-                        </p>
+                              {/* Title */}
+                              <h2 className="blog-card-title text-base sm:text-xl font-medium mb-1.5 sm:mb-2 text-foreground sm:group-hover:text-primary transition-colors duration-200">
+                                {blog.title}
+                                {/* Arrow - desktop only */}
+                                <span className="hidden sm:inline-block ml-2 opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-200">
+                                  →
+                                </span>
+                              </h2>
 
-                        {/* Tags and indicators */}
-                        <div className="flex items-center gap-3 flex-wrap">
-                          {blog.tags.slice(0, 3).map((tag) => (
-                            <span key={tag} className="blog-tag">
-                              {tag}
-                            </span>
-                          ))}
+                              {/* Summary */}
+                              <p className="text-sm sm:text-base text-muted-foreground leading-relaxed mb-2 sm:mb-3 line-clamp-2">
+                                {blog.summary}
+                              </p>
 
-                          {blog.linked_project && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <FolderOpen className="w-3 h-3" />
-                              Project
-                            </span>
-                          )}
+                              {/* Tags and indicators */}
+                              <div className="flex items-center gap-2 sm:gap-3 flex-wrap">
+                                {blog.tags.slice(0, 2).map((tag) => (
+                                  <span key={tag} className="blog-tag text-[10px] sm:text-xs sm:group-hover:bg-primary/10 transition-colors">
+                                    {tag}
+                                  </span>
+                                ))}
+                                {blog.tags.length > 2 && (
+                                  <span className="text-[10px] sm:text-xs text-muted-foreground">+{blog.tags.length - 2}</span>
+                                )}
 
-                          {blog.linked_video && (
-                            <span className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Video className="w-3 h-3" />
-                              Video
-                            </span>
-                          )}
-                        </div>
-                      </Link>
-                    ))}
+                                {blog.linked_project && (
+                                  <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                                    <FolderOpen className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Project</span>
+                                  </span>
+                                )}
+
+                                {blog.linked_video && (
+                                  <span className="flex items-center gap-1 text-[10px] sm:text-xs text-muted-foreground">
+                                    <Video className="w-3 h-3" />
+                                    <span className="hidden sm:inline">Video</span>
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </Link>
+                        </motion.div>
+                      ))}
+                    </AnimatePresence>
                   </div>
                 ) : (
                   <div className="py-20 text-center">

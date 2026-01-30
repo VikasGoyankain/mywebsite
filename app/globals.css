@@ -55,18 +55,18 @@
 @layer components {
   /* Blog Layout */
   .blog-container {
-    @apply max-w-[680px] mx-auto px-5 sm:px-6;
+    @apply max-w-[720px] mx-auto px-4 sm:px-6;
   }
 
   /* Blog Typography - Serif Headings */
   .blog-title {
     font-family: Georgia, 'Times New Roman', serif;
-    @apply text-3xl sm:text-4xl font-normal tracking-tight leading-tight;
+    @apply text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-normal tracking-tight leading-tight;
     color: hsl(var(--blog-text));
   }
 
   .blog-subtitle {
-    @apply text-lg leading-relaxed;
+    @apply text-base sm:text-lg leading-relaxed;
     color: hsl(var(--blog-text-muted));
     letter-spacing: -0.01em;
   }
@@ -177,17 +177,50 @@
 
   /* Blog Card */
   .blog-card {
-    @apply py-8 border-b transition-all duration-300 ease-out;
-    border-color: hsl(var(--blog-border) / 0.6);
+    @apply py-5 px-4 -mx-4 rounded-xl transition-all duration-300 ease-out;
+    @apply border border-border/30 bg-card/50 mb-3;
+    position: relative;
   }
 
-  .blog-card:hover {
-    @apply -mx-4 px-4 rounded-md;
-    background: hsl(var(--secondary) / 0.3);
+  /* Mobile: cards are always visually distinct */
+  @media (max-width: 640px) {
+    .blog-card {
+      @apply shadow-sm;
+    }
+    
+    .blog-card:active {
+      @apply bg-secondary/60 scale-[0.98];
+    }
   }
 
-  .blog-card:last-child {
-    @apply border-b-0;
+  /* Desktop: hover effects */
+  @media (min-width: 641px) {
+    .blog-card {
+      @apply border-transparent bg-transparent mb-0;
+    }
+
+    .blog-card::after {
+      content: '';
+      @apply absolute bottom-0 left-4 right-4 h-px;
+      background: linear-gradient(90deg, transparent, hsl(var(--blog-border) / 0.5), transparent);
+    }
+
+    .blog-card:last-child::after {
+      display: none;
+    }
+
+    .blog-card:hover {
+      @apply bg-secondary/40 border-border/50 shadow-sm;
+      transform: translateX(4px);
+    }
+
+    .blog-card:hover .blog-card-title {
+      @apply text-primary;
+    }
+
+    .blog-card:active {
+      transform: translateX(2px) scale(0.995);
+    }
   }
 
   /* Subtle Animations */

@@ -233,16 +233,6 @@ export async function initializeDefaultSections(): Promise<void> {
         isActive: true
       },
       {
-        title: 'Posts',
-        description: 'Manage your professional insights and articles',
-        icon: 'FileText',
-        linkHref: '/admin/posts',
-        linkText: 'Manage Posts',
-        category: 'content' as const,
-        priority: 2,
-        isActive: true
-      },
-      {
         title: 'Profile',
         description: 'Update your personal information and contact details',
         icon: 'User',

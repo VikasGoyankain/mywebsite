@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useState, useEffect } from "react"
+import React, { useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
@@ -53,8 +53,6 @@ import {
   Speech,
   Flag,
   Crown,
-  Menu,
-  X,
 } from "lucide-react"
 import Image from "next/image"
 import Link from "next/link"
@@ -118,7 +116,6 @@ export default function ModernProfile() {
   useDatabaseInit() // Initialize database connection
 
   const { profileData, experience, education, skills, posts, navigationButtons } = useProfileStore()
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
 
   // --- SEO & Favicon logic ---
   useEffect(() => {
@@ -210,99 +207,6 @@ export default function ModernProfile() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50">
       <div className="max-w-6xl mx-auto">
-        {/* Header */}
-        <div className="sticky top-0 z-50 bg-white/95 backdrop-blur-lg border-b border-gray-200 shadow-sm">
-          <div className="px-4 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <Avatar className="w-10 h-10 ring-2 ring-blue-500/20">
-                  <AvatarImage src={profileData.profileImage || "/placeholder.svg"} alt={profileData.name} />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
-                    {profileData.name
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex flex-col">
-                  <div className="flex items-center gap-2">
-                    <span className="font-bold text-gray-900">{profileData.name}</span>
-                    <Verified className="w-4 h-4 text-blue-500" />
-                  </div>
-                  <span className="text-sm text-gray-600">{profileData.title}</span>
-                </div>
-              </div>
-
-              {/* Desktop Social Links */}
-              <div className="hidden md:flex items-center gap-2">
-                {profileData.socialLinks.map((social) => (
-                  <Link
-                    key={social.id}
-                    href={social.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={`p-2 rounded-full transition-all duration-200 hover:scale-105 relative group`}
-                    aria-label={`Visit ${social.name} profile`}
-                  >
-                    <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                    <img
-                      src={social.icon}
-                      alt={social.name}
-                      className="w-4 h-4 relative z-10"
-                      onError={(e) => {
-                        const target = e.target as HTMLImageElement;
-                        target.src = '/placeholder.svg';
-                      }}
-                    />
-                  </Link>
-                ))}
-              </div>
-
-              {/* Mobile Menu Button - using state to control menu visibility */}
-              <button
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                className="md:hidden p-2 rounded-lg bg-gray-50 hover:bg-gray-100 transition-colors"
-                aria-label="Toggle mobile menu"
-              >
-                {mobileMenuOpen ? (
-                  <X className="w-5 h-5" />
-                ) : (
-                  <Menu className="w-5 h-5" />
-                )}
-              </button>
-            </div>
-
-            {/* Mobile Social Links Menu */}
-            {mobileMenuOpen && (
-              <div className="md:hidden mt-3 py-3 border-t border-gray-100">
-                <div className="flex items-center justify-center gap-4">
-                  {profileData.socialLinks.map((social) => (
-                    <Link
-                      key={social.id}
-                      href={social.href}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className={`p-2 rounded-full transition-all duration-200 hover:scale-105 relative group`}
-                      aria-label={`Visit ${social.name} profile`}
-                    >
-                      <div className={`absolute inset-0 rounded-full ${social.color} opacity-10 group-hover:opacity-20 transition-opacity`}></div>
-                      <img
-                        src={social.icon}
-                        alt={social.name}
-                        className="w-4 h-4 relative z-10"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = '/placeholder.svg';
-                        }}
-                      />
-                    </Link>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-
         <div className="px-4 py-8">
           {/* Profile Section */}
           <div className="mb-12">
