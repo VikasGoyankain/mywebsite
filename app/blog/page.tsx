@@ -13,7 +13,6 @@ import { Post } from '@/lib/types/Post';
 import { useProfileStore } from '@/lib/profile-store';
 import { useDatabaseInit } from '@/hooks/use-database-init';
 import { Footer } from '@/components/Footer';
-import { NotificationBanner } from '@/components/blog/NotificationBanner';
 import { PushNotificationPrompt } from '@/components/blog/PushNotificationPrompt';
 import { cn } from '@/lib/utils';
 
@@ -391,7 +390,6 @@ export default function BlogPage() {
         </main>
 
         <Footer />
-        <NotificationBanner />
         <PushNotificationPrompt variant="floating" />
       </div>
     </>

@@ -23,10 +23,10 @@ export function PushNotificationPrompt({
   const [isReady, setIsReady] = useState(false);
 
   useEffect(() => {
-    // Small delay to ensure component mounts properly
+    // Show notification prompt after 10 seconds
     const timer = setTimeout(() => {
       initializeNotifications();
-    }, 1500);
+    }, 10000);
     
     return () => clearTimeout(timer);
   }, []);
