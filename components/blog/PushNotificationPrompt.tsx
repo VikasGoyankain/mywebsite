@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Bell, X, Sparkles, Check } from 'lucide-react';
+import { Bell, X, Sparkles, Check, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,7 @@ export function PushNotificationPrompt({
   const [showSuccess, setShowSuccess] = useState(false);
   const [permission, setPermission] = useState<NotificationPermission | 'default'>('default');
   const [isReady, setIsReady] = useState(false);
+  const [showDeniedHelp, setShowDeniedHelp] = useState(false);
 
   useEffect(() => {
     // Show notification prompt after 10 seconds
@@ -75,9 +76,23 @@ export function PushNotificationPrompt({
   const subscribe = async () => {
     setIsLoading(true);
     try {
+      // Check if already denied - show help instead
+      if (Notification.permission === 'denied') {
+        setShowDeniedHelp(true);
+        setIsLoading(false);
+        return;
+      }
+
       // Request notification permission
       const perm = await Notification.requestPermission();
       setPermission(perm);
+      
+      if (perm === 'denied') {
+        console.log('Notification permission denied');
+        setShowDeniedHelp(true);
+        setIsLoading(false);
+        return;
+      }
       
       if (perm !== 'granted') {
         console.log('Notification permission not granted:', perm);
@@ -89,8 +104,10 @@ export function PushNotificationPrompt({
       const registration = await navigator.serviceWorker.ready;
       console.log('Service worker ready');
 
-      // Get VAPID public key from env
-      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      // Get VAPID public key - use env or fallback to hardcoded value
+      const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || 'BLCfqp2lIZNfEzAE6ah8oRtHFouhnjDpaPsEfIqf_e0mFs25XTMuDIDzkLq8buY7Jp44zzT1Q3cupfd7Bss8EHE';
+      
+      console.log('Using VAPID key:', vapidPublicKey.substring(0, 20) + '...');
       
       if (!vapidPublicKey) {
         console.error('VAPID public key not configured');
@@ -139,6 +156,7 @@ export function PushNotificationPrompt({
   const handleDismiss = () => {
     localStorage.setItem('push-notification-dismissed', Date.now().toString());
     setIsDismissed(true);
+    setShowDeniedHelp(false);
   };
 
   // Debug log
@@ -153,9 +171,63 @@ export function PushNotificationPrompt({
     return null;
   }
 
-  // Don't render if not supported, dismissed, denied, or already subscribed
-  if (!isSupported || isDismissed || permission === 'denied' || isSubscribed) {
+  // Don't render if not supported, dismissed, or already subscribed
+  // But DO render if denied so we can show help
+  if (!isSupported || isDismissed || isSubscribed) {
     return null;
+  }
+
+  // Show help dialog when permission is denied
+  if (showDeniedHelp || permission === 'denied') {
+    return (
+      <div className={cn(
+        "fixed bottom-6 right-6 z-50 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-500",
+        className
+      )}>
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4">
+            <div className="flex items-start justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h3 className="font-semibold text-white">Permission Blocked</h3>
+                  <p className="text-sm text-white/80">Enable in browser settings</p>
+                </div>
+              </div>
+              <button 
+                onClick={handleDismiss}
+                className="text-white/60 hover:text-white transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+          
+          {/* Content */}
+          <div className="px-5 py-4">
+            <p className="text-sm text-muted-foreground mb-4">
+              Notifications were previously blocked. To enable them:
+            </p>
+            <ol className="text-sm text-muted-foreground space-y-2 mb-4 list-decimal list-inside">
+              <li>Click the <strong>lock icon 🔒</strong> in the address bar</li>
+              <li>Find <strong>&quot;Notifications&quot;</strong></li>
+              <li>Change from &quot;Block&quot; to <strong>&quot;Allow&quot;</strong></li>
+              <li>Refresh the page</li>
+            </ol>
+            <Button 
+              variant="outline"
+              onClick={handleDismiss}
+              className="w-full"
+            >
+              Got it
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // Floating prompt (bottom-right corner)
