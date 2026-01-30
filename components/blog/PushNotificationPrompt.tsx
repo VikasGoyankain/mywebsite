@@ -47,14 +47,24 @@ export function PushNotificationPrompt({
     }
     
     setIsSupported(true);
-    setPermission(Notification.permission);
+    const currentPermission = Notification.permission;
+    setPermission(currentPermission);
     
     // Check if user dismissed the prompt before
+    // BUT if permission is now 'default' or 'granted', clear the dismissed state
+    // so user can subscribe after enabling in settings
     const dismissed = localStorage.getItem('push-notification-dismissed');
     if (dismissed) {
       const dismissedTime = parseInt(dismissed);
-      // Re-show after 7 days
-      if (Date.now() - dismissedTime < 7 * 24 * 60 * 60 * 1000) {
+      const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
+      
+      // If permission is default/granted and was dismissed due to denied, show again
+      if (currentPermission !== 'denied') {
+        // Permission changed from denied to allowed/default, clear dismissed state
+        localStorage.removeItem('push-notification-dismissed');
+        setIsDismissed(false);
+      } else if (dismissedTime > sevenDaysAgo) {
+        // Still denied and within 7 days
         setIsDismissed(true);
       }
     }
@@ -76,19 +86,25 @@ export function PushNotificationPrompt({
   const subscribe = async () => {
     setIsLoading(true);
     try {
-      // Check if already denied - show help instead
-      if (Notification.permission === 'denied') {
+      // Check current permission status first
+      const currentPermission = Notification.permission;
+      console.log('Current notification permission:', currentPermission);
+      
+      // If already denied, show help
+      if (currentPermission === 'denied') {
         setShowDeniedHelp(true);
         setIsLoading(false);
         return;
       }
 
       // Request notification permission
+      console.log('Requesting notification permission...');
       const perm = await Notification.requestPermission();
+      console.log('Permission result:', perm);
       setPermission(perm);
       
       if (perm === 'denied') {
-        console.log('Notification permission denied');
+        console.log('Notification permission denied by browser');
         setShowDeniedHelp(true);
         setIsLoading(false);
         return;
@@ -99,6 +115,9 @@ export function PushNotificationPrompt({
         setIsLoading(false);
         return;
       }
+
+      // Permission granted - proceed with subscription
+      console.log('Permission granted! Proceeding with push subscription...');
 
       // Wait for service worker
       const registration = await navigator.serviceWorker.ready;
