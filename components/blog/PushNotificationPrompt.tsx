@@ -80,12 +80,14 @@ export function PushNotificationPrompt({
       setPermission(perm);
       
       if (perm !== 'granted') {
+        console.log('Notification permission not granted:', perm);
         setIsLoading(false);
         return;
       }
 
       // Wait for service worker
       const registration = await navigator.serviceWorker.ready;
+      console.log('Service worker ready');
 
       // Get VAPID public key from env
       const vapidPublicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
@@ -102,12 +104,21 @@ export function PushNotificationPrompt({
         applicationServerKey: urlBase64ToUint8Array(vapidPublicKey) as BufferSource,
       });
 
+      console.log('Push subscription created:', subscription);
+
+      // Convert subscription to JSON for sending to server
+      const subscriptionJSON = subscription.toJSON();
+      console.log('Sending subscription to server:', subscriptionJSON);
+
       // Send subscription to server
       const response = await fetch('/api/subscribers/push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ subscription }),
+        body: JSON.stringify({ subscription: subscriptionJSON }),
       });
+
+      const data = await response.json();
+      console.log('Server response:', data);
 
       if (response.ok) {
         setIsSubscribed(true);
@@ -115,6 +126,8 @@ export function PushNotificationPrompt({
         setTimeout(() => {
           setShowSuccess(false);
         }, 3000);
+      } else {
+        console.error('Failed to save subscription:', data);
       }
     } catch (error) {
       console.error('Error subscribing to push notifications:', error);
