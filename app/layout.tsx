@@ -3,6 +3,8 @@ import type { Viewport } from "next"
 import "./globals.css"
 import { Toaster } from "@/components/ui/toaster"
 import { ServiceWorkerRegistration } from "@/components/blog/ServiceWorkerRegistration"
+import { CacheManager } from "@/components/CacheManager"
+import { UpdateNotification } from "@/components/UpdateNotification"
 import Navbar from "@/components/Navbar"
 import { defaultMetadata, personStructuredData, websiteStructuredData, organizationStructuredData } from "./metadata"
 
@@ -61,6 +63,13 @@ export default function RootLayout({
         <meta httpEquiv="content-language" content="en-IN" />
         <meta name="language" content="English" />
         
+        {/* Cache Control Meta Tags */}
+        <meta httpEquiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+        <meta httpEquiv="Pragma" content="no-cache" />
+        <meta httpEquiv="Expires" content="0" />
+        <meta name="cache-control" content="no-cache, no-store, must-revalidate, max-age=0" />
+        <meta name="version" content={Date.now().toString()} />
+        
         {/* Structured Data - Person */}
         <script
           type="application/ld+json"
@@ -87,6 +96,8 @@ export default function RootLayout({
       </head>
       <body className="antialiased" suppressHydrationWarning>
         <ServiceWorkerRegistration />
+        <CacheManager />
+        <UpdateNotification />
         <Navbar />
         {children}
         <Toaster />

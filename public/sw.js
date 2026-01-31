@@ -1,7 +1,8 @@
 // Service Worker for Push Notifications
 // This file should be placed in public/sw.js
 
-const CACHE_NAME = 'blog-cache-v2';
+const CACHE_NAME = 'blog-cache-v' + Date.now();
+const CACHE_VERSION = '3.1'; // Increment this when you want to force cache refresh
 
 // Install event
 self.addEventListener('install', (event) => {
@@ -12,7 +13,19 @@ self.addEventListener('install', (event) => {
 // Activate event
 self.addEventListener('activate', (event) => {
   console.log('Service Worker activated');
-  event.waitUntil(clients.claim());
+  // Clean up old caches
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            console.log('Deleting old cache:', cacheName);
+            return caches.delete(cacheName);
+          }
+        })
+      );
+    }).then(() => clients.claim())
+  );
 });
 
 // Push notification event with enhanced formatting

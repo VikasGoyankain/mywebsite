@@ -6,7 +6,12 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "cache:clear": "node scripts/update-cache-version.js",
+    "deploy": "npm run cache:clear && npm run build",
+    "deps:clean": "rm -rf node_modules bun.lockb package-lock.json && npm install",
+    "deps:update": "npm update next @next/swc-win32-x64-msvc",
+    "fix:swc": "node scripts/fix-nextjs-swc.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
@@ -55,7 +60,7 @@
     "input-otp": "1.4.1",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.454.0",
-    "next": "^15.2.8",
+    "next": "15.5.7",
     "next-themes": "^0.4.4",
     "nodemailer": "^7.0.3",
     "react": "^19",
