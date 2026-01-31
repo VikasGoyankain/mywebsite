@@ -11,7 +11,8 @@
     "deploy": "npm run cache:clear && npm run build",
     "deps:clean": "rm -rf node_modules bun.lockb package-lock.json && npm install",
     "deps:update": "npm update next @next/swc-win32-x64-msvc",
-    "fix:swc": "node scripts/fix-nextjs-swc.js"
+    "fix:swc": "node scripts/fix-nextjs-swc.js",
+    "vercel:prepare": "pnpm install --no-frozen-lockfile"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
