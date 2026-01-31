@@ -65,7 +65,6 @@ import type { NavigationButton } from "@/lib/profile-store"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { cn } from "@/lib/utils"
-import { AdminSectionManager } from "@/components/admin/AdminSectionManager"
 
 // Define icon options with proper typing
 const iconOptions = [
@@ -129,13 +128,18 @@ const getIconComponent = (iconName: string): LucideIcon | null => {
   return option?.Icon || null
 }
 
-export default function SettingsPage() {
+export default function GeneralSettingsPage() {
   // Initialize database connection
   useDatabaseInit()
 
   const { toast } = useToast()
   const router = useRouter()
-  const [activeTab, setActiveTab] = useState("password")
+  
+  // Check for tab query parameter
+  const searchParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+  const tabParam = searchParams?.get('tab')
+  
+  const [activeTab, setActiveTab] = useState(tabParam || "password")
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   // Get store data and actions
@@ -202,30 +206,11 @@ export default function SettingsPage() {
       setIsSubmitting(false)
       return
     }
-    if (passwordForm.currentPassword === passwordForm.newPassword) {
-      toast({
-        title: "Error",
-        description: "New password must be different from the current password.",
-        variant: "destructive",
-      })
-      setIsSubmitting(false)
-      return
-    }
-    // Basic strength check: must contain letters and numbers
-    if (!/[a-zA-Z]/.test(passwordForm.newPassword) || !/[0-9]/.test(passwordForm.newPassword)) {
-      toast({
-        title: "Error",
-        description: "Password must contain both letters and numbers.",
-        variant: "destructive",
-      })
-      setIsSubmitting(false)
-      return
-    }
 
     try {
       // Verify current password
-      const isCurrentPasswordValid = await verifyAdminPassword(passwordForm.currentPassword)
-      if (!isCurrentPasswordValid) {
+      const isValid = await verifyAdminPassword(passwordForm.currentPassword)
+      if (!isValid) {
         toast({
           title: "Error",
           description: "Current password is incorrect.",
@@ -241,9 +226,10 @@ export default function SettingsPage() {
       
       toast({
         title: "Success",
-        description: "Password changed successfully.",
-        variant: "default",
+        description: "Password changed successfully",
       })
+
+      // Clear form
       setPasswordForm({
         currentPassword: "",
         newPassword: "",
@@ -260,31 +246,41 @@ export default function SettingsPage() {
     }
   }
 
-  // Handle navigation button management
+  // Handle add/edit navigation button
   const handleAddButton = async (e: React.FormEvent) => {
     e.preventDefault()
     setIsSubmitting(true)
 
+    const buttonData = editingButton || newButton
+
+    if (!buttonData.text || !buttonData.href) {
+      toast({
+        title: "Error",
+        description: "Button text and link are required.",
+        variant: "destructive",
+      })
+      setIsSubmitting(false)
+      return
+    }
+
     try {
       if (editingButton) {
         updateNavigationButton(editingButton.id, editingButton)
+        setEditingButton(null)
       } else {
         addNavigationButton(newButton)
+        setNewButton({
+          text: "",
+          href: "",
+          icon: "",
+          description: "",
+          color: "bg-blue-500",
+          order: 0,
+          isVisible: true,
+        })
       }
       
       await saveToDatabase()
-      
-      // Reset form
-      setNewButton({
-        text: "",
-        href: "",
-        icon: "",
-        description: "",
-        color: "bg-blue-500",
-        order: navigationButtons.length,
-        isVisible: true,
-      })
-      setEditingButton(null)
       
       toast({
         title: "Success",
@@ -350,18 +346,17 @@ export default function SettingsPage() {
               <ArrowLeft className="h-4 w-4" />
             </Link>
           </Button>
-          <h1 className="text-3xl font-bold tracking-tight">Settings</h1>
+          <h1 className="text-3xl font-bold tracking-tight">General Settings</h1>
         </div>
         <p className="text-muted-foreground mt-1 ml-12">
-          Manage your website settings and configurations
+          Manage password, navigation, and backup settings
         </p>
       </header>
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-3">
           <TabsTrigger value="password">Password</TabsTrigger>
           <TabsTrigger value="navigation">Navigation</TabsTrigger>
-          <TabsTrigger value="admin-sections">Admin Sections</TabsTrigger>
           <TabsTrigger value="backup">Backup</TabsTrigger>
         </TabsList>
 
@@ -642,14 +637,20 @@ export default function SettingsPage() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="admin-sections" className="space-y-6">
-          <AdminSectionManager />
-        </TabsContent>
-
         <TabsContent value="backup">
-          {/* Backup tab content */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Backup & Restore</CardTitle>
+              <CardDescription>
+                Backup your website data or restore from a previous backup
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground">Backup functionality coming soon...</p>
+            </CardContent>
+          </Card>
         </TabsContent>
       </Tabs>
     </div>
   )
-} 
+}
