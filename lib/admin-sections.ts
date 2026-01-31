@@ -273,13 +273,23 @@ export async function initializeDefaultSections(): Promise<void> {
         isActive: true
       },
       {
+        title: 'Education & Experience',
+        description: 'Manage your educational background and work experience',
+        icon: 'GraduationCap',
+        linkHref: '/admin/expedu',
+        linkText: 'Manage Education & Experience',
+        category: 'content' as const,
+        priority: 6,
+        isActive: true
+      },
+      {
         title: 'My Works',
         description: 'Manage your research publications and legal case studies',
         icon: 'Award',
         linkHref: '/admin/works',
         linkText: 'Manage Works',
         category: 'content' as const,
-        priority: 6,
+        priority: 7,
         isActive: true
       },
       {
@@ -289,7 +299,7 @@ export async function initializeDefaultSections(): Promise<void> {
         linkHref: '/admin/casevault',
         linkText: 'Manage Cases',
         category: 'content' as const,
-        priority: 7,
+        priority: 8,
         isActive: true
       },
       {
@@ -299,7 +309,7 @@ export async function initializeDefaultSections(): Promise<void> {
         linkHref: '/admin/url-shortner',
         linkText: 'Manage URLs',
         category: 'tools' as const,
-        priority: 8,
+        priority: 9,
         isActive: true
       },
       {
@@ -309,7 +319,7 @@ export async function initializeDefaultSections(): Promise<void> {
         linkHref: '/admin/subscribers',
         linkText: 'Manage Subscribers',
         category: 'management' as const,
-        priority: 9,
+        priority: 10,
         isActive: true
       },
       {
@@ -319,7 +329,7 @@ export async function initializeDefaultSections(): Promise<void> {
         linkHref: '/admin/footer',
         linkText: 'Manage Footer',
         category: 'management' as const,
-        priority: 10,
+        priority: 11,
         isActive: true
       }
     ]

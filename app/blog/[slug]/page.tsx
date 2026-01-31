@@ -31,7 +31,7 @@ function blogToPostFormat(blog: Blog) {
     author: 'Vikas Goyanka',
     timestamp: blog.date ? new Date(blog.date) : new Date(),
     created_at: blog.created_at || blog.date,
-    updated_at: blog.updated_at || blog.last_updated,
+    updated_at: blog.updated_at || blog.last_updated || undefined,
     readTime: blog.reading_time,
     tags: blog.tags,
     media: [],
