@@ -22,10 +22,18 @@ export function PushNotificationPrompt({
   const [permission, setPermission] = useState<NotificationPermission | 'default'>('default');
   const [isReady, setIsReady] = useState(false);
   const [showDeniedHelp, setShowDeniedHelp] = useState(false);
+  const [shouldShow, setShouldShow] = useState(false);
 
   useEffect(() => {
     // Initialize notification support check (but don't request permission yet)
     checkNotificationSupport();
+    
+    // Show popup after 15 seconds
+    const timer = setTimeout(() => {
+      setShouldShow(true);
+    }, 15000);
+    
+    return () => clearTimeout(timer);
   }, []);
 
   const checkNotificationSupport = async () => {
@@ -167,9 +175,11 @@ export function PushNotificationPrompt({
   };
 
   const handleDismiss = () => {
-    localStorage.setItem('push-notification-dismissed', Date.now().toString());
-    setIsDismissed(true);
+    setShouldShow(false);
+    setShowSuccess(false);
     setShowDeniedHelp(false);
+    setIsDismissed(true);
+    localStorage.setItem('push-notification-dismissed', Date.now().toString());
   };
 
   // Debug log
@@ -193,6 +203,11 @@ export function PushNotificationPrompt({
   if (permission === 'granted' && isSubscribed) {
     return null;
   }
+  
+  // Don't show until timer completes (for floating variant)
+  if (variant === 'floating' && !shouldShow && !showDeniedHelp) {
+    return null;
+  }
 
   // Show help dialog when permission is denied
   if (showDeniedHelp || permission === 'denied') {
@@ -201,42 +216,38 @@ export function PushNotificationPrompt({
         "fixed bottom-6 right-6 z-50 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-500",
         className
       )}>
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl border border-gray-200 dark:border-gray-800 overflow-hidden">
+        <div className="bg-background border border-border shadow-lg rounded-lg overflow-hidden">
           {/* Header */}
-          <div className="bg-gradient-to-r from-amber-500 to-orange-500 px-5 py-4">
+          <div className="bg-amber-50 dark:bg-amber-950/30 border-b border-amber-100 dark:border-amber-900 px-4 py-3">
             <div className="flex items-start justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-white/20 backdrop-blur flex items-center justify-center">
-                  <Settings className="w-5 h-5 text-white" />
-                </div>
-                <div>
-                  <h3 className="font-semibold text-white">Permission Blocked</h3>
-                  <p className="text-sm text-white/80">Enable in browser settings</p>
-                </div>
+              <div className="flex items-center gap-2">
+                <Settings className="w-4 h-4 text-amber-600 dark:text-amber-500" />
+                <h3 className="text-sm font-semibold text-foreground">Permission Blocked</h3>
               </div>
               <button 
                 onClick={handleDismiss}
-                className="text-white/60 hover:text-white transition-colors"
+                className="text-muted-foreground hover:text-foreground transition-colors"
               >
-                <X className="w-5 h-5" />
+                <X className="w-4 h-4" />
               </button>
             </div>
           </div>
           
           {/* Content */}
-          <div className="px-5 py-4">
-            <p className="text-sm text-muted-foreground mb-4">
+          <div className="p-4">
+            <p className="text-xs text-muted-foreground mb-3">
               Notifications were previously blocked. To enable them:
             </p>
-            <ol className="text-sm text-muted-foreground space-y-2 mb-4 list-decimal list-inside">
-              <li>Click the <strong>lock icon 🔒</strong> in the address bar</li>
+            <ol className="text-xs text-muted-foreground space-y-1.5 mb-4 list-decimal list-inside">
+              <li>Click the <strong>lock icon</strong> in the address bar</li>
               <li>Find <strong>&quot;Notifications&quot;</strong></li>
-              <li>Change from &quot;Block&quot; to <strong>&quot;Allow&quot;</strong></li>
+              <li>Change to <strong>&quot;Allow&quot;</strong></li>
               <li>Refresh the page</li>
             </ol>
             <Button 
               variant="outline"
               onClick={handleDismiss}
+              size="sm"
               className="w-full"
             >
               Got it
@@ -247,62 +258,83 @@ export function PushNotificationPrompt({
     );
   }
 
-  // Floating prompt (bottom-right corner) - shows as a button the user can click
+  // Floating prompt (bottom-right corner) - shows as a minimalistic card
   if (variant === 'floating') {
     return (
       <div className={cn(
-        "fixed bottom-6 right-6 z-50",
+        "fixed bottom-6 right-6 z-50 max-w-sm animate-in slide-in-from-bottom-4 fade-in duration-500",
         className
       )}>
         {showSuccess ? (
-          <div className="bg-white dark:bg-gray-900 rounded-full shadow-2xl border border-gray-200 dark:border-gray-800 px-6 py-3 animate-in slide-in-from-bottom-4 fade-in duration-500">
-            <div className="flex items-center gap-2 text-emerald-600">
-              <Check className="w-5 h-5" />
-              <span className="font-medium">Subscribed!</span>
+          <div className="bg-background border border-border shadow-lg rounded-lg px-4 py-3">
+            <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-500">
+              <Check className="w-4 h-4" />
+              <span className="text-sm font-medium">Subscribed successfully!</span>
             </div>
           </div>
         ) : (
-          <Button 
-            onClick={subscribe}
-            disabled={isLoading}
-            size="lg"
-            className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 shadow-2xl rounded-full px-6 animate-in slide-in-from-bottom-4 fade-in duration-500"
-          >
-            {isLoading ? (
-              <span className="flex items-center gap-2">
-                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                Subscribing...
-              </span>
-            ) : (
-              <span className="flex items-center gap-2">
-                <Bell className="w-4 h-4" />
-                Notify me about updates
-              </span>
-            )}
-          </Button>
+          <div className="bg-background border border-border shadow-lg rounded-lg overflow-hidden">
+            <div className="p-4">
+              <div className="flex items-start justify-between gap-3 mb-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+                    <Bell className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <h4 className="text-sm font-semibold text-foreground mb-1">Stay Updated</h4>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      Get notified when new articles are published
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleDismiss}
+                  className="text-muted-foreground hover:text-foreground transition-colors p-1"
+                  aria-label="Dismiss"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <Button 
+                onClick={subscribe}
+                disabled={isLoading}
+                size="sm"
+                className="w-full h-9 text-sm"
+              >
+                {isLoading ? (
+                  <span className="flex items-center gap-2">
+                    <div className="w-3 h-3 border-2 border-current/30 border-t-current rounded-full animate-spin" />
+                    Subscribing...
+                  </span>
+                ) : (
+                  'Notify me about updates'
+                )}
+              </Button>
+            </div>
+          </div>
         )}
       </div>
     );
   }
 
-  // Banner variant (top of page) - shows as a subtle banner with call to action
+  // Banner variant (top of page) - minimalistic banner
   if (variant === 'banner') {
     return (
       <div className={cn(
-        "bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-b border-blue-100 dark:border-blue-900 px-4 py-3",
+        "bg-muted/50 border-b border-border px-4 py-2.5",
         className
       )}>
         <div className="max-w-4xl mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Bell className="w-5 h-5 text-blue-600" />
-            <span className="text-sm font-medium text-foreground">
-              Want to stay updated? Subscribe to get notified about new posts
+          <div className="flex items-center gap-2.5">
+            <Bell className="w-4 h-4 text-primary" />
+            <span className="text-xs font-medium text-foreground">
+              Subscribe to get notified about new posts
             </span>
           </div>
           <div className="flex items-center gap-2">
             {showSuccess ? (
-              <div className="flex items-center gap-2 text-emerald-600 text-sm font-medium">
-                <Check className="w-4 h-4" />
+              <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 text-xs font-medium">
+                <Check className="w-3.5 h-3.5" />
                 Subscribed!
               </div>
             ) : (
@@ -311,15 +343,16 @@ export function PushNotificationPrompt({
                   size="sm"
                   onClick={subscribe}
                   disabled={isLoading}
-                  className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+                  className="h-7 text-xs"
                 >
-                  {isLoading ? 'Subscribing...' : 'Subscribe to alerts'}
+                  {isLoading ? 'Subscribing...' : 'Subscribe'}
                 </Button>
                 <button 
                   onClick={handleDismiss}
                   className="text-muted-foreground hover:text-foreground p-1"
+                  aria-label="Dismiss"
                 >
-                  <X className="w-5 h-5" />
+                  <X className="w-3.5 h-3.5" />
                 </button>
               </>
             )}
@@ -329,33 +362,33 @@ export function PushNotificationPrompt({
     );
   }
 
-  // Inline variant (default)
+  // Inline variant (default) - minimalistic card
   return (
     <div className={cn(
-      "flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900",
+      "flex items-center gap-4 p-4 rounded-lg bg-muted/50 border border-border",
       className
     )}>
-      <div className="w-12 h-12 rounded-full bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-        <Bell className="w-6 h-6 text-white" />
+      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
+        <Bell className="w-5 h-5 text-primary" />
       </div>
       <div className="flex-1 min-w-0">
-        <h4 className="font-semibold text-foreground">Stay in the loop</h4>
-        <p className="text-sm text-muted-foreground">
+        <h4 className="text-sm font-semibold text-foreground mb-0.5">Stay in the loop</h4>
+        <p className="text-xs text-muted-foreground">
           Get notified when new articles are published
         </p>
       </div>
       {showSuccess ? (
-        <div className="flex items-center gap-2 text-emerald-600 font-medium">
-          <Check className="w-5 h-5" />
+        <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-500 text-sm font-medium">
+          <Check className="w-4 h-4" />
           Subscribed!
         </div>
       ) : (
         <Button 
           onClick={subscribe}
           disabled={isLoading}
-          className="bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700"
+          size="sm"
         >
-          {isLoading ? 'Subscribing...' : 'Subscribe to alerts'}
+          {isLoading ? 'Subscribing...' : 'Subscribe'}
         </Button>
       )}
     </div>
