@@ -13,9 +13,9 @@ export function CompetitionsSection({ competitions }: CompetitionsSectionProps) 
     <section className="py-12 border-t border-border">
       <h2 className="font-display text-2xl font-medium mb-8">Competitions</h2>
       <div className="space-y-6">
-        {sorted.map((comp) => (
+        {sorted.map((comp, index) => (
           <article
-            key={comp.id}
+            key={comp.id || `comp-${index}`}
             className="p-5 border border-border bg-card"
           >
             <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-2 mb-3">

@@ -6,7 +6,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { addItem, updateItem, deleteItem } from '@/lib/expertise-storage';
 import type { Competition, ExpertiseData } from '@/types/expertise';
 
 interface CompetitionsFormProps {
@@ -32,15 +31,30 @@ export function CompetitionsForm({ data, onDataChange }: CompetitionsFormProps) 
     setEditingId(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      updateItem<Competition>('competitions', editingId, form);
-    } else {
-      addItem<Competition>('competitions', form);
+    try {
+      if (editingId) {
+        const response = await fetch(`/api/competitions/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!response.ok) throw new Error('Failed to update');
+      } else {
+        const response = await fetch('/api/competitions', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!response.ok) throw new Error('Failed to create');
+      }
+      resetForm();
+      onDataChange();
+    } catch (error) {
+      console.error('Error saving competition:', error);
+      alert('Failed to save competition');
     }
-    resetForm();
-    onDataChange();
   };
 
   const handleEdit = (comp: Competition) => {
@@ -56,10 +70,18 @@ export function CompetitionsForm({ data, onDataChange }: CompetitionsFormProps) 
     setIsAdding(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Delete this competition?')) {
-      deleteItem('competitions', id);
-      onDataChange();
+      try {
+        const response = await fetch(`/api/competitions/${id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete');
+        onDataChange();
+      } catch (error) {
+        console.error('Error deleting competition:', error);
+        alert('Failed to delete competition');
+      }
     }
   };
 

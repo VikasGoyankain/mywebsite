@@ -7,7 +7,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { addItem, updateItem, deleteItem } from '@/lib/expertise-storage';
 import type { ExpertiseArea, ExpertiseData } from '@/types/expertise';
 
 interface ExpertiseFormProps {
@@ -40,15 +39,30 @@ export function ExpertiseAreasForm({ data, onDataChange }: ExpertiseFormProps) {
     setEditingId(null);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (editingId) {
-      updateItem<ExpertiseArea>('expertiseAreas', editingId, form);
-    } else {
-      addItem<ExpertiseArea>('expertiseAreas', form);
+    try {
+      if (editingId) {
+        const response = await fetch(`/api/expertise-areas/${editingId}`, {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!response.ok) throw new Error('Failed to update');
+      } else {
+        const response = await fetch('/api/expertise-areas', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(form),
+        });
+        if (!response.ok) throw new Error('Failed to create');
+      }
+      resetForm();
+      onDataChange();
+    } catch (error) {
+      console.error('Error saving expertise area:', error);
+      alert('Failed to save expertise area');
     }
-    resetForm();
-    onDataChange();
   };
 
   const handleEdit = (area: ExpertiseArea) => {
@@ -64,10 +78,18 @@ export function ExpertiseAreasForm({ data, onDataChange }: ExpertiseFormProps) {
     setIsAdding(true);
   };
 
-  const handleDelete = (id: string) => {
+  const handleDelete = async (id: string) => {
     if (confirm('Delete this expertise area?')) {
-      deleteItem('expertiseAreas', id);
-      onDataChange();
+      try {
+        const response = await fetch(`/api/expertise-areas/${id}`, {
+          method: 'DELETE',
+        });
+        if (!response.ok) throw new Error('Failed to delete');
+        onDataChange();
+      } catch (error) {
+        console.error('Error deleting expertise area:', error);
+        alert('Failed to delete expertise area');
+      }
     }
   };
 

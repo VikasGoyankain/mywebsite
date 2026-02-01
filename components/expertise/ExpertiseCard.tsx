@@ -15,9 +15,9 @@ interface ExpertiseCardProps {
 export function ExpertiseCard({ area, certifications, competitions, books }: ExpertiseCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
 
-  const linkedCerts = certifications.filter((c) => area.linkedCertifications.includes(c.id));
-  const linkedComps = competitions.filter((c) => area.linkedCompetitions.includes(c.id));
-  const linkedBooks = books.filter((b) => area.linkedBooks.includes(b.id));
+  const linkedCerts = certifications.filter((c) => area.linkedCertifications?.includes(c.id));
+  const linkedComps = competitions.filter((c) => area.linkedCompetitions?.includes(c.id));
+  const linkedBooks = books.filter((b) => area.linkedBooks?.includes(b.id));
   const evidenceCount = linkedCerts.length + linkedComps.length + linkedBooks.length;
 
   return (

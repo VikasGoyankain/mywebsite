@@ -14,9 +14,9 @@ export function CertificationsSection({ certifications }: CertificationsSectionP
     <section className="py-12 border-t border-border">
       <h2 className="font-display text-2xl font-medium mb-8">Certifications & Awards</h2>
       <div className="grid gap-4 sm:grid-cols-2">
-        {sorted.map((cert) => (
+        {sorted.map((cert, index) => (
           <article
-            key={cert.id}
+            key={cert.id || `cert-${index}`}
             className="p-5 border border-border bg-card hover:border-foreground/20 transition-colors"
           >
             <div className="flex items-start justify-between gap-3">
