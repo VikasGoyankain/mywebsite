@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { Plus, Trash2, BookOpen, GraduationCap, Image as ImageIcon, Loader2, ExternalLink, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, BookOpen, GraduationCap, Image as ImageIcon, Loader2, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -21,17 +21,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -73,7 +62,6 @@ export function ReadingsForm({ onDataChange }: ReadingsFormProps) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
-  const [migrating, setMigrating] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(initialFormState);
@@ -110,69 +98,6 @@ export function ReadingsForm({ onDataChange }: ReadingsFormProps) {
   useEffect(() => {
     fetchReadings();
   }, []);
-
-  // Migration from localStorage
-  const handleMigration = async () => {
-    try {
-      setMigrating(true);
-      
-      // Get legacy data from localStorage
-      const storedData = localStorage.getItem('expertise_data');
-      if (!storedData) {
-        toast({
-          title: 'No Data',
-          description: 'No legacy books found in localStorage',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      const data = JSON.parse(storedData);
-      const books = data.books || [];
-
-      if (books.length === 0) {
-        toast({
-          title: 'No Books',
-          description: 'No books found in localStorage to migrate',
-          variant: 'destructive',
-        });
-        return;
-      }
-
-      // Call migration API
-      const response = await fetch('/api/readings/migrate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ books, uploadImages: true }),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        toast({
-          title: 'Migration Complete',
-          description: `Migrated ${result.summary.migrated} books, ${result.summary.skipped} skipped, ${result.summary.failed} failed`,
-        });
-        fetchReadings();
-        onDataChange?.();
-      } else {
-        toast({
-          title: 'Migration Failed',
-          description: result.error || 'Unknown error',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Migration error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to migrate books',
-        variant: 'destructive',
-      });
-    } finally {
-      setMigrating(false);
-    }
-  };
 
   const resetForm = () => {
     setForm(initialFormState);
@@ -361,35 +286,6 @@ export function ReadingsForm({ onDataChange }: ReadingsFormProps) {
           </p>
         </div>
         <div className="flex gap-2">
-          {/* Migration Button */}
-          <AlertDialog>
-            <AlertDialogTrigger asChild>
-              <Button size="sm" variant="outline" disabled={migrating}>
-                {migrating ? (
-                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-1" />
-                )}
-                Migrate from Legacy
-              </Button>
-            </AlertDialogTrigger>
-            <AlertDialogContent>
-              <AlertDialogHeader>
-                <AlertDialogTitle>Migrate Legacy Books</AlertDialogTitle>
-                <AlertDialogDescription>
-                  This will migrate all books from the legacy localStorage storage to the new Redis database. 
-                  Existing books in Redis will be skipped. This action cannot be undone.
-                </AlertDialogDescription>
-              </AlertDialogHeader>
-              <AlertDialogFooter>
-                <AlertDialogCancel>Cancel</AlertDialogCancel>
-                <AlertDialogAction onClick={handleMigration}>
-                  Start Migration
-                </AlertDialogAction>
-              </AlertDialogFooter>
-            </AlertDialogContent>
-          </AlertDialog>
-
           <Button size="sm" variant="outline" onClick={() => setIsDialogOpen(true)}>
             <Plus className="h-4 w-4 mr-1" /> Add
           </Button>

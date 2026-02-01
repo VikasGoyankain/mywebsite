@@ -1,34 +1,48 @@
 'use client';
 
+import { useState } from 'react';
 import { ReadingItem } from '@/types/expertise';
 import { motion } from 'framer-motion';
-import { BookOpen, GraduationCap, ArrowRight } from 'lucide-react';
+import { BookOpen, GraduationCap, ArrowRight, ChevronDown, ChevronUp } from 'lucide-react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 interface ReadingsSectionProps {
   readings: ReadingItem[];
 }
 
+const INITIAL_VISIBLE = 4; // Shows 2 rows of 2 cards
+
 export function ReadingsSection({ readings }: ReadingsSectionProps) {
+  const [isExpanded, setIsExpanded] = useState(false);
+  
   if (readings.length === 0) return null;
 
   const sorted = [...readings].sort((a, b) => a.order - b.order);
+  const showExpandButton = sorted.length > INITIAL_VISIBLE;
+  const visibleReadings = isExpanded ? sorted : sorted.slice(0, INITIAL_VISIBLE);
+  const hiddenCount = sorted.length - INITIAL_VISIBLE;
 
   return (
     <section className="py-12 border-t border-border">
-      <h2 className="font-display text-2xl font-medium mb-2">Readings & Courses</h2>
+      <div className="flex items-start justify-between mb-2">
+        <h2 className="font-display text-2xl font-medium">Readings & Courses</h2>
+        <span className="text-sm text-muted-foreground bg-secondary px-2.5 py-1 rounded-full">
+          {sorted.length}
+        </span>
+      </div>
       <p className="text-sm text-muted-foreground mb-8">
         Not a reading list—a thinking list. Click to see my detailed notes.
       </p>
       <div className="grid gap-6 md:grid-cols-2">
-        {sorted.map((reading, index) => (
+        {visibleReadings.map((reading, index) => (
           <motion.div
-            key={reading.id}
+            key={reading.id || `reading-${index}`}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.3, delay: index * 0.1 }}
+            transition={{ duration: 0.3, delay: Math.min(index, 3) * 0.1 }}
           >
             <Link href={`/expertise/readings/${reading.slug}`}>
               <article className="group relative h-full p-5 border border-border rounded-lg bg-card/50 hover:bg-card hover:shadow-lg transition-all duration-300 cursor-pointer">
@@ -61,7 +75,7 @@ export function ReadingsSection({ readings }: ReadingsSectionProps) {
                     </p>
                     
                     {/* Impact - only this, no summary */}
-                    <p className="text-sm text-foreground/80 line-clamp-3">
+                    <p className="text-sm text-foreground/80 line-clamp-2">
                       {reading.impactOnThinking}
                     </p>
 
@@ -91,6 +105,30 @@ export function ReadingsSection({ readings }: ReadingsSectionProps) {
           </motion.div>
         ))}
       </div>
+
+      {/* Expand/Collapse Button */}
+      {showExpandButton && (
+        <div className="mt-6 flex justify-center">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="gap-2 text-muted-foreground hover:text-foreground"
+          >
+            {isExpanded ? (
+              <>
+                <ChevronUp className="h-4 w-4" />
+                Show less
+              </>
+            ) : (
+              <>
+                <ChevronDown className="h-4 w-4" />
+                Show {hiddenCount} more reading{hiddenCount > 1 ? 's' : ''}
+              </>
+            )}
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

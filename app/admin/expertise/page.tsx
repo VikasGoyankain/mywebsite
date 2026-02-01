@@ -2,11 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { ArrowLeft, Database, Loader2 } from 'lucide-react';
+import { ArrowLeft } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
 import { useToast } from '@/hooks/use-toast';
-import { getData } from '@/lib/expertise-storage';
 import { ExpertiseAreasForm } from '@/components/admin/ExpertiseAreasForm';
 import { CertificationsForm } from '@/components/admin/CertificationsForm';
 import { CompetitionsForm } from '@/components/admin/CompetitionsForm';
@@ -15,7 +13,6 @@ import type { ExpertiseData } from '@/types/expertise';
 
 export default function AdminExpertisePage() {
   const [data, setData] = useState<ExpertiseData | null>(null);
-  const [migrating, setMigrating] = useState(false);
   const [loading, setLoading] = useState(true);
   const { toast } = useToast();
 
@@ -52,61 +49,6 @@ export default function AdminExpertisePage() {
     fetchData();
   };
 
-  const handleMigrateAll = async () => {
-    try {
-      setMigrating(true);
-      const localData = getData();
-      
-      console.log('LocalStorage data to migrate:', {
-        expertiseAreas: localData.expertiseAreas?.length || 0,
-        certifications: localData.certifications?.length || 0,
-        competitions: localData.competitions?.length || 0,
-      });
-      
-      const response = await fetch('/api/expertise/migrate', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          expertiseAreas: localData.expertiseAreas,
-          certifications: localData.certifications,
-          competitions: localData.competitions,
-        }),
-      });
-
-      const result = await response.json();
-      console.log('Migration response:', result);
-
-      if (response.ok) {
-        const { results } = result;
-        const details = [
-          `Areas: ${results.expertiseAreas.migrated} migrated, ${results.expertiseAreas.skipped} skipped`,
-          `Certifications: ${results.certifications.migrated} migrated, ${results.certifications.skipped} skipped`,
-          `Competitions: ${results.competitions.migrated} migrated, ${results.competitions.skipped} skipped`,
-        ].join(' | ');
-        
-        toast({
-          title: 'Migration Complete',
-          description: details,
-        });
-      } else {
-        toast({
-          title: 'Migration Failed',
-          description: result.error || 'Unknown error',
-          variant: 'destructive',
-        });
-      }
-    } catch (error) {
-      console.error('Migration error:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to migrate expertise data',
-        variant: 'destructive',
-      });
-    } finally {
-      setMigrating(false);
-    }
-  };
-
   if (!data || loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -134,38 +76,6 @@ export default function AdminExpertisePage() {
 
       {/* Main Content */}
       <main className="max-w-4xl mx-auto px-6 py-8">
-        {/* Migration Banner */}
-        <div className="mb-6 p-4 bg-blue-500/10 border border-blue-500/30 rounded-lg">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1">
-              <div className="flex items-center gap-2 mb-2">
-                <Database className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-                <h3 className="font-semibold text-blue-600 dark:text-blue-400">Database Migration</h3>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Your expertise data is currently stored in localStorage. Click below to migrate all data (Expertise Areas, Certifications, Competitions) to the Redis database for better performance and reliability.
-              </p>
-            </div>
-            <Button
-              onClick={handleMigrateAll}
-              disabled={migrating}
-              className="shrink-0"
-            >
-              {migrating ? (
-                <>
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  Migrating...
-                </>
-              ) : (
-                <>
-                  <Database className="h-4 w-4 mr-2" />
-                  Migrate All Data
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
-
         <Tabs defaultValue="expertise" className="space-y-6">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="expertise">Expertise</TabsTrigger>

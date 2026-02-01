@@ -1,12 +1,16 @@
 "use client";
 
 import { useState, useEffect } from 'react';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 import { ExpertiseCard } from '@/components/expertise/ExpertiseCard';
 import { CertificationsSection } from '@/components/expertise/CertificationsSection';
 import { CompetitionsSection } from '@/components/expertise/CompetitionsSection';
 import { ReadingsSection } from '@/components/expertise/BooksSection';
+import { Button } from '@/components/ui/button';
 import { Footer } from '@/components/Footer';
 import type { ExpertiseArea, Certification, Competition, ReadingItem } from '@/types/expertise';
+
+const INITIAL_VISIBLE_AREAS = 3;
 
 export default function ExpertisePage() {
   const [expertiseAreas, setExpertiseAreas] = useState<ExpertiseArea[]>([]);
@@ -14,6 +18,7 @@ export default function ExpertisePage() {
   const [competitions, setCompetitions] = useState<Competition[]>([]);
   const [readings, setReadings] = useState<ReadingItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isAreasExpanded, setIsAreasExpanded] = useState(false);
 
   useEffect(() => {
     async function fetchData() {
@@ -91,21 +96,50 @@ export default function ExpertisePage() {
 
         {/* Expertise Areas */}
         <section className="mb-12">
-          <h2 className="font-display text-2xl font-medium mb-6">Core Competencies</h2>
+          <div className="flex items-start justify-between mb-6">
+            <h2 className="font-display text-2xl font-medium">Core Competencies</h2>
+            <span className="text-sm text-muted-foreground bg-secondary px-2.5 py-1 rounded-full">
+              {sortedAreas.length}
+            </span>
+          </div>
           {sortedAreas.length === 0 ? (
             <p className="text-muted-foreground">No expertise areas yet.</p>
           ) : (
-            <div className="space-y-3">
-              {sortedAreas.map((area, index) => (
-                <ExpertiseCard
-                  key={area.id || `area-${index}`}
-                  area={area}
-                  certifications={certifications}
-                  competitions={competitions}
-                  books={[]}
-                />
-              ))}
-            </div>
+            <>
+              <div className="space-y-3">
+                {(isAreasExpanded ? sortedAreas : sortedAreas.slice(0, INITIAL_VISIBLE_AREAS)).map((area, index) => (
+                  <ExpertiseCard
+                    key={area.id || `area-${index}`}
+                    area={area}
+                    certifications={certifications}
+                    competitions={competitions}
+                    books={[]}
+                  />
+                ))}
+              </div>
+              {sortedAreas.length > INITIAL_VISIBLE_AREAS && (
+                <div className="mt-6 flex justify-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setIsAreasExpanded(!isAreasExpanded)}
+                    className="gap-2 text-muted-foreground hover:text-foreground"
+                  >
+                    {isAreasExpanded ? (
+                      <>
+                        <ChevronUp className="h-4 w-4" />
+                        Show less
+                      </>
+                    ) : (
+                      <>
+                        <ChevronDown className="h-4 w-4" />
+                        Show {sortedAreas.length - INITIAL_VISIBLE_AREAS} more competenc{sortedAreas.length - INITIAL_VISIBLE_AREAS > 1 ? 'ies' : 'y'}
+                      </>
+                    )}
+                  </Button>
+                </div>
+              )}
+            </>
           )}
         </section>
 
