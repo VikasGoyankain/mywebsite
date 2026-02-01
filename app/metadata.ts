@@ -45,10 +45,10 @@ export const defaultMetadata: Metadata = {
     description: 'Passionate advocate for constitutional rights and social justice. Specializing in Constitutional Law, Human Rights & Cyber Laws.',
     images: [
       {
-        url: `${siteUrl}/og-image.jpg`,
-        width: 1200,
-        height: 630,
-        alt: 'Vikas Goyanka - Law Student & Political Activist',
+        url: `${siteUrl}/profile-photo.jpg`,
+        width: 800,
+        height: 800,
+        alt: 'Vikas Goyanka - Profile Photo',
         type: 'image/jpeg',
       },
     ],
@@ -59,7 +59,7 @@ export const defaultMetadata: Metadata = {
     description: 'Passionate advocate for constitutional rights and social justice.',
     creator: '@vikasgoyanka_in',
     site: '@vikasgoyanka_in',
-    images: [`${siteUrl}/og-image.jpg`],
+    images: [`${siteUrl}/profile-photo.jpg`],
   },
   robots: {
     index: true,
@@ -103,7 +103,7 @@ export const personStructuredData = {
   jobTitle: 'Law Student & Political Activist',
   description: 'Passionate advocate for constitutional rights and social justice. Law student specializing in Constitutional Law, Cyber Laws & Human Rights.',
   url: siteUrl,
-  image: `${siteUrl}/og-image.jpg`,
+  image: `${siteUrl}/profile-photo.jpg`,
   sameAs: [
     'https://www.instagram.com/vikasgoyanka.in/',
     'https://in.linkedin.com/in/vikas-goyanka-1a483a342',
@@ -173,7 +173,7 @@ export const organizationStructuredData = {
   '@id': `${siteUrl}/#organization`,
   name: 'Vikas Goyanka',
   url: siteUrl,
-  logo: `${siteUrl}/og-image.jpg`,
+  logo: `${siteUrl}/profile-photo.jpg`,
   sameAs: [
     'https://www.instagram.com/vikasgoyanka.in/',
     'https://in.linkedin.com/in/vikas-goyanka-1a483a342',

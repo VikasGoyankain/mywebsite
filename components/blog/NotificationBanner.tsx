@@ -32,13 +32,9 @@ export function NotificationBanner() {
       if (daysSinceDismissed < 7) return;
     }
 
-    // Show banner after a thoughtful delay (user has engaged with content)
-    const timer = setTimeout(() => {
-      setIsAnimating(true);
-      setTimeout(() => setIsVisible(true), 50);
-    }, 15000); // 15 seconds
-
-    return () => clearTimeout(timer);
+    // Show banner immediately (no auto-popup, user must click)
+    setIsAnimating(true);
+    setIsVisible(true);
   }, []);
 
   const handleEnable = async () => {
