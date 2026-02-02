@@ -24,6 +24,7 @@ interface EducationFormData {
   grade: string
   specialization: string
   achievements: string[]
+  image: string
 }
 
 interface ExperienceFormData {
@@ -44,7 +45,8 @@ const defaultEducationForm: EducationFormData = {
   year: "",
   grade: "",
   specialization: "",
-  achievements: []
+  achievements: [],
+  image: ""
 }
 
 const defaultExperienceForm: ExperienceFormData = {
@@ -133,7 +135,8 @@ export default function AdminExpEduPage() {
             year: edu.year || "",
             grade: edu.grade || "",
             specialization: edu.specialization || "",
-            achievements: Array.isArray(edu.achievements) ? edu.achievements : []
+            achievements: Array.isArray(edu.achievements) ? edu.achievements : [],
+            image: edu.image || ""
           })
           break
         case "experience":
@@ -179,6 +182,7 @@ export default function AdminExpEduPage() {
           grade: educationForm.grade,
           specialization: educationForm.specialization,
           achievements: educationForm.achievements,
+          image: educationForm.image,
           order: education.length
         })
       } else {
@@ -188,7 +192,8 @@ export default function AdminExpEduPage() {
           year: educationForm.year,
           grade: educationForm.grade,
           specialization: educationForm.specialization,
-          achievements: educationForm.achievements
+          achievements: educationForm.achievements,
+          image: educationForm.image
         })
       }
       
@@ -907,6 +912,16 @@ export default function AdminExpEduPage() {
                             value={educationForm.grade}
                             onChange={(e) => setEducationForm(prev => ({ ...prev, grade: e.target.value }))}
                             placeholder="e.g., First Class Honours"
+                          />
+                        </div>
+
+                        <div className="space-y-2">
+                          <Label htmlFor="eduImage">Institution Logo URL</Label>
+                          <Input
+                            id="eduImage"
+                            value={educationForm.image}
+                            onChange={(e) => setEducationForm(prev => ({ ...prev, image: e.target.value }))}
+                            placeholder="e.g., https://example.com/logo.png"
                           />
                         </div>
 

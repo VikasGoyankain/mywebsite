@@ -1,11 +1,9 @@
 "use client"
 
-import React, { useEffect } from "react"
+import React, { useEffect, useState } from "react"
 import { Card } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Button } from "@/components/ui/button"
-import { Analytics } from "@vercel/analytics/next"
 import { Footer } from "@/components/Footer"
 import {
   Mail,
@@ -53,12 +51,16 @@ import {
   Speech,
   Flag,
   Crown,
+  ChevronDown,
+  ArrowRight,
 } from "lucide-react"
-import Image from "next/image"
 import Link from "next/link"
 import { useProfileStore } from "@/lib/profile-store"
 import { useDatabaseInit } from "@/hooks/use-database-init"
 import { SubscribeButton } from "@/components/subscribe-button"
+import { ExperienceCard } from "@/components/personal/ExperienceCard"
+import { EducationCard } from "@/components/personal/EducationCard"
+import { cn } from "@/lib/utils"
 
 // Icon mapping for dynamic icons
 const iconMap = {
@@ -112,10 +114,32 @@ const iconMap = {
   Default: Users,
 } as const;
 
+// Social icon mapping
+const socialIconMap: Record<string, React.ComponentType<{ className?: string }>> = {
+  LinkedIn: Linkedin,
+  Twitter: Twitter,
+  Instagram: Instagram,
+  Facebook: Facebook,
+  Youtube: Youtube,
+  GitHub: Github,
+  Mail: Mail,
+}
+
 export default function ModernProfile() {
   useDatabaseInit() // Initialize database connection
 
   const { profileData, experience, education, skills, posts, navigationButtons } = useProfileStore()
+  const [showAllExperience, setShowAllExperience] = useState(false)
+  const [showAllEducation, setShowAllEducation] = useState(false)
+
+  const INITIAL_ITEMS_COUNT = 3
+
+  // Sort items by order
+  const sortedExperience = [...experience].sort((a, b) => (a.order || 0) - (b.order || 0))
+  const sortedEducation = [...education].sort((a, b) => (a.order || 0) - (b.order || 0))
+
+  const displayedExperience = showAllExperience ? sortedExperience : sortedExperience.slice(0, INITIAL_ITEMS_COUNT)
+  const displayedEducation = showAllEducation ? sortedEducation : sortedEducation.slice(0, INITIAL_ITEMS_COUNT)
 
   // --- SEO & Favicon logic ---
   useEffect(() => {
@@ -210,11 +234,12 @@ export default function ModernProfile() {
         <div className="px-4 py-8">
           {/* Profile Section */}
           <div className="mb-12">
-            <div className="flex flex-col lg:flex-row gap-8 mb-10">
-              {/* Profile Picture & Contact */}
-              <div className="flex flex-col items-center lg:items-start">
-                <div className="relative mb-8">
-                  <div className="w-40 h-40 lg:w-48 lg:h-48 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-blue-50 to-purple-50 p-1">
+            {/* Profile Header - LinkedIn Style */}
+            <Card className="p-8 mb-10 shadow-xl border-0 bg-white/90 backdrop-blur-sm">
+              <div className="flex flex-col md:flex-row gap-8 items-start">
+                {/* Profile Picture - Left Side */}
+                <div className="flex-shrink-0">
+                  <div className="w-40 h-40 md:w-48 md:h-48 rounded-2xl overflow-hidden shadow-2xl bg-gradient-to-br from-blue-50 to-purple-50 p-1">
                     <Avatar className="w-full h-full rounded-xl">
                       <AvatarImage
                         src={profileData.profileImage || "/placeholder.svg"}
@@ -231,41 +256,8 @@ export default function ModernProfile() {
                   </div>
                 </div>
 
-                {/* Contact Info Card */}
-                <Card className="p-5 w-full max-w-sm bg-gradient-to-br from-blue-50 to-purple-50 border-0 shadow-lg hover:shadow-xl transition-all duration-300 hover:-translate-y-1">
-                  <h3 className="font-semibold text-gray-900 mb-4 flex items-center gap-2">
-                    <Phone className="w-4 h-4 text-blue-600" />
-                    Contact Information
-                  </h3>
-                  <div className="space-y-3 text-sm">
-                    <a
-                      href={`mailto:${profileData.contact.email}`}
-                      className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors group"
-                    >
-                      <Mail className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      <span>{profileData.contact.email}</span>
-                    </a>
-                    <a
-                      href={`tel:${profileData.contact.phone}`}
-                      className="flex items-center gap-3 text-gray-700 hover:text-green-600 transition-colors group"
-                    >
-                      <Phone className="w-4 h-4 group-hover:scale-110 transition-transform" />
-                      <span>{profileData.contact.phone}</span>
-                    </a>
-                    <div className="flex items-center gap-3 text-gray-700">
-                      <MapPin className="w-4 h-4" />
-                      <span>{profileData.contact.location}</span>
-                    </div>
-                    <div className="flex items-center gap-3 text-gray-700">
-                      <Globe className="w-4 h-4" />
-                      <span>{profileData.contact.availability}</span>
-                    </div>
-                  </div>
-                </Card>
-              </div>
-
-              {/* Profile Info */}
-              <div className="flex-1">
+                {/* Profile Info - Right Side */}
+                <div className="flex-1 min-w-0">
                 <div className="mb-6">
                   <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-3 flex items-center gap-3">
                     {profileData.name}
@@ -291,18 +283,13 @@ export default function ModernProfile() {
                       <div key={index}>{spec}</div>
                     ))}
                   </div>
-                  {/* Subscribe Button */}
-                  <div className="mt-8">
-                    <SubscribeButton
-                      className="bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white px-8 py-3 rounded-lg shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105 group"
-                    />
-                  </div>
+                </div>
                 </div>
               </div>
-            </div>
+            </Card>
 
             {/* Navigation Buttons */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-10">
               {navigationButtons.filter(button => button.isVisible !== false).map((button) => {
                 const IconComponent = iconMap[button.icon as keyof typeof iconMap]
                 return (
@@ -334,85 +321,83 @@ export default function ModernProfile() {
             {/* Experience */}
             <div className="lg:col-span-2">
               <Card className="p-6 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center gap-3">
-                  <Briefcase className="w-6 h-6 text-blue-600" />
-                  Professional Experience
-                </h2>
-                <div className="space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                  {/* Sort experience by order field */}
-                  {[...experience].sort((a, b) => (a.order || 0) - (b.order || 0)).map((exp) => (
-                    <div key={exp.id} className="relative">
-                      <div className="flex gap-4 p-5 rounded-xl bg-gradient-to-r from-gray-50 to-blue-50 hover:from-blue-50 hover:to-purple-50 transition-all duration-300 border border-gray-100">
-                        <Avatar className="w-14 h-14 ring-2 ring-white shadow-md">
-                          <AvatarImage src={exp.image || "/placeholder.svg"} />
-                          <AvatarFallback className="bg-blue-600 text-white font-bold">
-                            {exp.company
-                              .split(" ")
-                              .map((word) => word[0])
-                              .join("")}
-                          </AvatarFallback>
-                        </Avatar>
-                        
-                        <div className="flex-1">
-                          <div className="flex items-start justify-between mb-2">
-                            <div>
-                              <h3 className="font-bold text-gray-900 text-lg">{exp.title}</h3>
-                              <p className="text-blue-600 font-semibold">{exp.company}</p>
-                            </div>
-                            <Badge variant="outline" className="text-xs">
-                              {exp.type}
-                            </Badge>
-                          </div>
-                          <div className="flex items-center gap-4 text-sm text-gray-600 mb-3">
-                            <div className="flex items-center gap-1">
-                              <Clock className="w-4 h-4" />
-                              {exp.duration}
-                            </div>
-                            <div className="flex items-center gap-1">
-                              <MapPin className="w-4 h-4" />
-                              {exp.location}
-                            </div>
-                          </div>
-                          <p className="text-gray-700 leading-relaxed">{exp.description}</p>
-                        </div>
-                      </div>
-                    </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-2xl font-bold text-gray-900 flex items-center gap-3">
+                    <Briefcase className="w-6 h-6 text-blue-600" />
+                    Professional Experience
+                  </h2>
+                  <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    {experience.length} {experience.length === 1 ? 'position' : 'positions'}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {displayedExperience.map((exp, index) => (
+                    <ExperienceCard 
+                      key={exp.id} 
+                      experience={exp}
+                      defaultExpanded={index === 0}
+                    />
                   ))}
+                  
+                  {/* Show More Button */}
+                  {sortedExperience.length > INITIAL_ITEMS_COUNT && (
+                    <button
+                      onClick={() => setShowAllExperience(!showAllExperience)}
+                      className="w-full py-3 text-sm font-medium text-blue-600 hover:text-blue-700 flex items-center justify-center gap-2 transition-colors border-t border-gray-100 mt-4"
+                    >
+                      {showAllExperience ? (
+                        <>Show less</>
+                      ) : (
+                        <>Show {sortedExperience.length - INITIAL_ITEMS_COUNT} more</>
+                      )}
+                      <ChevronDown className={cn(
+                        "w-4 h-4 transition-transform",
+                        showAllExperience && "rotate-180"
+                      )} />
+                    </button>
+                  )}
                 </div>
               </Card>
             </div>
 
-            {/* Education & Skills */}
+            {/* Education */}
             <div className="space-y-6">
-              {/* Education */}
               <Card className="p-6 shadow-lg border-0 bg-white/90 backdrop-blur-sm">
-                <h2 className="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                  <GraduationCap className="w-6 h-6 text-purple-600" />
-                  Education
-                </h2>
-                <div className="space-y-6 max-h-[80vh] overflow-y-auto custom-scrollbar">
-                  {education.map((edu) => (
-                    <div key={edu.id} className="relative">
-                      <div className="border-l-4 border-purple-500 pl-6 pb-6">
-                        <div className="absolute -left-2 top-0 w-4 h-4 bg-purple-500 rounded-full"></div>
-                        <h3 className="font-bold text-gray-900 mb-1">{edu.degree}</h3>
-                        <p className="text-purple-600 font-semibold mb-1">{edu.institution}</p>
-                        <div className="flex items-center gap-3 text-sm text-gray-600 mb-2">
-                          <span>{edu.year}</span>
-                          <span className="font-medium text-green-600">{edu.grade}</span>
-                        </div>
-                        <p className="text-sm text-gray-700 mb-3">{edu.specialization}</p>
-                        <div className="space-y-1">
-                          {edu.achievements.map((achievement, i) => (
-                            <div key={i} className="flex items-center gap-2">
-                              <Award className="w-3 h-3 text-yellow-500" />
-                              <span className="text-xs text-gray-600">{achievement}</span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                    <GraduationCap className="w-6 h-6 text-purple-600" />
+                    Education
+                  </h2>
+                  <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                    {education.length} {education.length === 1 ? 'degree' : 'degrees'}
+                  </span>
+                </div>
+                <div className="space-y-3">
+                  {displayedEducation.map((edu, index) => (
+                    <EducationCard 
+                      key={edu.id} 
+                      education={edu}
+                      defaultExpanded={index === 0}
+                    />
                   ))}
+                  
+                  {/* Show More Button */}
+                  {sortedEducation.length > INITIAL_ITEMS_COUNT && (
+                    <button
+                      onClick={() => setShowAllEducation(!showAllEducation)}
+                      className="w-full py-3 text-sm font-medium text-purple-600 hover:text-purple-700 flex items-center justify-center gap-2 transition-colors border-t border-gray-100 mt-4"
+                    >
+                      {showAllEducation ? (
+                        <>Show less</>
+                      ) : (
+                        <>Show {sortedEducation.length - INITIAL_ITEMS_COUNT} more</>
+                      )}
+                      <ChevronDown className={cn(
+                        "w-4 h-4 transition-transform",
+                        showAllEducation && "rotate-180"
+                      )} />
+                    </button>
+                  )}
                 </div>
               </Card>
             </div>
@@ -425,3 +410,4 @@ export default function ModernProfile() {
     </div>
   )
 }
+

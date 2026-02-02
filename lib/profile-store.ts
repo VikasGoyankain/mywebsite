@@ -51,6 +51,7 @@ export interface Education {
   grade: string
   specialization: string
   achievements: string[]
+  image?: string
   order: number
 }
 
