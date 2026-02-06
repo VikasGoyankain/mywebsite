@@ -101,19 +101,38 @@ async function main() {
 }
 
 /**
- * Get all keys from Redis using SCAN (handles large datasets)
+ * Get all keys from Redis
+ * Using KEYS * for simplicity - works fine for most use cases
+ * For very large datasets (millions of keys), consider using SCAN
  */
 async function getAllKeys(redis) {
-  const keys = [];
-  let cursor = 0;
+  try {
+    // For Upstash and most Redis setups, KEYS * is fine
+    const keys = await redis.keys('*');
+    return keys || [];
+  } catch (error) {
+    console.warn('   ⚠️  KEYS command failed, trying SCAN...');
+    
+    // Fallback to SCAN if KEYS is disabled
+    const keys = [];
+    let cursor = '0';
+    let iterations = 0;
+    const maxIterations = 1000; // Safety limit
 
-  do {
-    const result = await redis.scan(cursor, { count: 100 });
-    cursor = result[0];
-    keys.push(...result[1]);
-  } while (cursor !== 0);
+    do {
+      const result = await redis.scan(cursor, { count: 100 });
+      cursor = String(result[0]); // Ensure cursor is string
+      keys.push(...(result[1] || []));
+      iterations++;
+      
+      if (iterations >= maxIterations) {
+        console.warn('   ⚠️  SCAN reached max iterations, stopping');
+        break;
+      }
+    } while (cursor !== '0');
 
-  return [...new Set(keys)]; // Remove duplicates
+    return [...new Set(keys)]; // Remove duplicates
+  }
 }
 
 /**
