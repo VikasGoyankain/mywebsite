@@ -12,10 +12,14 @@
     "deps:clean": "rm -rf node_modules bun.lockb package-lock.json && npm install",
     "deps:update": "npm update next @next/swc-win32-x64-msvc",
     "fix:swc": "node scripts/fix-nextjs-swc.js",
-    "vercel:prepare": "pnpm install --no-frozen-lockfile"
+    "vercel:prepare": "pnpm install --no-frozen-lockfile",
+    "backup:redis": "node scripts/redis-backup.js",
+    "restore:redis": "node scripts/redis-restore.js",
+    "test:backup": "node scripts/test-backup.js"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",
+    "@octokit/rest": "^21.1.1",
     "@platejs/autoformat": "^52.0.11",
     "@platejs/basic-nodes": "^52.0.11",
     "@platejs/basic-styles": "^52.0.11",
