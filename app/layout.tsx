@@ -7,6 +7,7 @@ import { CacheManager } from "@/components/CacheManager"
 import { UpdateNotification } from "@/components/UpdateNotification"
 import Navbar from "@/components/Navbar"
 import { defaultMetadata, personStructuredData, websiteStructuredData, organizationStructuredData } from "./metadata"
+import { Analytics } from '@vercel/analytics/next'
 
 const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in'
 
@@ -101,6 +102,7 @@ export default function RootLayout({
         <Navbar />
         {children}
         <Toaster />
+        <Analytics />
       </body>
     </html>
   )
