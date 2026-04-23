@@ -46,7 +46,7 @@ export const getWelcomeEmailHtml = (fullName: string) => {
               </tr>
               <tr>
                 <td style="padding: 25px 0; text-align: center;">
-                  <a href="https://vikasgoyanka.in/posts" style="background-color: #1a365d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 600; display: inline-block;">Explore My Blog</a>
+                  <a href="https://vikasgoyanka.in/blog" style="background-color: #1a365d; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: 600; display: inline-block;">Explore My Blog</a>
                 </td>
               </tr>
               <tr>
@@ -96,7 +96,7 @@ As a subscriber, you'll receive:
 - Insights on current legal developments
 - Invitations to exclusive webinars and events
 
-Visit my Blog page: https://vikasgoyanka.in/posts
+Visit my Blog page: https://vikasgoyanka.in/blog
 
 If you have any questions or would like to discuss potential collaborations, please don't hesitate to reach out.
 

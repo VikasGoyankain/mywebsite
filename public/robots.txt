@@ -1,14 +1,72 @@
+# Vikas Goyanka Portfolio - robots.txt
+# https://vikasgoyanka.in
+
+# Google
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /personal/
+Disallow: /family/
 
+# Google Images
+User-agent: Googlebot-Image
+Allow: /*.jpg$
+Allow: /*.jpeg$
+Allow: /*.png$
+Allow: /*.gif$
+Allow: /*.webp$
+Allow: /*.svg$
+Disallow: /admin/
+Disallow: /api/
+
+# Bing
 User-agent: Bingbot
 Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /personal/
+Disallow: /family/
 
+# Twitter
 User-agent: Twitterbot
 Allow: /
 
+# Facebook
 User-agent: facebookexternalhit
 Allow: /
 
+# LinkedIn
+User-agent: LinkedInBot
+Allow: /
+
+# Telegram
+User-agent: TelegramBot
+Allow: /
+
+# WhatsApp
+User-agent: WhatsApp
+Allow: /
+
+# All other bots
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /admin/*
+Disallow: /api/
+Disallow: /api/*
+Disallow: /personal/
+Disallow: /personal/*
+Disallow: /family/
+Disallow: /family/*
+Disallow: /*.json$
+Disallow: /*_buildManifest.js$
+Disallow: /*_middlewareManifest.js$
+Disallow: /*_ssgManifest.js$
+Disallow: /*.js.map$
+
+# Sitemap location
+Sitemap: https://vikasgoyanka.in/sitemap.xml
+
+# Host
+Host: https://vikasgoyanka.in

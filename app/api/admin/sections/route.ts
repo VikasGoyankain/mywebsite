@@ -1,16 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { 
   getAllAdminSections, 
-  createAdminSection, 
-  getSectionAnalytics,
-  initializeDefaultSections 
+  createAdminSection
 } from '@/lib/admin-sections'
 
 export async function GET() {
   try {
-    // Initialize default sections if none exist
-    await initializeDefaultSections()
-    
     const sections = await getAllAdminSections()
     return NextResponse.json(sections)
   } catch (error) {
@@ -22,10 +17,10 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json()
-    const { title, description, icon, linkHref, linkText, category, priority, isActive } = body
+    const { title, description, icon, linkHref, linkText, categoryId, order, isActive, isPinned } = body
 
     // Validate required fields
-    if (!title || !description || !icon || !linkHref || !linkText || !category) {
+    if (!title || !description || !icon || !linkHref || !linkText || !categoryId) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 })
     }
 
@@ -35,12 +30,13 @@ export async function POST(request: NextRequest) {
       icon,
       linkHref,
       linkText,
-      category,
-      priority: priority || 0,
-      isActive: isActive !== false
+      categoryId,
+      order: order || 0,
+      isActive: isActive !== false,
+      isPinned: isPinned || false
     })
 
-    return NextResponse.json(section)
+    return NextResponse.json(section, { status: 201 })
   } catch (error) {
     console.error('Error creating admin section:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

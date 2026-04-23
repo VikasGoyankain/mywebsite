@@ -25,7 +25,7 @@ export async function PUT(
 ) {
   try {
     const body = await request.json()
-    const { title, description, icon, linkHref, linkText, category, priority, isActive } = body
+    const { title, description, icon, linkHref, linkText, categoryId, order, isActive, isPinned } = body
 
     const section = await updateAdminSection(params.id, {
       ...(title && { title }),
@@ -33,9 +33,10 @@ export async function PUT(
       ...(icon && { icon }),
       ...(linkHref && { linkHref }),
       ...(linkText && { linkText }),
-      ...(category && { category }),
-      ...(priority !== undefined && { priority }),
-      ...(isActive !== undefined && { isActive })
+      ...(categoryId && { categoryId }),
+      ...(order !== undefined && { order }),
+      ...(isActive !== undefined && { isActive }),
+      ...(isPinned !== undefined && { isPinned })
     })
 
     if (!section) {

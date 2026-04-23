@@ -33,7 +33,7 @@ CREATE INDEX idx_admin_section_usage_accessed_at ON admin_section_usage(accessed
 
 -- Insert default sections
 INSERT INTO admin_sections (title, description, icon, link_href, link_text, category, priority) VALUES
-('Posts', 'Manage your professional insights and articles', 'FileText', '/admin/posts', 'Manage Posts', 'content', 1),
+('Blog', 'Manage your blog posts and articles', 'FileText', '/admin/blogs', 'Manage Blog', 'content', 1),
 ('Profile', 'Update your personal information and contact details', 'User', '/admin/profile', 'Edit Profile', 'frequent', 2),
 ('Settings', 'Manage your website settings', 'Settings', '/admin/settings', 'Manage Settings', 'management', 3),
 ('Family', 'Manage family members and their access', 'Users', '/admin/family', 'Manage Family', 'management', 4),

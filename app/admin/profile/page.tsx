@@ -505,76 +505,8 @@ export default function ProfileManagement() {
           </Card>
         </div>
 
-        {/* Right Column - Specializations, Social Links, and Badges */}
+        {/* Right Column - Social Links, and Badges */}
         <div className="lg:col-span-8 space-y-4">
-          {/* Specializations - More compact */}
-          <Card className="hover:shadow-md transition-shadow duration-200">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Specializations</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex flex-wrap gap-2">
-                  {profileData.specializations.map((specialization, index) => (
-                    <Badge 
-                      key={index} 
-                      className="px-3 py-1 text-sm bg-blue-50 text-blue-700 hover:bg-blue-100 transition-colors"
-                    >
-                      {specialization}
-                      <button
-                        onClick={() =>
-                          updateProfileData({
-                            specializations: profileData.specializations.filter((_, i) => i !== index),
-                          })
-                        }
-                        className="ml-2 text-xs opacity-70 hover:opacity-100"
-                      >
-                        ×
-                      </button>
-                    </Badge>
-                  ))}
-                  {profileData.specializations.length === 0 && (
-                    <div className="text-sm text-muted-foreground italic">No specializations added yet.</div>
-                  )}
-                </div>
-                <div className="flex gap-2">
-                  <Input
-                    id="new-specialization"
-                    placeholder="Add a specialization..."
-                    className="flex-1"
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") {
-                        const value = e.currentTarget.value.trim()
-                        if (value) {
-                          updateProfileData({
-                            specializations: [...profileData.specializations, value],
-                          })
-                          e.currentTarget.value = ""
-                        }
-                      }
-                    }}
-                  />
-                  <Button
-                    size="sm"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white"
-                    onClick={() => {
-                      const input = document.getElementById("new-specialization") as HTMLInputElement
-                      const value = input.value.trim()
-                      if (value) {
-                        updateProfileData({
-                          specializations: [...profileData.specializations, value],
-                        })
-                        input.value = ""
-                      }
-                    }}
-                  >
-                    <Plus className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Social Links - More compact */}
           <Card className="hover:shadow-md transition-shadow duration-200">
             <CardHeader className="pb-3">

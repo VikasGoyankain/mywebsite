@@ -1,7 +1,7 @@
 "use client"
 
 import React, { useState, useEffect } from "react"
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
   FileText,
@@ -44,7 +44,7 @@ export default function AdminDashboard() {
   }, [])
 
   return (
-    <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full">
+    <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full p-6">
       {/* Welcome Header */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>

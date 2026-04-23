@@ -1,6 +1,5 @@
 "use client";
 import React, { useState } from 'react';
-import { AdminAuthWrapper } from '@/components/admin/AdminAuthWrapper';
 import UrlShortnerIndex from '@/components/admin/url-shortner/UrlShortnerIndex';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
@@ -61,31 +60,29 @@ export default function UrlShortnerPage() {
   };
   
   return (
-    <AdminAuthWrapper>
-      <div className="container mx-auto p-6">
-        <div className="flex justify-between items-center mb-6">
-          <div className="flex items-center gap-4">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={() => router.push('/admin')}
-              className="hover:bg-slate-100"
-            >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <h1 className="text-3xl font-bold">URL Shortener</h1>
-          </div>
-          <Button 
-            variant="outline" 
-            onClick={runMigration}
-            disabled={isMigrating}
-            className="text-sm"
+    <div className="container mx-auto p-6">
+      <div className="flex justify-between items-center mb-6">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => router.push('/admin')}
+            className="hover:bg-slate-100"
           >
-            {isMigrating ? "Optimizing..." : "Fix Duplicate URLs"}
+            <ArrowLeft className="h-5 w-5" />
           </Button>
+          <h1 className="text-3xl font-bold">URL Shortener</h1>
         </div>
-        <UrlShortnerIndex />
+        <Button 
+          variant="outline" 
+          onClick={runMigration}
+          disabled={isMigrating}
+          className="text-sm"
+        >
+          {isMigrating ? "Optimizing..." : "Fix Duplicate URLs"}
+        </Button>
       </div>
-    </AdminAuthWrapper>
+      <UrlShortnerIndex />
+    </div>
   );
 }
