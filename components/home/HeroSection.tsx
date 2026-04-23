@@ -1,14 +1,11 @@
 "use client"
 
 import React from "react"
-import { motion } from "framer-motion"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Card } from "@/components/ui/card"
-import { Verified, Phone, Mail, MapPin, Globe } from "lucide-react"
+import { motion, type Variants } from "framer-motion"
+import { Verified, Mail, MapPin, ArrowUpRight, Sparkles } from "lucide-react"
 import Link from "next/link"
-import { SubscribeButton } from "@/components/subscribe-button"
 import * as LucideIcons from "lucide-react"
+import portrait from "@/assets/vikas-portrait.png"
 
 interface BadgeData {
   id: number
@@ -46,181 +43,227 @@ interface HeroSectionProps {
   navigationButtons: NavButton[]
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
-      delayChildren: 0.1
+      staggerChildren: 0.12,
+      delayChildren: 0.05
     }
   }
 }
 
-const itemVariants = {
-  hidden: { y: 20, opacity: 0 },
-  visible: { y: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+const itemVariants: Variants = {
+  hidden: { y: 24, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { duration: 0.7, ease: [0.22, 1, 0.36, 1] }
+  }
 }
 
 export function HeroSection({ profileData, navigationButtons }: HeroSectionProps) {
+  const nameParts = profileData.name?.split(" ") || ["Vikas", "Goyanka"]
+  const firstName = nameParts[0]
+  const lastName = nameParts.slice(1).join(" ")
+
   return (
     <motion.div 
-      className="mb-16"
+      className="mb-20"
       variants={containerVariants}
       initial="hidden"
       animate="visible"
     >
-      <div className="flex flex-col lg:flex-row gap-10 mb-12">
-        {/* Profile Picture & Contact */}
-        <motion.div variants={itemVariants} className="flex flex-col items-center lg:items-start group">
-          <div className="relative mb-8">
-            {/* Animated background glow */}
-            <div className="absolute -inset-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-[2rem] opacity-20 blur-2xl group-hover:opacity-40 transition-opacity duration-700"></div>
-            
-            <div className="w-48 h-48 lg:w-56 lg:h-56 rounded-3xl overflow-hidden shadow-2xl relative z-10 p-1.5 bg-gradient-to-br from-white/60 to-white/10 backdrop-blur-md border border-white/40 ring-1 ring-black/5">
-              <Avatar className="w-full h-full rounded-2xl shadow-inner">
-                <AvatarImage
-                  src={profileData.profileImage || "/placeholder.svg"}
-                  alt={`${profileData.name} - ${profileData.title}`}
-                  className="object-cover transition-transform duration-700 hover:scale-105"
+      {/* === HERO PORTRAIT + NAME === */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-16 items-center pt-6 sm:pt-10 lg:pt-16">
+        {/* Portrait — LCP image */}
+        <motion.div
+          variants={itemVariants}
+          className="lg:col-span-5 order-1 lg:order-1 relative"
+        >
+          <div className="relative mx-auto max-w-[360px] lg:max-w-none">
+            {/* Gold glow halo */}
+            <div
+              aria-hidden
+              className="absolute -inset-6 rounded-[2rem] blur-3xl opacity-50 pointer-events-none"
+              style={{
+                background:
+                  "radial-gradient(60% 60% at 50% 30%, hsl(var(--gold) / 0.25), transparent 70%)",
+              }}
+            />
+            <div className="relative rounded-[1.75rem] overflow-hidden gold-border shadow-gold-glow bg-obsidian-elevated">
+              {/* Frosted brass top bar */}
+              <div className="absolute top-0 left-0 right-0 h-10 z-20 flex items-center justify-between px-4 glass-nav">
+                <div className="flex items-center gap-2">
+                  <span className="w-1.5 h-1.5 rounded-full bg-gold animate-gold-pulse" />
+                  <span className="text-[10px] tracking-[0.2em] text-gold uppercase font-sans">
+                    Live · Delhi
+                  </span>
+                </div>
+                <span className="text-[10px] tracking-[0.2em] text-muted-foreground uppercase font-sans">
+                  MMXXVI
+                </span>
+              </div>
+              <div className="aspect-[4/5] relative">
+                <img
+                  src={portrait.src}
+                  alt={`${profileData.name} — ${profileData.title}`}
+                  fetchPriority="high"
+                  decoding="async"
+                  className="absolute inset-0 w-full h-full object-cover object-top"
                 />
-                <AvatarFallback className="text-5xl font-bold bg-gradient-to-br from-blue-600 to-purple-600 text-white rounded-2xl">
-                  {profileData.name.split(" ").map((n) => n[0]).join("")}
-                </AvatarFallback>
-              </Avatar>
+                {/* Bottom vignette */}
+                <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-obsidian via-obsidian/70 to-transparent" />
+                {/* Verified seal */}
+                <div className="absolute bottom-4 right-4 z-10 glass-panel rounded-full px-3 py-1.5 flex items-center gap-2">
+                  <Verified className="w-3.5 h-3.5 text-gold" />
+                  <span className="text-[10px] tracking-[0.18em] uppercase text-foreground/90 font-sans">
+                    Verified
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
-
-          {/* Contact Info Card */}
-          <Card className="p-6 w-full max-w-sm bg-white/70 backdrop-blur-xl border border-white/50 shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.08)] transition-all duration-500 rounded-2xl relative overflow-hidden group">
-            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-blue-500 to-purple-600 opacity-50 group-hover:opacity-100 transition-opacity"></div>
-            <h3 className="font-bold text-gray-900 mb-5 flex items-center gap-2 text-lg">
-              <Phone className="w-5 h-5 text-blue-600" />
-              Contact Details
-            </h3>
-            <div className="space-y-4 text-sm font-medium">
-              <a
-                href={`mailto:${profileData.contact.email}`}
-                className="flex items-center gap-3 text-gray-700 hover:text-blue-600 transition-colors group/link p-2 -mx-2 rounded-lg hover:bg-blue-50/50"
-              >
-                <div className="bg-blue-100/50 p-2 rounded-lg group-hover/link:bg-blue-100 transition-colors">
-                  <Mail className="w-4 h-4 text-blue-600" />
-                </div>
-                <span className="truncate">{profileData.contact.email}</span>
-              </a>
-              <a
-                href={`tel:${profileData.contact.phone}`}
-                className="flex items-center gap-3 text-gray-700 hover:text-purple-600 transition-colors group/link p-2 -mx-2 rounded-lg hover:bg-purple-50/50"
-              >
-                <div className="bg-purple-100/50 p-2 rounded-lg group-hover/link:bg-purple-100 transition-colors">
-                  <Phone className="w-4 h-4 text-purple-600" />
-                </div>
-                <span>{profileData.contact.phone}</span>
-              </a>
-              <div className="flex items-center gap-3 text-gray-700 p-2 -mx-2 rounded-lg">
-                <div className="bg-gray-100 p-2 rounded-lg">
-                  <MapPin className="w-4 h-4 text-gray-600" />
-                </div>
-                <span>{profileData.contact.location}</span>
-              </div>
-              <div className="flex items-center gap-3 text-gray-700 p-2 -mx-2 rounded-lg">
-                <div className="bg-green-100/50 p-2 rounded-lg">
-                  <Globe className="w-4 h-4 text-green-600" />
-                </div>
-                <span className="text-green-700">{profileData.contact.availability}</span>
-              </div>
-            </div>
-          </Card>
         </motion.div>
 
-        {/* Profile Info */}
-        <motion.div variants={itemVariants} className="flex-1 mt-4 lg:mt-0">
-          <div className="mb-8">
-            <motion.h1 
-              className="text-4xl md:text-5xl lg:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-gray-900 to-gray-600 tracking-tight mb-4 flex items-center gap-4 py-1"
-            >
-              {profileData.name}
-              <Verified className="w-8 h-8 md:w-10 md:h-10 text-blue-500 drop-shadow-md" />
-            </motion.h1>
-            <div className="flex flex-wrap gap-2 mb-6">
-              {profileData.badges.map((badge, idx) => {
-                const IconComponent = (LucideIcons as any)[badge.icon] || LucideIcons.Award
-                return (
-                  <motion.div 
-                    key={badge.id}
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    transition={{ delay: 0.3 + idx * 0.1 }}
-                  >
-                    <Badge className={`${badge.color} px-4 py-1.5 rounded-full text-sm font-medium shadow-sm border-white/20 backdrop-blur-md`}>
-                      <IconComponent className="w-4 h-4 mr-2 opacity-80" />
-                      {badge.text}
-                    </Badge>
-                  </motion.div>
-                )
-              })}
-            </div>
+        {/* Headline + identity */}
+        <motion.div
+          variants={itemVariants}
+          className="lg:col-span-7 order-2 lg:order-2"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="h-px w-10 bg-gold/60" />
+            <span className="text-[10px] sm:text-xs tracking-[0.32em] uppercase text-gold font-sans">
+              The Obsidian Architect
+            </span>
           </div>
 
-          <div className="prose prose-lg text-gray-700 mb-10 max-w-3xl">
-            <p className="text-xl leading-relaxed text-gray-600 font-medium">
-              {profileData.bio}
-            </p>
-            <div className="mt-8 space-y-3">
-              {profileData.specializations.map((spec, index) => (
-                <div key={index} className="flex items-center gap-3 text-gray-600">
-                  <div className="w-2 h-2 rounded-full bg-blue-500"></div>
-                  <span className="text-lg">{spec}</span>
-                </div>
+          <h1 className="font-serif-display text-[3.25rem] leading-[0.95] sm:text-7xl lg:text-[6.5rem] lg:leading-[0.92] font-light tracking-tight">
+            <span className="block text-foreground/95">{firstName}</span>
+            <span className="block gold-text italic font-medium">{lastName}</span>
+          </h1>
+
+          <p className="mt-6 text-base sm:text-lg leading-relaxed text-muted-foreground max-w-xl font-sans">
+            {profileData.bio ||
+              "Building the bridge between Indian Jurisprudence and Artificial Intelligence — from NLU Delhi to Stanford."}
+          </p>
+
+          {/* Specializations as gold-divided list */}
+          {profileData.specializations?.length > 0 && (
+            <div className="mt-8 flex flex-wrap items-center gap-x-5 gap-y-2 text-xs sm:text-sm font-sans tracking-wide text-foreground/70">
+              {profileData.specializations.slice(0, 4).map((spec, i) => (
+                <React.Fragment key={spec}>
+                  {i > 0 && <span className="w-1 h-1 rounded-full bg-gold/60" />}
+                  <span className="uppercase tracking-[0.18em]">{spec}</span>
+                </React.Fragment>
               ))}
             </div>
-            
-            {/* Subscribe Button */}
-            <motion.div 
-              className="mt-10"
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
+          )}
+
+          {/* CTAs */}
+          <div className="mt-10 flex flex-col sm:flex-row gap-3 sm:gap-4">
+            <Link
+              href="/contact"
+              className="group relative inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full bg-gold text-gold-foreground font-sans font-semibold text-sm tracking-wide shadow-gold-glow hover:shadow-gold-soft transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0"
             >
-              <SubscribeButton
-                className="bg-gray-900 hover:bg-gray-800 text-white px-8 py-6 h-auto rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.12)] hover:shadow-[0_8px_30px_rgb(0,0,0,0.16)] transition-all duration-300 text-lg font-semibold w-full sm:w-auto"
-              />
-            </motion.div>
+              <Sparkles className="w-4 h-4" />
+              Strategic Inquiry
+              <ArrowUpRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+            </Link>
+            <Link
+              href="/expertise"
+              className="group inline-flex items-center justify-center gap-2 px-7 py-4 rounded-full glass-panel text-foreground font-sans font-medium text-sm tracking-wide hover:border-gold/40 transition-all duration-300"
+            >
+              View Expertise
+              <ArrowUpRight className="w-4 h-4 opacity-60 transition-all group-hover:opacity-100 group-hover:translate-x-0.5" />
+            </Link>
+          </div>
+
+          {/* Quick contact line */}
+          <div className="mt-10 flex flex-wrap items-center gap-x-6 gap-y-3 text-xs font-sans text-muted-foreground">
+            {profileData.contact?.email && (
+              <a
+                href={`mailto:${profileData.contact.email}`}
+                className="inline-flex items-center gap-2 hover:text-gold transition-colors"
+              >
+                <Mail className="w-3.5 h-3.5" />
+                {profileData.contact.email}
+              </a>
+            )}
+            {profileData.contact?.location && (
+              <span className="inline-flex items-center gap-2">
+                <MapPin className="w-3.5 h-3.5 text-gold/70" />
+                {profileData.contact.location}
+              </span>
+            )}
           </div>
         </motion.div>
       </div>
 
-      {/* Navigation Buttons Grid */}
-      <motion.div variants={itemVariants} className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-        {navigationButtons.map((button, idx) => {
-          const IconComponent = (LucideIcons as any)[button.icon] || LucideIcons.Square
-          return (
-            <motion.div
-              key={button.id}
-              whileHover={{ y: -5 }}
-              transition={{ type: "spring", stiffness: 300, damping: 20 }}
-            >
-              <Link href={button.href} className="block h-full group">
-                <Card className="h-full p-6 text-center border border-white/60 bg-white/40 hover:bg-white/80 backdrop-blur-xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] hover:shadow-[0_20px_40px_rgb(0,0,0,0.08)] transition-all duration-500 rounded-3xl overflow-hidden relative">
-                  <div className={`absolute inset-0 opacity-0 group-hover:opacity-5 transition-opacity duration-500 ${button.color}`}></div>
-                  <div className="relative z-10 flex flex-col items-center">
-                    <div
-                      className={`w-16 h-16 ${button.color} rounded-2xl flex items-center justify-center mb-5 group-hover:scale-110 transition-transform duration-500 shadow-lg group-hover:shadow-xl rotate-3 group-hover:-rotate-3`}
-                    >
-                      <IconComponent className="w-8 h-8 text-white" />
+      {/* === POWER HUB — Bento Navigation === */}
+      {navigationButtons?.length > 0 && (
+        <motion.div
+          variants={itemVariants}
+          className="mt-20 sm:mt-28"
+        >
+          <div className="flex items-end justify-between mb-6">
+            <div>
+              <span className="text-[10px] tracking-[0.32em] uppercase text-gold font-sans">
+                The Command Center
+              </span>
+              <h2 className="font-serif-display text-3xl sm:text-4xl mt-2 text-foreground/95">
+                Navigate the Practice
+              </h2>
+            </div>
+            <div className="hidden sm:block gold-rule flex-1 ml-8 mb-3" />
+          </div>
+
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+            {navigationButtons.map((button, idx) => {
+              const IconComponent =
+                (LucideIcons as any)[button.icon] || LucideIcons.ArrowUpRight
+              const wide = idx === 0 && navigationButtons.length === 3
+              return (
+                <Link
+                  key={button.id}
+                  href={button.href}
+                  prefetch
+                  className={`group relative overflow-hidden rounded-2xl glass-panel p-5 sm:p-6 hover:border-gold/40 transition-all duration-500 hover:-translate-y-1 ${
+                    wide ? "col-span-2" : ""
+                  }`}
+                >
+                  {/* Hover gold sweep */}
+                  <div
+                    aria-hidden
+                    className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 pointer-events-none"
+                    style={{
+                      background:
+                        "radial-gradient(120% 80% at 50% 0%, hsl(var(--gold) / 0.08), transparent 60%)",
+                    }}
+                  />
+                  <div className="relative z-10 flex flex-col h-full min-h-[150px] sm:min-h-[180px] justify-between">
+                    <div className="w-11 h-11 rounded-xl gold-border bg-obsidian-elevated/60 flex items-center justify-center group-hover:shadow-gold-soft transition-all duration-500">
+                      <IconComponent className="w-5 h-5 text-gold" />
                     </div>
-                    <h3 className="font-bold text-gray-900 text-base mb-2">
-                      {button.text}
-                    </h3>
-                    {button.description && (
-                      <p className="text-sm text-gray-500 font-medium">{button.description}</p>
-                    )}
+                    <div className="mt-6">
+                      <h3 className="font-serif-display text-xl sm:text-2xl text-foreground leading-tight">
+                        {button.text}
+                      </h3>
+                      {button.description && (
+                        <p className="mt-1.5 text-xs text-muted-foreground font-sans line-clamp-2">
+                          {button.description}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                </Card>
-              </Link>
-            </motion.div>
-          )
-        })}
-      </motion.div>
+                  <ArrowUpRight className="absolute top-5 right-5 w-4 h-4 text-muted-foreground group-hover:text-gold transition-all group-hover:translate-x-0.5 group-hover:-translate-y-0.5" />
+                </Link>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
     </motion.div>
   )
 }

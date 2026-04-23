@@ -16,6 +16,11 @@ export default function Navbar() {
     return null;
   }
 
+  // Homepage uses its own bespoke HomeNavbar (Obsidian Architect)
+  if (pathname === "/") {
+    return null;
+  }
+
   // Determine if we're on homepage or nested page
   const isHomePage = pathname === "/";
   const isTopLevelSection = pathname?.split("/").filter(Boolean).length === 1;

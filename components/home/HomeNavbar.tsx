@@ -1,8 +1,8 @@
 "use client"
 
-import React, { useState } from "react"
+import React, { useState, useEffect } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Verified, Menu, X } from "lucide-react"
+import { Menu, X, ArrowUpRight } from "lucide-react"
 import Link from "next/link"
 
 interface SocialLink {
@@ -22,99 +22,134 @@ interface HomeNavbarProps {
 
 export function HomeNavbar({ profileName, profileTitle, profileImage, socialLinks }: HomeNavbarProps) {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const [scrolled, setScrolled] = useState(false)
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 12)
+    onScroll()
+    window.addEventListener("scroll", onScroll, { passive: true })
+    return () => window.removeEventListener("scroll", onScroll)
+  }, [])
+
+  const navLinks = [
+    { href: "/expertise", label: "Expertise" },
+    { href: "/research", label: "Research" },
+    { href: "/blog", label: "Journal" },
+    { href: "/contact", label: "Inquire" },
+  ]
+
+  const initials = profileName
+    ? profileName.split(" ").map((n) => n[0]).join("").slice(0, 2)
+    : "VG"
 
   return (
-    <div className="sticky top-0 z-50 bg-white/80 backdrop-blur-xl border-b border-gray-200/50 shadow-[0_4px_30px_rgba(0,0,0,0.05)] transition-all duration-300">
-      <div className="px-4 py-3">
-        <div className="flex items-center justify-between max-w-6xl mx-auto">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <Avatar className="w-10 h-10 ring-2 ring-blue-500/20 group-hover:ring-blue-500/50 transition-all duration-300 shadow-md">
+    <header
+      className={`sticky top-0 z-50 glass-nav transition-all duration-500 ${
+        scrolled ? "py-2" : "py-3 sm:py-4"
+      }`}
+    >
+      <div className="px-4 sm:px-6 max-w-6xl mx-auto flex items-center justify-between gap-4">
+        {/* Identity mark */}
+        <Link href="/" className="flex items-center gap-3 group" aria-label="Home">
+          <div className="relative">
+            <Avatar className="w-9 h-9 gold-border ring-1 ring-gold/30 transition-all duration-300 group-hover:ring-gold/60">
               <AvatarImage src={profileImage || "/placeholder.svg"} alt={profileName} />
-              <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
-                {profileName
-                  ? profileName.split(" ").map((n) => n[0]).join("")
-                  : "?"}
+              <AvatarFallback className="bg-obsidian text-gold font-serif-display font-semibold">
+                {initials}
               </AvatarFallback>
             </Avatar>
-            <div className="flex flex-col">
-              <div className="flex items-center gap-2">
-                <span className="font-bold text-gray-900 group-hover:text-blue-700 transition-colors">{profileName}</span>
-                <Verified className="w-4 h-4 text-blue-500" />
-              </div>
-              <span className="text-xs font-medium text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full w-fit group-hover:bg-blue-50 group-hover:text-blue-600 transition-colors">{profileTitle}</span>
-            </div>
           </div>
-
-          {/* Desktop Social Links */}
-          <div className="hidden md:flex items-center gap-3">
-            {socialLinks?.map((social) => (
-              <Link
-                key={social.id}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`p-2.5 rounded-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-lg bg-gray-50 hover:bg-white relative group border border-gray-100 hover:border-gray-200`}
-                aria-label={`Visit ${social.name} profile`}
-              >
-                <div className={`absolute inset-0 rounded-xl ${social.color} opacity-0 group-hover:opacity-10 transition-opacity duration-300`}></div>
-                <img
-                  src={social.icon}
-                  alt={social.name}
-                  className="w-4 h-4 relative z-10 opacity-70 group-hover:opacity-100 transition-opacity"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (target.src !== '/placeholder.svg') {
-                        target.src = '/placeholder.svg';
-                    }
-                  }}
-                />
-              </Link>
-            ))}
+          <div className="flex flex-col leading-tight">
+            <span className="font-serif-display text-base sm:text-lg text-foreground tracking-tight">
+              {profileName || "Vikas Goyanka"}
+            </span>
+            <span className="text-[9px] sm:text-[10px] tracking-[0.28em] uppercase text-gold font-sans">
+              {profileTitle || "Architect"}
+            </span>
           </div>
+        </Link>
 
-          {/* Mobile Menu Button - using state to control menu visibility */}
-          <button
-            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            className="md:hidden p-2 rounded-xl bg-gray-50 hover:bg-gray-100 border border-gray-100 transition-colors active:scale-95"
-            aria-label="Toggle mobile menu"
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          {navLinks.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              prefetch
+              className="px-4 py-2 text-sm font-sans text-foreground/80 hover:text-gold transition-colors duration-300 relative group"
+            >
+              {link.label}
+              <span className="absolute left-4 right-4 -bottom-0.5 h-px bg-gold scale-x-0 group-hover:scale-x-100 origin-left transition-transform duration-500" />
+            </Link>
+          ))}
+          <Link
+            href="/contact"
+            prefetch
+            className="ml-3 inline-flex items-center gap-1.5 px-4 py-2 rounded-full bg-gold text-gold-foreground font-sans font-semibold text-xs tracking-wide hover:shadow-gold-soft transition-all"
           >
-            {mobileMenuOpen ? (
-              <X className="w-5 h-5 text-gray-700" />
-            ) : (
-              <Menu className="w-5 h-5 text-gray-700" />
-            )}
-          </button>
-        </div>
+            Inquire
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </Link>
+        </nav>
 
-        {/* Mobile Social Links Menu */}
-        <div className={`md:hidden overflow-hidden transition-all duration-300 ease-in-out ${mobileMenuOpen ? 'max-h-24 opacity-100 mt-3 pt-3 border-t border-gray-100/50' : 'max-h-0 opacity-0'}`}>
-          <div className="flex items-center justify-center gap-4">
-            {socialLinks?.map((social) => (
+        {/* Mobile menu toggle */}
+        <button
+          onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          className="md:hidden p-2 rounded-full gold-border bg-obsidian-elevated/60 active:scale-95 transition-transform"
+          aria-label="Toggle menu"
+        >
+          {mobileMenuOpen ? (
+            <X className="w-4 h-4 text-gold" />
+          ) : (
+            <Menu className="w-4 h-4 text-gold" />
+          )}
+        </button>
+      </div>
+
+      {/* Mobile drawer */}
+      <div
+        className={`md:hidden overflow-hidden transition-all duration-500 ease-out ${
+          mobileMenuOpen ? "max-h-[420px] opacity-100" : "max-h-0 opacity-0"
+        }`}
+      >
+        <div className="px-6 pb-6 pt-2 max-w-6xl mx-auto">
+          <nav className="grid grid-cols-2 gap-2 mt-2">
+            {navLinks.map((link) => (
               <Link
-                key={social.id}
-                href={social.href}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={`p-3 rounded-xl transition-all duration-200 active:scale-95 relative group bg-gray-50 border border-gray-100`}
-                aria-label={`Visit ${social.name} profile`}
+                key={link.href}
+                href={link.href}
+                onClick={() => setMobileMenuOpen(false)}
+                className="flex items-center justify-between px-4 py-3 rounded-xl glass-panel hover:border-gold/40 transition-all"
               >
-                <div className={`absolute inset-0 rounded-xl ${social.color} opacity-5 group-active:opacity-20 transition-opacity`}></div>
-                <img
-                  src={social.icon}
-                  alt={social.name}
-                  className="w-5 h-5 relative z-10 opacity-80"
-                  onError={(e) => {
-                    const target = e.target as HTMLImageElement;
-                    if (target.src !== '/placeholder.svg') {
-                        target.src = '/placeholder.svg';
-                    }
-                  }}
-                />
+                <span className="font-serif-display text-base text-foreground">
+                  {link.label}
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-gold" />
               </Link>
             ))}
-          </div>
+          </nav>
+          {socialLinks?.length > 0 && (
+            <div className="mt-5 pt-5 border-t border-gold/10 flex items-center justify-center gap-3">
+              {socialLinks.slice(0, 6).map((social) => (
+                <a
+                  key={social.id}
+                  href={social.href}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="p-2.5 rounded-full gold-border bg-obsidian-elevated/40 active:scale-95"
+                  aria-label={social.name}
+                >
+                  <img
+                    src={social.icon}
+                    alt={social.name}
+                    className="w-4 h-4 opacity-80 invert"
+                  />
+                </a>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-    </div>
+    </header>
   )
 }

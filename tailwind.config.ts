@@ -11,6 +11,11 @@ const config: Config = {
   ],
   theme: {
   	extend: {
+  		fontFamily: {
+  			serif: ['var(--font-serif)', 'Cormorant Garamond', 'Georgia', 'serif'],
+  			sans: ['var(--font-sans)', 'Geist', 'system-ui', 'sans-serif'],
+  			display: ['var(--font-serif)', 'Cormorant Garamond', 'Georgia', 'serif'],
+  		},
   		colors: {
   			background: 'hsl(var(--background))',
   			foreground: 'hsl(var(--foreground))',
@@ -45,6 +50,15 @@ const config: Config = {
   			border: 'hsl(var(--border))',
   			input: 'hsl(var(--input))',
   			ring: 'hsl(var(--ring))',
+  			gold: {
+  				DEFAULT: 'hsl(var(--gold))',
+  				foreground: 'hsl(var(--gold-foreground))',
+  				muted: 'hsl(var(--gold-muted))',
+  			},
+  			obsidian: {
+  				DEFAULT: 'hsl(var(--obsidian))',
+  				elevated: 'hsl(var(--obsidian-elevated))',
+  			},
   			chart: {
   				'1': 'hsl(var(--chart-1))',
   				'2': 'hsl(var(--chart-2))',
@@ -68,6 +82,15 @@ const config: Config = {
   			md: 'calc(var(--radius) - 2px)',
   			sm: 'calc(var(--radius) - 4px)'
   		},
+  		backgroundImage: {
+  			'gold-gradient': 'linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-muted)) 50%, hsl(var(--gold)) 100%)',
+  			'obsidian-gradient': 'radial-gradient(ellipse at top, hsl(var(--obsidian-elevated)) 0%, hsl(var(--obsidian)) 60%)',
+  		},
+  		boxShadow: {
+  			'gold-glow': '0 0 40px -10px hsl(var(--gold) / 0.45)',
+  			'gold-soft': '0 0 20px -5px hsl(var(--gold) / 0.25)',
+  			'inner-gold': 'inset 0 1px 0 0 hsl(var(--gold) / 0.15)',
+  		},
   		keyframes: {
   			'accordion-down': {
   				from: {
@@ -85,10 +108,31 @@ const config: Config = {
   					height: '0'
   				}
   			}
+  		,
+  			'shimmer': {
+  				'0%': { backgroundPosition: '-200% 0' },
+  				'100%': { backgroundPosition: '200% 0' },
+  			},
+  			'marquee': {
+  				'0%': { transform: 'translateX(0)' },
+  				'100%': { transform: 'translateX(-50%)' },
+  			},
+  			'fade-up': {
+  				'0%': { opacity: '0', transform: 'translateY(24px)' },
+  				'100%': { opacity: '1', transform: 'translateY(0)' },
+  			},
+  			'gold-pulse': {
+  				'0%, 100%': { boxShadow: '0 0 0 0 hsl(var(--gold) / 0.45)' },
+  				'50%': { boxShadow: '0 0 0 12px hsl(var(--gold) / 0)' },
+  			}
   		},
   		animation: {
   			'accordion-down': 'accordion-down 0.2s ease-out',
-  			'accordion-up': 'accordion-up 0.2s ease-out'
+  			'accordion-up': 'accordion-up 0.2s ease-out',
+  			'shimmer': 'shimmer 6s linear infinite',
+  			'marquee': 'marquee 35s linear infinite',
+  			'fade-up': 'fade-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both',
+  			'gold-pulse': 'gold-pulse 2.4s ease-out infinite',
   		}
   	}
   },

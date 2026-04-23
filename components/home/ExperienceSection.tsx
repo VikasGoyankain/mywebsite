@@ -1,11 +1,8 @@
 "use client"
 
 import React from "react"
-import { motion } from "framer-motion"
-import { Card } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Briefcase, Clock, MapPin } from "lucide-react"
+import { motion, type Variants } from "framer-motion"
+import { Briefcase, Clock, MapPin, GraduationCap } from "lucide-react"
 
 interface Experience {
   id: string
@@ -23,88 +20,97 @@ interface ExperienceSectionProps {
   experience: Experience[]
 }
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: { opacity: 0 },
   visible: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1
+      staggerChildren: 0.15
     }
   }
 }
 
-const itemVariants = {
-  hidden: { x: -20, opacity: 0 },
-  visible: { x: 0, opacity: 1, transition: { type: "spring", stiffness: 100 } }
+const itemVariants: Variants = {
+  hidden: { y: 28, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: { duration: 0.6, ease: [0.22, 1, 0.36, 1] },
+  },
 }
 
 export function ExperienceSection({ experience }: ExperienceSectionProps) {
   const sortedExperience = [...experience].sort((a, b) => (a.order || 0) - (b.order || 0))
 
   return (
-    <Card className="p-8 shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-white/60 bg-white/60 backdrop-blur-xl rounded-3xl relative overflow-hidden h-full">
-      <div className="absolute top-0 right-0 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-50 -translate-y-1/2 translate-x-1/2"></div>
-      
-      <div className="relative z-10">
-        <h2 className="text-3xl font-extrabold text-gray-900 mb-8 flex items-center gap-4">
-          <div className="p-3 bg-blue-100 rounded-2xl">
-            <Briefcase className="w-6 h-6 text-blue-600" />
-          </div>
-          Professional Experience
-        </h2>
-        
-        <motion.div 
-          className="space-y-6 max-h-[80vh] overflow-y-auto pr-4 custom-scrollbar"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-        >
-          {sortedExperience.map((exp) => (
-            <motion.div key={exp.id} variants={itemVariants} className="relative group">
-              <div className="absolute left-7 top-14 bottom-0 w-0.5 bg-gradient-to-b from-blue-200 to-transparent opacity-0 group-last:hidden group-hover:opacity-100 transition-opacity duration-300"></div>
-              
-              <div className="flex gap-6 p-6 rounded-2xl bg-white hover:bg-gradient-to-r hover:from-blue-50/50 hover:to-purple-50/50 transition-all duration-300 border border-gray-100 shadow-sm hover:shadow-md">
-                <Avatar className="w-14 h-14 ring-4 ring-white shadow-sm mt-1 z-10 flex-shrink-0 group-hover:scale-110 transition-transform duration-300">
-                  <AvatarImage src={exp.image || "/placeholder.svg"} className="object-cover" />
-                  <AvatarFallback className="bg-gradient-to-br from-blue-600 to-purple-600 text-white font-bold">
-                    {exp.company.split(" ").map((word) => word[0]).join("")}
-                  </AvatarFallback>
-                </Avatar>
-                
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-2 gap-2">
-                    <div>
-                      <h3 className="font-bold text-gray-900 text-xl group-hover:text-blue-700 transition-colors leading-tight">
-                        {exp.title}
-                      </h3>
-                      <p className="text-blue-600 font-semibold mt-1">{exp.company}</p>
-                    </div>
-                    <Badge variant="secondary" className="w-fit bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors">
-                      {exp.type}
-                    </Badge>
-                  </div>
-                  
-                  <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-sm text-gray-500 font-medium mb-4">
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4 text-gray-400" />
-                      {exp.duration}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4 text-gray-400" />
-                      {exp.location}
-                    </div>
-                  </div>
-                  
-                  <p className="text-gray-600 leading-relaxed text-base">
-                    {exp.description}
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
+    <div className="glass-panel rounded-3xl p-6 sm:p-8 relative overflow-hidden h-full">
+      <div className="flex items-center gap-3 mb-8">
+        <div className="w-9 h-9 rounded-lg gold-border flex items-center justify-center">
+          <Briefcase className="w-4 h-4 text-gold" />
+        </div>
+        <div>
+          <span className="text-[10px] tracking-[0.28em] uppercase text-gold font-sans">
+            Track Record
+          </span>
+          <h2 className="font-serif-display text-2xl sm:text-3xl text-foreground/95 leading-none mt-1">
+            Ventures &amp; Roles
+          </h2>
+        </div>
       </div>
-    </Card>
+
+      <motion.ol
+        className="relative space-y-7 pl-6 sm:pl-8"
+        variants={containerVariants}
+        initial="hidden"
+        whileInView="visible"
+        viewport={{ once: true, margin: "-80px" }}
+      >
+        {/* Vertical gold spine */}
+        <div
+          aria-hidden
+          className="absolute left-2 top-2 bottom-2 w-px"
+          style={{
+            background:
+              "linear-gradient(to bottom, hsl(var(--gold) / 0.5), hsl(var(--gold) / 0.05))",
+          }}
+        />
+
+        {sortedExperience.map((exp) => (
+          <motion.li key={exp.id} variants={itemVariants} className="relative group">
+            {/* Node */}
+            <span
+              className="absolute -left-[19px] sm:-left-[27px] top-2 w-3 h-3 rounded-full bg-obsidian border border-gold/60 group-hover:bg-gold transition-colors duration-500"
+              aria-hidden
+            />
+            <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <h3 className="font-serif-display text-xl sm:text-2xl text-foreground leading-tight">
+                {exp.title}
+              </h3>
+              <span className="text-[10px] uppercase tracking-[0.2em] text-gold font-sans">
+                {exp.type}
+              </span>
+            </div>
+            <p className="mt-1 text-sm font-sans text-gold/90">{exp.company}</p>
+            <div className="mt-2 flex flex-wrap items-center gap-x-5 gap-y-1 text-[11px] text-muted-foreground font-sans">
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="w-3 h-3" />
+                {exp.duration}
+              </span>
+              {exp.location && (
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="w-3 h-3" />
+                  {exp.location}
+                </span>
+              )}
+            </div>
+            {exp.description && (
+              <p className="mt-3 text-sm leading-relaxed text-foreground/70 font-sans max-w-prose">
+                {exp.description}
+              </p>
+            )}
+          </motion.li>
+        ))}
+      </motion.ol>
+    </div>
   )
 }
