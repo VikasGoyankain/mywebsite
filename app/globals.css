@@ -5,41 +5,41 @@
 @layer base {
   :root {
     /* === The Obsidian Architect — Dark Executive === */
-    --background: 0 0% 2%;            /* #050505 obsidian black */
-    --foreground: 40 28% 92%;         /* warm off-white */
-    --card: 0 0% 5%;
-    --card-foreground: 40 28% 92%;
-    --popover: 0 0% 5%;
-    --popover-foreground: 40 28% 92%;
-    /* Brushed Gold (#D4AF37 ≈ HSL 46 65% 52%) */
-    --primary: 46 65% 52%;
+    --background: 0 0% 4%;            /* #0a0a0a slightly lighter for visibility */
+    --foreground: 40 28% 94%;         /* warm off-white, slightly brighter */
+    --card: 0 0% 7%;
+    --card-foreground: 40 28% 94%;
+    --popover: 0 0% 7%;
+    --popover-foreground: 40 28% 94%;
+    /* Brushed Gold (#E8C547 ≈ HSL 46 80% 58%) - Boosted for better visibility */
+    --primary: 46 80% 58%;
     --primary-foreground: 0 0% 5%;
-    --secondary: 0 0% 8%;
-    --secondary-foreground: 40 28% 92%;
-    --muted: 0 0% 10%;
-    --muted-foreground: 40 8% 65%;
-    --accent: 46 65% 52%;
+    --secondary: 0 0% 10%;
+    --secondary-foreground: 40 28% 94%;
+    --muted: 0 0% 12%;
+    --muted-foreground: 40 10% 78%;   /* Much brighter for better contrast */
+    --accent: 46 80% 58%;             /* Boosted gold */
     --accent-foreground: 0 0% 5%;
     --destructive: 0 65% 45%;
-    --destructive-foreground: 40 28% 92%;
-    --border: 40 12% 16%;
-    --input: 0 0% 10%;
-    --ring: 46 65% 52%;
+    --destructive-foreground: 40 28% 94%;
+    --border: 40 15% 22%;
+    --input: 0 0% 12%;
+    --ring: 46 80% 58%;
     --radius: 0.75rem;
 
     /* Brand tokens */
-    --obsidian: 0 0% 2%;
-    --obsidian-elevated: 0 0% 7%;
-    --gold: 46 65% 52%;
-    --gold-muted: 42 45% 70%;
+    --obsidian: 0 0% 4%;
+    --obsidian-elevated: 0 0% 9%;
+    --gold: 46 80% 58%;              /* Brighter gold */
+    --gold-muted: 42 55% 76%;
     --gold-foreground: 0 0% 5%;
 
     /* Blog-specific design tokens */
-    --blog-bg: 0 0% 4%;
-    --blog-text: 40 28% 92%;
-    --blog-text-muted: 40 8% 65%;
-    --blog-accent: 46 65% 52%;
-    --blog-border: 40 12% 16%;
+    --blog-bg: 0 0% 6%;
+    --blog-text: 40 28% 94%;
+    --blog-text-muted: 40 10% 78%;   /* Much brighter */
+    --blog-accent: 46 80% 58%;
+    --blog-border: 40 15% 22%;
     --blog-card: 0 0% 6%;
   }
 }

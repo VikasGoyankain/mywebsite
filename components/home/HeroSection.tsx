@@ -2,7 +2,7 @@
 
 import React from "react"
 import { motion, type Variants } from "framer-motion"
-import { Verified, Mail, MapPin, ArrowUpRight, Sparkles } from "lucide-react"
+import { Mail, MapPin, ArrowUpRight, Sparkles } from "lucide-react"
 import Link from "next/link"
 import * as LucideIcons from "lucide-react"
 import portrait from "@/assets/vikas-portrait.png"
@@ -115,13 +115,6 @@ export function HeroSection({ profileData, navigationButtons }: HeroSectionProps
                 />
                 {/* Bottom vignette */}
                 <div className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-obsidian via-obsidian/70 to-transparent" />
-                {/* Verified seal */}
-                <div className="absolute bottom-4 right-4 z-10 glass-panel rounded-full px-3 py-1.5 flex items-center gap-2">
-                  <Verified className="w-3.5 h-3.5 text-gold" />
-                  <span className="text-[10px] tracking-[0.18em] uppercase text-foreground/90 font-sans">
-                    Verified
-                  </span>
-                </div>
               </div>
             </div>
           </div>
