@@ -1,5 +1,6 @@
 import React from "react"
 import { AdminAuthWrapper } from "@/components/admin/AdminAuthWrapper"
+import { AdminSidebar } from "@/components/admin/AdminSidebar"
 import { Toaster } from "@/components/ui/toaster"
 
 export const metadata = {
@@ -14,10 +15,10 @@ export default function AdminLayout({
 }) {
   return (
     <AdminAuthWrapper>
-      <div className="min-h-screen bg-slate-50 dark:bg-slate-900">
+      <AdminSidebar>
         {children}
         <Toaster />
-      </div>
+      </AdminSidebar>
     </AdminAuthWrapper>
   )
-} 
+}

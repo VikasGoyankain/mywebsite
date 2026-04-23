@@ -23,7 +23,7 @@ import {
   TableRow,
 } from '@/components/ui/table'
 import Link from 'next/link'
-import { mockCases, Case as CaseItem } from '@/app/casevault/data/mockCases'
+import { mockCases, Case as CaseItem } from '@/lib/data/mockCases'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import Image from "next/image"
 import { cn } from "@/lib/utils"

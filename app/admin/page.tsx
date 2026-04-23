@@ -1,351 +1,159 @@
 "use client"
 
-import React, { useState, useEffect, Suspense } from "react"
-import { ErrorBoundary } from 'react-error-boundary'
+import React, { useState, useEffect } from "react"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import {
-  User,
-  Briefcase,
-  GraduationCap,
-  Star,
+  FileText,
   Users,
   Award,
-  LogOut,
-  Settings,
-  FileText,
+  Star,
   Link as LinkIcon,
-  Mail,
-  MessageSquare,
-  PlusCircle,
-  UserPlus,
-  Home,
-  Clock,
-  Wrench
+  Activity,
+  PlusCircle
 } from "lucide-react"
-import { useDatabaseInit } from "@/hooks/use-database-init"
 import Link from "next/link"
-import { LogoutButton } from "@/components/admin/LogoutButton"
-import { DashboardCard } from "@/components/admin/DashboardCard"
 
-function ErrorFallback({error}: {error: Error}) {
-  return (
-    <div className="p-6 bg-red-50 text-red-800 rounded-lg">
-      <h2 className="text-lg font-semibold mb-2">Something went wrong:</h2>
-      <pre className="text-sm overflow-auto p-2 bg-white border border-red-200 rounded">
-        {error.message}
-      </pre>
-      <div className="mt-4">
-        <a href="/admin" className="text-blue-600 hover:underline">Try again</a>
-      </div>
-    </div>
-  );
-}
+export default function AdminDashboard() {
+  const [stats, setStats] = useState({
+    posts: 0,
+    subscribers: 0,
+    works: 0
+  })
 
-export default function AdminDashboardWrapper() {
-  return (
-    <ErrorBoundary FallbackComponent={ErrorFallback}>
-      <Suspense fallback={<div className="p-6">Loading admin dashboard...</div>}>
-        <AdminDashboard />
-      </Suspense>
-    </ErrorBoundary>
-  );
-}
-
-interface DashboardCardProps {
-  title: string
-  description: string
-  icon: React.ReactNode
-  linkHref: string
-  linkText: string
-}
-
-function DashboardCard({ title, description, icon, linkHref, linkText }: DashboardCardProps) {
-  return (
-    <Card className="overflow-hidden transition-all hover:shadow-md">
-      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-        <CardTitle className="text-lg font-medium">{title}</CardTitle>
-        <div className="rounded-full bg-primary/10 p-2 text-primary">
-          {icon}
-        </div>
-      </CardHeader>
-      <CardContent>
-        <p className="text-sm text-muted-foreground mb-4">{description}</p>
-        <Button asChild variant="default" className="w-full">
-          <Link href={linkHref}>
-            {linkText}
-          </Link>
-        </Button>
-      </CardContent>
-    </Card>
-  )
-}
-
-// Add usage tracking interface
-interface AdminSection {
-  id: string
-  title: string
-  description: string
-  icon: React.ReactNode
-  linkHref: string
-  linkText: string
-  category: 'frequent' | 'content' | 'management' | 'tools'
-  priority: number
-}
-
-// Add the getIconComponent function
-const getIconComponent = (iconName: string) => {
-  const iconMap: Record<string, React.ComponentType<any>> = {
-    'User': User,
-    'Briefcase': Briefcase,
-    'GraduationCap': GraduationCap,
-    'Star': Star,
-    'Users': Users,
-    'Award': Award,
-    'Settings': Settings,
-    'FileText': FileText,
-    'Link': LinkIcon,
-    'Mail': Mail,
-    'MessageSquare': MessageSquare,
-    'PlusCircle': PlusCircle,
-    'UserPlus': UserPlus,
-    'Home': Home,
-    'Clock': Clock,
-    'Wrench': Wrench,
-    'LogOut': LogOut
-  }
-  
-  return iconMap[iconName] || Settings // Default to Settings if icon not found
-}
-
-function AdminDashboard() {
-  try {
-    useDatabaseInit() // Initialize database connection
-  } catch (error) {
-    console.error("Error initializing database:", error);
-  }
-
-  const [username, setUsername] = useState("Admin")
-  const [lastLogin, setLastLogin] = useState<string | null>(null)
-
-  // Usage tracking state
-  const [sectionUsage, setSectionUsage] = useState<Record<string, number>>({})
-  const [recentlyUsed, setRecentlyUsed] = useState<string[]>([])
-
-  const [sections, setSections] = useState<AdminSection[]>([])
-  const [loading, setLoading] = useState(true)
-
+  // Basic mock fetch for stats - you can connect this to actual APIs later
   useEffect(() => {
-    // Retrieve last login time from localStorage if available
-    const storedLastLogin = localStorage.getItem('lastLoginTime')
-    if (storedLastLogin) {
-      setLastLogin(new Date(storedLastLogin).toLocaleString())
+    const fetchStats = async () => {
+      try {
+        const [postsRes, subsRes, worksRes] = await Promise.all([
+          fetch('/api/posts').catch(() => null),
+          fetch('/api/subscribers').catch(() => null),
+          fetch('/api/works').catch(() => null)
+        ])
+        
+        setStats({
+          posts: postsRes?.ok ? (await postsRes.json()).length || 0 : 0,
+          subscribers: subsRes?.ok ? (await subsRes.json()).length || 0 : 0,
+          works: worksRes?.ok ? (await worksRes.json()).length || 0 : 0
+        })
+      } catch (e) {
+        console.error("Failed to fetch stats", e)
+      }
     }
-    
-    // Store current login time
-    localStorage.setItem('lastLoginTime', new Date().toISOString())
-
-    // Load usage data from localStorage
-    const savedUsage = localStorage.getItem('adminSectionUsage')
-    const savedRecent = localStorage.getItem('adminRecentlyUsed')
-    
-    if (savedUsage) {
-      setSectionUsage(JSON.parse(savedUsage))
-    }
-    if (savedRecent) {
-      setRecentlyUsed(JSON.parse(savedRecent))
-    }
-
-    loadSections()
+    fetchStats()
   }, [])
-  
-  const loadSections = async () => {
-    try {
-      const response = await fetch('/api/admin/sections')
-      if (response.ok) {
-        const data = await response.json()
-        setSections(data)
-      }
-    } catch (error) {
-      console.error('Error loading sections:', error)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  const trackSectionUsage = async (sectionId: string) => {
-    // Update local state
-    const newUsage = { ...sectionUsage }
-    newUsage[sectionId] = (newUsage[sectionId] || 0) + 1
-    setSectionUsage(newUsage)
-    localStorage.setItem('adminSectionUsage', JSON.stringify(newUsage))
-    
-    // Update recently used
-    const newRecent = [sectionId, ...recentlyUsed.filter(id => id !== sectionId)].slice(0, 5)
-    setRecentlyUsed(newRecent)
-    localStorage.setItem('adminRecentlyUsed', JSON.stringify(newRecent))
-
-    // Record usage in Redis
-    try {
-      await fetch(`/api/admin/sections/${sectionId}/usage`, {
-        method: 'POST'
-      })
-    } catch (error) {
-      console.error('Error recording usage:', error)
-    }
-  }
-
-  // Convert database sections to AdminSection format
-  const allSections: AdminSection[] = sections.map(section => ({
-    id: section.id,
-    title: section.title,
-    description: section.description,
-    icon: React.createElement(getIconComponent(section.icon), { className: "h-5 w-5" }),
-    linkHref: section.linkHref,
-    linkText: section.linkText,
-    category: section.category,
-    priority: section.priority
-  }))
-
-  // Smart ordering function
-  const getOrderedSections = () => {
-    return allSections.sort((a, b) => {
-      // First priority: Recently used (last 5)
-      const aRecent = recentlyUsed.indexOf(a.id)
-      const bRecent = recentlyUsed.indexOf(b.id)
-      
-      if (aRecent !== -1 && bRecent !== -1) {
-        return aRecent - bRecent // Most recent first
-      }
-      if (aRecent !== -1) return -1
-      if (bRecent !== -1) return 1
-      
-      // Second priority: Usage frequency
-      const aUsage = sectionUsage[a.id] || 0
-      const bUsage = sectionUsage[b.id] || 0
-      
-      if (aUsage !== bUsage) {
-        return bUsage - aUsage // Most used first
-      }
-      
-      // Third priority: Category and original priority
-      return a.priority - b.priority
-    })
-  }
-
-  const orderedSections = getOrderedSections()
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-7xl">
-      <header className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+    <div className="flex flex-col gap-8 max-w-6xl mx-auto w-full">
+      {/* Welcome Header */}
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
-          <p className="text-muted-foreground mt-1">
-            Manage your website content and settings
+          <h1 className="text-3xl font-bold tracking-tight">Welcome, Admin</h1>
+          <p className="text-muted-foreground mt-1 text-lg">
+            Here's what's happening with your website today.
           </p>
         </div>
+        <div className="flex gap-2">
+          <Button asChild>
+            <Link href="/admin/posts?new=true">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              New Post
+            </Link>
+          </Button>
+        </div>
+      </div>
+
+      {/* Quick Stats Row */}
+      <div className="grid gap-4 md:grid-cols-3">
+        <Card className="border-t-4 border-t-blue-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Posts</CardTitle>
+            <FileText className="h-4 w-4 text-muted-foreground text-blue-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.posts || '--'}</div>
+            <p className="text-xs text-muted-foreground mt-1">Published articles</p>
+          </CardContent>
+        </Card>
         
-        <div className="flex items-center gap-2">
-          <div className="text-right hidden sm:block mr-4">
-            <p className="font-medium">{username}</p>
-            {lastLogin && (
-              <p className="text-xs text-muted-foreground">Last login: {lastLogin}</p>
-            )}
-          </div>
-          <LogoutButton />
-        </div>
-      </header>
+        <Card className="border-t-4 border-t-emerald-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Subscribers</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground text-emerald-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.subscribers || '--'}</div>
+            <p className="text-xs text-muted-foreground mt-1">Active newsletter readers</p>
+          </CardContent>
+        </Card>
+        
+        <Card className="border-t-4 border-t-purple-500 shadow-sm hover:shadow-md transition-shadow">
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Portfolio Works</CardTitle>
+            <Award className="h-4 w-4 text-muted-foreground text-purple-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold">{stats.works || '--'}</div>
+            <p className="text-xs text-muted-foreground mt-1">Showcased projects</p>
+          </CardContent>
+        </Card>
+      </div>
 
-      {/* Recently Used Section */}
-      {recentlyUsed.length > 0 && (
-        <div className="mb-6">
-          <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-            <Clock className="h-5 w-5" />
-            Recently Used
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
-            {recentlyUsed.slice(0, 3).map(sectionId => {
-              const section = allSections.find(s => s.id === sectionId)
-              if (!section) return null
-              
-              return (
-                <Card key={section.id} className="overflow-hidden transition-all hover:shadow-md border-primary/20">
-                  <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                    <CardTitle className="text-lg font-medium">{section.title}</CardTitle>
-                    <div className="rounded-full bg-primary/10 p-2 text-primary">
-                      {section.icon}
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
-                    <Button 
-                      asChild 
-                      variant="default" 
-                      className="w-full"
-                      onClick={() => trackSectionUsage(section.id)}
-                    >
-                      <Link href={section.linkHref}>
-                        {section.linkText}
-                      </Link>
-                    </Button>
-                  </CardContent>
-                </Card>
-              )
-            })}
-          </div>
-        </div>
-      )}
+      {/* Quick Actions / Shortcuts */}
+      <div>
+        <h2 className="text-xl font-semibold tracking-tight mb-4 flex items-center gap-2">
+          <Activity className="h-5 w-5 text-primary" />
+          Quick Actions
+        </h2>
+        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <Link href="/admin/posts" className="group">
+            <Card className="h-full hover:border-primary/50 hover:bg-muted/50 transition-colors">
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center gap-2">
+                <div className="p-3 rounded-full bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform">
+                  <FileText className="h-6 w-6" />
+                </div>
+                <div className="font-medium">Write a Post</div>
+                <div className="text-xs text-muted-foreground">Manage your blog</div>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/url-shortner" className="group">
+            <Card className="h-full hover:border-primary/50 hover:bg-muted/50 transition-colors">
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center gap-2">
+                <div className="p-3 rounded-full bg-orange-100 dark:bg-orange-900/40 text-orange-600 dark:text-orange-400 group-hover:scale-110 transition-transform">
+                  <LinkIcon className="h-6 w-6" />
+                </div>
+                <div className="font-medium">Shorten URL</div>
+                <div className="text-xs text-muted-foreground">Create custom links</div>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/admin/subscribers" className="group">
+            <Card className="h-full hover:border-primary/50 hover:bg-muted/50 transition-colors">
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center gap-2">
+                <div className="p-3 rounded-full bg-emerald-100 dark:bg-emerald-900/40 text-emerald-600 dark:text-emerald-400 group-hover:scale-110 transition-transform">
+                  <Users className="h-6 w-6" />
+                </div>
+                <div className="font-medium">Email List</div>
+                <div className="text-xs text-muted-foreground">Manage subscribers</div>
+              </CardContent>
+            </Card>
+          </Link>
 
-      {/* All Sections with Categories */}
-      <div className="space-y-8">
-        {['frequent', 'content', 'management', 'tools'].map(category => {
-          const categorySections = orderedSections.filter(s => s.category === category)
-          if (categorySections.length === 0) return null
-          
-          const categoryLabels = {
-            frequent: 'Frequently Used',
-            content: 'Content Management',
-            management: 'User & Settings',
-            tools: 'Tools & Utilities'
-          }
-          
-          return (
-            <div key={category}>
-              <h2 className="text-xl font-semibold mb-4 flex items-center gap-2">
-                {category === 'frequent' && <Star className="h-5 w-5" />}
-                {category === 'content' && <FileText className="h-5 w-5" />}
-                {category === 'management' && <Settings className="h-5 w-5" />}
-                {category === 'tools' && <Wrench className="h-5 w-5" />}
-                {categoryLabels[category]}
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                {categorySections.map(section => (
-                  <Card key={section.id} className="overflow-hidden transition-all hover:shadow-md">
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                      <CardTitle className="text-lg font-medium">{section.title}</CardTitle>
-                      <div className="rounded-full bg-primary/10 p-2 text-primary">
-                        {section.icon}
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-sm text-muted-foreground mb-4">{section.description}</p>
-                      <Button 
-                        asChild 
-                        variant="default" 
-                        className="w-full"
-                        onClick={() => trackSectionUsage(section.id)}
-                      >
-                        <Link href={section.linkHref}>
-                          {section.linkText}
-                        </Link>
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          )
-        })}
+          <Link href="/admin/expertise" className="group">
+            <Card className="h-full hover:border-primary/50 hover:bg-muted/50 transition-colors">
+              <CardContent className="flex flex-col items-center justify-center p-6 text-center gap-2">
+                <div className="p-3 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform">
+                  <Star className="h-6 w-6" />
+                </div>
+                <div className="font-medium">Update Skills</div>
+                <div className="text-xs text-muted-foreground">Manage expertise</div>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
       </div>
     </div>
   )

@@ -4,16 +4,16 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
-  DialogDescription, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
   DialogFooter
 } from "@/components/ui/dialog"
 import { toast } from 'sonner'
-import { AlertCircle, Loader2 } from 'lucide-react'
+import { AlertCircle, Loader2, ShieldAlert, Eye, EyeOff, Lock } from 'lucide-react'
 import { Alert, AlertDescription } from "@/components/ui/alert"
 
 interface LoginModalProps {
@@ -26,82 +26,121 @@ export function LoginModal({ isOpen, setIsOpen, onLoginSuccess }: LoginModalProp
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState('')
+  const [showPassword, setShowPassword] = useState(false)
+  const [isRateLimited, setIsRateLimited] = useState(false)
   const router = useRouter()
-  
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
     setIsLoading(true)
-    
+    setIsRateLimited(false)
+
     try {
       const response = await fetch('/api/admin/login', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ password }),
+        credentials: 'include',
       })
-      
+
       const data = await response.json()
-      
+
+      if (response.status === 429) {
+        // Rate limited
+        setIsRateLimited(true)
+        setError(data.message || 'Too many attempts. Please wait before trying again.')
+        toast.error('Account temporarily locked')
+        return
+      }
+
       if (response.ok) {
-        toast.success('Login successful')
+        toast.success('Welcome back!')
+        setPassword('')
         setIsOpen(false)
         onLoginSuccess?.()
         router.push('/admin')
       } else {
-        setError(data.message || 'Login failed')
-        toast.error(data.message || 'Login failed')
+        setError(data.message || 'Invalid password')
+        setPassword('')
+        toast.error('Login failed')
       }
-    } catch (error) {
-      setError('An error occurred during login')
-      console.error(error)
+    } catch {
+      setError('Connection error. Please try again.')
     } finally {
       setIsLoading(false)
     }
   }
-  
+
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogContent className="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>Admin Login</DialogTitle>
-          <DialogDescription>
-            Enter your admin password to access the dashboard
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open && !isLoading) setIsOpen(open)
+    }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader className="space-y-3">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
+            <Lock className="h-6 w-6 text-slate-600 dark:text-slate-300" />
+          </div>
+          <DialogTitle className="text-center text-xl">Admin Access</DialogTitle>
+          <DialogDescription className="text-center">
+            Enter your password to access the dashboard
           </DialogDescription>
         </DialogHeader>
-        
-        <form onSubmit={handleLogin} className="space-y-4 py-4">
+
+        <form onSubmit={handleLogin} className="space-y-4 py-2">
           {error && (
-            <Alert variant="destructive">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
+            <Alert variant="destructive" className="py-2">
+              {isRateLimited
+                ? <ShieldAlert className="h-4 w-4" />
+                : <AlertCircle className="h-4 w-4" />
+              }
+              <AlertDescription className="text-sm">{error}</AlertDescription>
             </Alert>
           )}
-          
-          <div className="space-y-2">
+
+          <div className="relative">
             <Input
-              id="password"
-              type="password"
+              id="admin-password"
+              type={showPassword ? 'text' : 'password'}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              placeholder="Enter your password"
+              placeholder="Password"
               required
+              autoComplete="current-password"
+              className="pr-10"
+              disabled={isRateLimited || isLoading}
             />
+            <button
+              type="button"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              onClick={() => setShowPassword(!showPassword)}
+              tabIndex={-1}
+            >
+              {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+            </button>
           </div>
-          
+
           <DialogFooter>
-            <Button type="submit" className="w-full" disabled={isLoading}>
+            <Button
+              type="submit"
+              className="w-full"
+              disabled={isLoading || isRateLimited || !password}
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  Logging in...
+                  Verifying...
                 </>
-              ) : 'Login'}
+              ) : isRateLimited ? (
+                <>
+                  <ShieldAlert className="mr-2 h-4 w-4" />
+                  Temporarily Locked
+                </>
+              ) : 'Sign In'}
             </Button>
           </DialogFooter>
         </form>
       </DialogContent>
     </Dialog>
   )
-} 
+}

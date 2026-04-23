@@ -53,6 +53,7 @@
     "imagekitio-react": "^4.3.0",
     "immer": "latest",
     "input-otp": "1.4.1",
+    "jose": "^6.2.2",
     "js-cookie": "^3.0.5",
     "lucide-react": "^0.454.0",
     "next": "15.2.4",

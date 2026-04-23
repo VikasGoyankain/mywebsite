@@ -1,36 +1,62 @@
-import { NextResponse } from 'next/server'
-import type { NextRequest } from 'next/server'
+import { NextRequest, NextResponse } from 'next/server'
+import { jwtVerify } from 'jose'
 
-// Paths that require authentication
-const PROTECTED_PATHS = {
-  ADMIN: ['/admin'],
-  FAMILY: ['/family']
-};
-
-// Paths that are login pages
-const LOGIN_PATHS = {
-  ADMIN: '/admin/login',
-  FAMILY: '/family/login'
-};
-
-// Public API paths that should not be protected
+// Public API paths that bypass authentication
 const PUBLIC_API_PATHS = [
-  '/api/personal/login',
-  '/api/personal/check-auth',
   '/api/admin/login',
   '/api/admin/check-auth',
   '/api/family/login',
-  '/api/family/check-auth'
-];
+  '/api/family/check-auth',
+  '/api/personal/login',
+  '/api/personal/check-auth',
+]
 
-// Comment out the entire middleware function for now as we're handling auth in the layout component
-// This prevents redirects that might be causing issues
-export function middleware(request: NextRequest) {
-  // Just let the request through - authentication is handled by the AdminAuthWrapper
+const SESSION_COOKIE_NAME = 'admin-session'
+
+function getJwtSecret(): Uint8Array {
+  const secret = process.env.JWT_SECRET ?? ''
+  return new TextEncoder().encode(secret)
+}
+
+async function isValidAdminJWT(token: string): Promise<boolean> {
+  try {
+    const { payload } = await jwtVerify(token, getJwtSecret())
+    return payload.role === 'admin'
+  } catch {
+    return false
+  }
+}
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
+  // Allow public API routes through
+  if (PUBLIC_API_PATHS.some(p => pathname.startsWith(p))) {
+    return NextResponse.next()
+  }
+
+  // Protect all /admin routes
+  if (pathname.startsWith('/admin')) {
+    const token = request.cookies.get(SESSION_COOKIE_NAME)?.value
+
+    if (!token || !(await isValidAdminJWT(token))) {
+      // For API routes under /admin, return JSON 401
+      if (pathname.startsWith('/api/admin')) {
+        return NextResponse.json(
+          { success: false, message: 'Unauthorized' },
+          { status: 401 }
+        )
+      }
+
+      // For page routes, let the AdminAuthWrapper handle showing the login modal
+      // (avoids hard redirect loops)
+      return NextResponse.next()
+    }
+  }
+
   return NextResponse.next()
 }
 
-// Specify the paths that should be checked by the middleware
 export const config = {
-  matcher: ['/admin/:path*']
-} 
+  matcher: ['/admin/:path*', '/api/admin/:path*'],
+}

@@ -1,102 +1,101 @@
-import { NextRequest, NextResponse } from "next/server"
-import { loadProfileFromDatabase } from '@/lib/redis'
-
-// Password verification utility (same as in profile-store)
-async function hashPassword(password: string): Promise<string> {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(password)
-  const hash = await crypto.subtle.digest('SHA-256', data)
-  return Array.from(new Uint8Array(hash))
-    .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-}
-
-async function verifyPassword(password: string, hashedPassword: string): Promise<boolean> {
-  const hashedInput = await hashPassword(password)
-  return hashedInput === hashedPassword
-}
-
-// Generate a secure token for this session
-const generateToken = (): string => {
-  return process.env.ADMIN_AUTH_TOKEN || ''
-}
+import { NextRequest, NextResponse } from 'next/server'
+import {
+  verifyPasswordPbkdf2,
+  checkRateLimit,
+  clearRateLimit,
+  createSessionJWT,
+  SESSION_COOKIE_NAME,
+  sessionCookieOptions,
+} from '@/lib/admin-auth'
 
 export async function POST(request: NextRequest) {
-  try {
-    const { password } = await request.json()
-    
-    // Check if password is provided
-    if (!password) {
-      return NextResponse.json(
-        { success: false, message: "Password is required" },
-        { status: 400 }
-      )
-    }
-    
-    // Load hashed password from database
-    const profile = await loadProfileFromDatabase()
-    let hashedPassword = profile?.adminPassword || null
-    let isValid = false
+  // ── 1. Resolve client IP ──────────────────────────────────────────────────
+  const ip =
+    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ??
+    request.headers.get('x-real-ip') ??
+    '127.0.0.1'
 
-    if (hashedPassword) {
-      isValid = await verifyPassword(password, hashedPassword)
-    } else {
-      // Fallback to env variable for legacy support
-      const envPassword = process.env.ADMIN_PASSWORD
-      isValid = password === envPassword
-    }
-    
-    if (!isValid) {
-      return NextResponse.json(
-        { success: false, message: "Invalid password" },
-        { status: 401 }
-      )
-    }
-    
-    // Generate auth token
-    const token = generateToken()
-    
-    // Set cookie with the token
-    // Set secure to true in production and sameSite to 'lax' for better security
-    const cookieOptions = {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === "production",
-      sameSite: "lax" as const,
-      maxAge: 7 * 24 * 60 * 60, // 7 days
-      path: "/",
-    }
-    
-    // Create the response
-    const response = NextResponse.json(
-      { success: true, message: "Login successful" },
-      { status: 200 }
-    )
-    
-    // Set the cookie
-    response.cookies.set("admin-auth-token", token, cookieOptions)
-    
-    return response
-  } catch (error) {
-    console.error("Login error:", error)
+  // ── 2. Rate-limit check ───────────────────────────────────────────────────
+  const rateCheck = await checkRateLimit(ip)
+  if (!rateCheck.allowed) {
+    const minutes = Math.ceil((rateCheck.retryAfter ?? 900) / 60)
     return NextResponse.json(
-      { success: false, message: "An error occurred during login" },
+      {
+        success: false,
+        message: `Too many failed attempts. Try again in ${minutes} minute${minutes !== 1 ? 's' : ''}.`,
+      },
+      {
+        status: 429,
+        headers: { 'Retry-After': String(rateCheck.retryAfter ?? 900) },
+      }
+    )
+  }
+
+  // ── 3. Parse body ─────────────────────────────────────────────────────────
+  let password: string
+  try {
+    const body = await request.json()
+    password = body?.password ?? ''
+  } catch {
+    return NextResponse.json(
+      { success: false, message: 'Invalid request body' },
+      { status: 400 }
+    )
+  }
+
+  if (!password) {
+    return NextResponse.json(
+      { success: false, message: 'Password is required' },
+      { status: 400 }
+    )
+  }
+
+  // ── 4. Verify password ────────────────────────────────────────────────────
+  const storedHash = process.env.ADMIN_PASSWORD_HASH
+  if (!storedHash) {
+    console.error('[Admin Login] ADMIN_PASSWORD_HASH env variable is not set')
+    return NextResponse.json(
+      { success: false, message: 'Server misconfiguration. Contact admin.' },
       { status: 500 }
     )
   }
-}
 
-// Handle logout request
-export async function DELETE() {
+  const isValid = await verifyPasswordPbkdf2(password, storedHash)
+
+  if (!isValid) {
+    // Return a deliberately vague message to prevent user enumeration
+    return NextResponse.json(
+      { success: false, message: 'Invalid password' },
+      { status: 401 }
+    )
+  }
+
+  // ── 5. Login successful – clear rate limit and issue JWT session ──────────
+  await clearRateLimit(ip)
+  const jwt = await createSessionJWT()
+
   const response = NextResponse.json(
-    { success: true, message: "Logged out successfully" },
+    { success: true, message: 'Login successful' },
     { status: 200 }
   )
-  
-  // Clear the auth cookie
-  response.cookies.set("admin-auth-token", "", { 
-    maxAge: 0,
-    path: "/"
-  })
-  
+
+  response.cookies.set(SESSION_COOKIE_NAME, jwt, sessionCookieOptions)
+
   return response
-} 
+}
+
+// ── Logout ────────────────────────────────────────────────────────────────────
+export async function DELETE() {
+  const response = NextResponse.json(
+    { success: true, message: 'Logged out successfully' },
+    { status: 200 }
+  )
+
+  response.cookies.set(SESSION_COOKIE_NAME, '', {
+    httpOnly: true,
+    maxAge: 0,
+    path: '/',
+  })
+
+  return response
+}

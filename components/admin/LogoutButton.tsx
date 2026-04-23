@@ -19,7 +19,7 @@ export function LogoutButton() {
       
       if (response.ok) {
         toast.success('Logged out successfully')
-        router.push('/admin-login')
+        router.push('/')
       } else {
         toast.error('Failed to log out')
       }
