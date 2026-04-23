@@ -1,6 +1,7 @@
 import type React from "react"
 import type { Viewport } from "next"
 import "./globals.css"
+import { Cormorant_Garamond, Geist } from "next/font/google"
 import { Toaster } from "@/components/ui/toaster"
 import { ServiceWorkerRegistration } from "@/components/blog/ServiceWorkerRegistration"
 import { CacheManager } from "@/components/CacheManager"
@@ -10,6 +11,19 @@ import { defaultMetadata, personStructuredData, websiteStructuredData, organizat
 import { Analytics } from '@vercel/analytics/next'
 
 const siteUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://vikasgoyanka.in'
+
+const fontSerif = Cormorant_Garamond({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
+  variable: "--font-serif",
+  display: "swap",
+})
+
+const fontSans = Geist({
+  subsets: ["latin"],
+  variable: "--font-sans",
+  display: "swap",
+})
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -30,7 +44,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={`${fontSerif.variable} ${fontSans.variable}`}>
       <head>
         <link rel="canonical" href={siteUrl} />
         <link rel="icon" href="/favicon.ico" sizes="any" />
