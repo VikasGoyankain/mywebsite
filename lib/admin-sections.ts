@@ -25,6 +25,16 @@ function generateId(): string {
   return `section_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
 }
 
+// Track section usage (currently a stub to prevent build errors)
+export async function recordSectionUsage(id: string): Promise<void> {
+  try {
+    // We could increment a counter or update lastUsed field here in the future
+    // await redis.hincrby('admin:sections:usage', id, 1)
+  } catch (error) {
+    console.error('Error recording section usage:', error)
+  }
+}
+
 // Get all admin sections
 export async function getAllAdminSections(): Promise<AdminSection[]> {
   try {
