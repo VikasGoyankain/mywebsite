@@ -1,9 +1,9 @@
 name: Redis Backup
 
 on:
-  # Run daily at midnight UTC
-  schedule:
-    - cron: '0 0 * * *'
+#   # Run daily at midnight UTC
+#   schedule:
+#     - cron: '0 0 * * *'
   
   # Allow manual trigger from GitHub Actions UI
   workflow_dispatch:
